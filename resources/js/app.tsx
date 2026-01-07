@@ -23,6 +23,7 @@ createInertiaApp({
                 <App {...props} />
             </StrictMode>,
         );
+        delete el.dataset.page;
     },
     progress: {
         color: '#4B5563',
