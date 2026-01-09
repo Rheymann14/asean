@@ -120,13 +120,101 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                 
                                 <div className="grid gap-5">
                                     <div className="grid gap-2">
+                                        <Label htmlFor="country_id">Country</Label>
+                                        <input type="hidden" name="country_id" value={country} />
+
+                                        <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={countryOpen}
+                                                    className={comboboxTriggerClass}
+                                                    tabIndex={1}
+                                                >
+                                                    <span className="flex min-w-0 items-center gap-2">
+                                                        {selectedCountry ? (
+                                                            <>
+                                                                {selectedCountry.flag_url ? (
+                                                                    <img
+                                                                        src={selectedCountry.flag_url}
+                                                                        alt=""
+                                                                        className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
+                                                                        loading="lazy"
+                                                                        draggable={false}
+                                                                    />
+                                                                ) : (
+                                                                    <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                                                                        {selectedCountry.code}
+                                                                    </span>
+                                                                )}
+                                                                <span className="truncate">{selectedCountry.name}</span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">Select country…</span>
+                                                        )}
+                                                    </span>
+                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+
+                                            <PopoverContent
+                                                className="w-[--radix-popover-trigger-width] p-0"
+                                                align="start"
+                                            >
+                                                <Command>
+                                                    <CommandInput placeholder="Search country…" />
+                                                    <CommandEmpty>No country found.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {countries.map((item) => (
+                                                            <CommandItem
+                                                                key={item.id}
+                                                                value={item.name}
+                                                                onSelect={() => {
+                                                                    setCountry(String(item.id));
+                                                                    setCountryOpen(false);
+                                                                }}
+                                                                className="gap-2"
+                                                            >
+                                                                {item.flag_url ? (
+                                                                    <img
+                                                                        src={item.flag_url}
+                                                                        alt=""
+                                                                        className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
+                                                                        loading="lazy"
+                                                                        draggable={false}
+                                                                    />
+                                                                ) : (
+                                                                    <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                                                                        {item.code}
+                                                                    </span>
+                                                                )}
+                                                                <span className="truncate">{item.name}</span>
+                                                                <Check
+                                                                    className={cn(
+                                                                        'ml-auto h-4 w-4',
+                                                                        country === String(item.id) ? 'opacity-100' : 'opacity-0'
+                                                                    )}
+                                                                />
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        <InputError message={err.country_id ?? err.country} />
+                                    </div>
+
+                                    <div className="grid gap-2">
                                         <Label htmlFor="name">Name</Label>
                                         <Input
                                             id="name"
                                             type="text"
                                             required
                                             autoFocus
-                                            tabIndex={1}
+                                            tabIndex={2}
                                             autoComplete="name"
                                             name="name"
                                             placeholder="Full name"
@@ -141,7 +229,7 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                             id="email"
                                             type="email"
                                             required
-                                            tabIndex={2}
+                                            tabIndex={3}
                                             autoComplete="email"
                                             name="email"
                                             placeholder="email@example.com"
@@ -150,121 +238,27 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                         <InputError message={err.email} />
                                     </div>
 
-                                    <div className="grid gap-5 sm:grid-cols-2">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="contact_number">Contact number</Label>
-                                            <Input
-                                                id="contact_number"
-                                                type="tel"
-                                                required
-                                                tabIndex={3}
-                                                autoComplete="tel"
-                                                name="contact_number"
-                                                inputMode="numeric"
-                                                pattern="[0-9]*"
-                                                placeholder="e.g. 639123456789"
-                                                className={inputClass}
-                                                onInput={(event) => {
-                                                    event.currentTarget.value = event.currentTarget.value.replace(
-                                                        /[^0-9]/g,
-                                                        ''
-                                                    );
-                                                }}
-                                            />
-                                            <InputError message={err.contact_number} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="country_id">Country</Label>
-                                            <input type="hidden" name="country_id" value={country} />
-
-                                            <Popover open={countryOpen} onOpenChange={setCountryOpen}>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        aria-expanded={countryOpen}
-                                                        className={comboboxTriggerClass}
-                                                        tabIndex={4}
-                                                    >
-                                                        <span className="flex min-w-0 items-center gap-2">
-                                                            {selectedCountry ? (
-                                                                <>
-                                                                    {selectedCountry.flag_url ? (
-                                                                        <img
-                                                                            src={selectedCountry.flag_url}
-                                                                            alt=""
-                                                                            className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
-                                                                            loading="lazy"
-                                                                            draggable={false}
-                                                                        />
-                                                                    ) : (
-                                                                        <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                                                                            {selectedCountry.code}
-                                                                        </span>
-                                                                    )}
-                                                                    <span className="truncate">{selectedCountry.name}</span>
-                                                                </>
-                                                            ) : (
-                                                                <span className="text-muted-foreground">
-                                                                    Select country…
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                                                    </Button>
-                                                </PopoverTrigger>
-
-                                                <PopoverContent
-                                                    className="w-[--radix-popover-trigger-width] p-0"
-                                                    align="start"
-                                                >
-                                                    <Command>
-                                                        <CommandInput placeholder="Search country…" />
-                                                        <CommandEmpty>No country found.</CommandEmpty>
-                                                        <CommandGroup>
-                                                            {countries.map((item) => (
-                                                                <CommandItem
-                                                                    key={item.id}
-                                                                    value={item.name}
-                                                                    onSelect={() => {
-                                                                        setCountry(String(item.id));
-                                                                        setCountryOpen(false);
-                                                                    }}
-                                                                    className="gap-2"
-                                                                >
-                                                                    {item.flag_url ? (
-                                                                        <img
-                                                                            src={item.flag_url}
-                                                                            alt=""
-                                                                            className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
-                                                                            loading="lazy"
-                                                                            draggable={false}
-                                                                        />
-                                                                    ) : (
-                                                                        <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                                                                            {item.code}
-                                                                        </span>
-                                                                    )}
-                                                                    <span className="truncate">{item.name}</span>
-                                                                    <Check
-                                                                        className={cn(
-                                                                            'ml-auto h-4 w-4',
-                                                                            country === String(item.id)
-                                                                                ? 'opacity-100'
-                                                                                : 'opacity-0'
-                                                                        )}
-                                                                    />
-                                                                </CommandItem>
-                                                            ))}
-                                                        </CommandGroup>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
-
-                                            <InputError message={err.country_id ?? err.country} />
-                                        </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="contact_number">Contact number</Label>
+                                        <Input
+                                            id="contact_number"
+                                            type="tel"
+                                            required
+                                            tabIndex={4}
+                                            autoComplete="tel"
+                                            name="contact_number"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            placeholder="e.g. 639123456789"
+                                            className={inputClass}
+                                            onInput={(event) => {
+                                                event.currentTarget.value = event.currentTarget.value.replace(
+                                                    /[^0-9]/g,
+                                                    ''
+                                                );
+                                            }}
+                                        />
+                                        <InputError message={err.contact_number} />
                                     </div>
 
                                     <div className="grid gap-2">
