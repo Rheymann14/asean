@@ -202,9 +202,7 @@ export default function ContactDetails(props: PageProps) {
                                     </div>
                                     <span>Updated: {formatDateTimeSafe(item.updated_at)}</span>
                                 </div>
-                                <div className="mt-2 text-[11px] text-slate-500">
-                                    Updated by: {item.updated_by_name || '—'}
-                                </div>
+                           
                             </div>
                         ))}
                     </div>
