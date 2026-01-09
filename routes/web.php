@@ -8,6 +8,7 @@ use App\Http\Controllers\CountryController;
 use App\Http\Controllers\UserTypeController;
 use App\Http\Controllers\IssuanceController;
 use App\Http\Controllers\ContactDetailController;
+use App\Http\Controllers\ProgrammeController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -21,7 +22,7 @@ Route::get('/venue', function () {
     return Inertia::render('venue');
 })->name('venue');
 
-Route::get('/programme', fn () => Inertia::render('programme'))->name('programme');
+Route::get('/event', [ProgrammeController::class, 'publicIndex'])->name('event');
 
 
 Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issuances');
@@ -44,7 +45,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('contact-details', [ContactDetailController::class, 'index'])->name('contact-details');
     Route::patch('contact-details/{contactDetail}', [ContactDetailController::class, 'update'])->name('contact-details.update');
 
-    Route::get('programme-management', fn () => Inertia::render('programme-management'))->name('programme-management');
+    Route::get('event-management', [ProgrammeController::class, 'index'])->name('event-management');
+    Route::resource('programmes', ProgrammeController::class)->only(['store', 'update', 'destroy']);
 
     Route::get('scanner', fn () => Inertia::render('scanner'))->name('scanner');
 

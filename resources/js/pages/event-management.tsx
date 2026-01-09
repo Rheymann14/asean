@@ -73,7 +73,7 @@ type PageProps = {
     programmes?: ProgrammeRow[];
 };
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Programme Management', href: '/programme-management' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Event Management', href: '/event-management' }];
 
 const ENDPOINTS = {
     programmes: {
@@ -230,7 +230,7 @@ function EmptyState({
     );
 }
 
-export default function ProgrammeManagement(props: PageProps) {
+export default function EventManagement(props: PageProps) {
     const serverProgrammes: ProgrammeRow[] = props.programmes ?? [];
 
     const programmes: ProgrammeRow[] = React.useMemo(() => serverProgrammes, [serverProgrammes]);
@@ -395,7 +395,7 @@ export default function ProgrammeManagement(props: PageProps) {
             onSuccess: () => {
                 setDialogOpen(false);
                 setEditing(null);
-                toast.success(`Programme ${editing ? 'updated' : 'created'}.`);
+                toast.success(`Event ${editing ? 'updated' : 'created'}.`);
             },
             onError: (errors: Record<string, string | string[]>) => showToastError(errors),
         } as const;
@@ -410,8 +410,8 @@ export default function ProgrammeManagement(props: PageProps) {
             { is_active: !item.is_active },
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success(`Programme ${item.is_active ? 'deactivated' : 'activated'}.`),
-                onError: () => toast.error('Unable to update programme status.'),
+                onSuccess: () => toast.success(`Event ${item.is_active ? 'deactivated' : 'activated'}.`),
+                onError: () => toast.error('Unable to update event status.'),
             },
         );
     }
@@ -430,14 +430,14 @@ export default function ProgrammeManagement(props: PageProps) {
                 setDeleteOpen(false);
                 setDeleteTarget(null);
             },
-            onSuccess: () => toast.success('Programme deleted.'),
-            onError: () => toast.error('Unable to delete programme.'),
+            onSuccess: () => toast.success('Event deleted.'),
+            onError: () => toast.error('Unable to delete event.'),
         });
     }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Programme Management" />
+            <Head title="Event Management" />
 
             {/* ✅ removed overflow-x-auto here */}
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
@@ -446,10 +446,10 @@ export default function ProgrammeManagement(props: PageProps) {
                     <div className="flex items-center gap-2">
                         <CalendarDays className="h-5 w-5 text-[#00359c]" />
                         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                            Programme Management
+                            Event Management
                         </h1>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Manage programme cards shown on the public Programme page.</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Manage event cards shown on the public Event page.</p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
@@ -479,7 +479,7 @@ export default function ProgrammeManagement(props: PageProps) {
 
                         <Button onClick={openAdd} className={cn('w-full sm:w-auto', PRIMARY_BTN)}>
                             <Plus className="mr-2 h-4 w-4" />
-                            Add Programme
+                            Add Event
                         </Button>
                     </div>
 
@@ -494,8 +494,8 @@ export default function ProgrammeManagement(props: PageProps) {
                         {filtered.length === 0 ? (
                             <EmptyState
                                 icon={<CalendarDays className="h-5 w-5" />}
-                                title="No programme items found"
-                                subtitle="Try adjusting your search/filter, or add a new programme item."
+                                title="No event items found"
+                                subtitle="Try adjusting your search/filter, or add a new event item."
                             />
                         ) : (
                             // ✅ scrollbar only in table area
@@ -503,7 +503,7 @@ export default function ProgrammeManagement(props: PageProps) {
                                 <Table className="min-w-[1280px]">
                                     <TableHeader>
                                         <TableRow className="bg-slate-50 dark:bg-slate-900/40">
-                                            <TableHead className="min-w-[360px]">Programme</TableHead>
+                                            <TableHead className="min-w-[360px]">Event</TableHead>
                                             <TableHead className="min-w-[200px]">Added by</TableHead>
                                             <TableHead className="min-w-[260px]">Schedule</TableHead>
                                             <TableHead className="min-w-[220px]">Location</TableHead>
@@ -630,7 +630,7 @@ export default function ProgrammeManagement(props: PageProps) {
                     <form onSubmit={submit} className="flex max-h-[85vh] flex-col">
                         <div className="px-6 pt-6">
                             <DialogHeader>
-                                <DialogTitle>{editing ? 'Edit Programme' : 'Add Programme'}</DialogTitle>
+                                <DialogTitle>{editing ? 'Edit Event' : 'Add Event'}</DialogTitle>
                                 <DialogDescription>Upload image + PDF for “View more” on the public page.</DialogDescription>
                             </DialogHeader>
                         </div>
@@ -761,7 +761,7 @@ export default function ProgrammeManagement(props: PageProps) {
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this programme?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete this event?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This will permanently delete{' '}
                             <span className="font-semibold text-slate-900 dark:text-slate-100">{deleteTarget?.title ?? 'this item'}</span>.

@@ -1,0 +1,205 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Programme;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+
+class ProgrammeController extends Controller
+{
+    public function index()
+    {
+        $programmes = Programme::query()
+            ->with('user')
+            ->latest('starts_at')
+            ->get()
+            ->map(fn (Programme $programme) => [
+                'id' => $programme->id,
+                'tag' => $programme->tag,
+                'title' => $programme->title,
+                'description' => $programme->description,
+                'starts_at' => $programme->starts_at?->toISOString(),
+                'ends_at' => $programme->ends_at?->toISOString(),
+                'location' => $programme->location,
+                'image_url' => $programme->image_url,
+                'pdf_url' => $programme->pdf_url,
+                'is_active' => $programme->is_active,
+                'updated_at' => $programme->updated_at?->toISOString(),
+                'created_by' => $programme->user
+                    ? [
+                        'name' => $programme->user->name,
+                    ]
+                    : null,
+            ]);
+
+        return Inertia::render('event-management', [
+            'programmes' => $programmes,
+        ]);
+    }
+
+    public function publicIndex()
+    {
+        $programmes = Programme::query()
+            ->where('is_active', true)
+            ->latest('starts_at')
+            ->get()
+            ->map(fn (Programme $programme) => [
+                'id' => $programme->id,
+                'tag' => $programme->tag,
+                'title' => $programme->title,
+                'description' => $programme->description,
+                'starts_at' => $programme->starts_at?->toISOString(),
+                'ends_at' => $programme->ends_at?->toISOString(),
+                'location' => $programme->location,
+                'image_url' => $programme->image_url,
+                'pdf_url' => $programme->pdf_url,
+                'is_active' => $programme->is_active,
+                'updated_at' => $programme->updated_at?->toISOString(),
+            ]);
+
+        return Inertia::render('event', [
+            'programmes' => $programmes,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'tag' => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'location' => ['required', 'string', 'max:255'],
+            'image' => ['nullable', 'image', 'max:10240'],
+            'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $imageName = null;
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $imageName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
+            $destination = public_path('event');
+
+            if (!File::exists($destination)) {
+                File::makeDirectory($destination, 0755, true);
+            }
+
+            $file->move($destination, $imageName);
+        }
+
+        $pdfName = null;
+        if ($request->hasFile('pdf')) {
+            $file = $request->file('pdf');
+            $pdfName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
+            $destination = public_path('downloadables');
+
+            if (!File::exists($destination)) {
+                File::makeDirectory($destination, 0755, true);
+            }
+
+            $file->move($destination, $pdfName);
+        }
+
+        Programme::create([
+            'user_id' => $request->user()->id,
+            'tag' => $validated['tag'],
+            'title' => $validated['title'],
+            'description' => $validated['description'],
+            'starts_at' => $validated['starts_at'] ?? null,
+            'ends_at' => $validated['ends_at'] ?? null,
+            'location' => $validated['location'],
+            'image_url' => $imageName,
+            'pdf_url' => $pdfName,
+            'is_active' => $validated['is_active'] ?? true,
+        ]);
+
+        return back();
+    }
+
+    public function update(Request $request, Programme $programme)
+    {
+        $validated = $request->validate([
+            'tag' => ['sometimes', 'required', 'string', 'max:255'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['sometimes', 'required', 'string'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'location' => ['sometimes', 'required', 'string', 'max:255'],
+            'image' => ['nullable', 'image', 'max:10240'],
+            'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $imageName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
+            $destination = public_path('event');
+
+            if (!File::exists($destination)) {
+                File::makeDirectory($destination, 0755, true);
+            }
+
+            $file->move($destination, $imageName);
+
+            if ($programme->image_url) {
+                $existing = public_path('event/' . ltrim($programme->image_url, '/'));
+                if (File::exists($existing)) {
+                    File::delete($existing);
+                }
+            }
+
+            $validated['image_url'] = $imageName;
+        }
+
+        if ($request->hasFile('pdf')) {
+            $file = $request->file('pdf');
+            $pdfName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
+            $destination = public_path('downloadables');
+
+            if (!File::exists($destination)) {
+                File::makeDirectory($destination, 0755, true);
+            }
+
+            $file->move($destination, $pdfName);
+
+            if ($programme->pdf_url) {
+                $existing = public_path('downloadables/' . ltrim($programme->pdf_url, '/'));
+                if (File::exists($existing)) {
+                    File::delete($existing);
+                }
+            }
+
+            $validated['pdf_url'] = $pdfName;
+        }
+
+        $programme->update($validated);
+
+        return back();
+    }
+
+    public function destroy(Programme $programme)
+    {
+        if ($programme->image_url) {
+            $existing = public_path('event/' . ltrim($programme->image_url, '/'));
+            if (File::exists($existing)) {
+                File::delete($existing);
+            }
+        }
+
+        if ($programme->pdf_url) {
+            $existing = public_path('downloadables/' . ltrim($programme->pdf_url, '/'));
+            if (File::exists($existing)) {
+                File::delete($existing);
+            }
+        }
+
+        $programme->delete();
+
+        return back();
+    }
+}
