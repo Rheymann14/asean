@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -66,9 +66,14 @@ type VenueRow = {
     embed_url: string | null; // iframe src
     is_active: boolean;
     updated_at?: string | null;
+    created_by?: number | null;
 
     // optional relation
     event?: EventRow | null;
+    creator?: {
+        id: number;
+        name: string;
+    } | null;
 };
 
 type PageProps = {
@@ -186,87 +191,17 @@ function MapPreview({
     );
 }
 
-const DEV_SAMPLE_EVENTS: EventRow[] = [
-    {
-        id: 1,
-        title: 'Main Event',
-        starts_at: '2026-01-15T09:00:00+08:00',
-        ends_at: '2026-01-15T17:00:00+08:00',
-    },
-    {
-        id: 2,
-        title: 'Workshop A',
-        starts_at: '2026-01-16T09:00:00+08:00',
-        ends_at: '2026-01-16T12:00:00+08:00',
-    },
-    {
-        id: 3,
-        title: 'Workshop B',
-        starts_at: '2026-01-16T13:30:00+08:00',
-        ends_at: '2026-01-16T16:30:00+08:00',
-    },
-];
+function showToastError(errors: Record<string, string | string[]>) {
+    const message = Object.values(errors)
+        .flat()
+        .find((value) => value);
 
-function makeDevSampleVenues(events: EventRow[]): VenueRow[] {
-    const byTitle = (t: string) => events.find((e) => e.title.toLowerCase() === t.toLowerCase())?.id ?? null;
-
-    const mainId = byTitle('Main Event') ?? events[0]?.id ?? null;
-    const aId = byTitle('Workshop A') ?? events[1]?.id ?? null;
-    const bId = byTitle('Workshop B') ?? events[2]?.id ?? null;
-
-    // NOTE: iframe can use `...&output=embed` (works for demo + shorter than pb=...)
-    return [
-        {
-            id: 1,
-            event_id: mainId,
-            name: 'Commission on Higher Education (CHED)',
-            address: '55 C.P. Garcia Ave, Diliman, Quezon City, 1101 Metro Manila',
-            google_maps_url:
-                'https://www.google.com/maps/search/?api=1&query=Commission%20on%20Higher%20Education%20(CHED)%2055%20C.P.%20Garcia%20Ave%20Diliman%20Quezon%20City',
-            embed_url:
-                'https://www.google.com/maps?q=Commission%20on%20Higher%20Education%20(CHED)%2055%20C.P.%20Garcia%20Ave%20Diliman%20Quezon%20City&output=embed',
-            is_active: true,
-            updated_at: '2026-01-05T08:00:00+08:00',
-        },
-        {
-            id: 2,
-            event_id: aId,
-            name: 'UP Diliman – Convention Hall (Sample)',
-            address: 'University of the Philippines Diliman, Quezon City, Metro Manila',
-            google_maps_url:
-                'https://www.google.com/maps/search/?api=1&query=UP%20Diliman%20Convention%20Hall%20Quezon%20City',
-            embed_url: 'https://www.google.com/maps?q=UP%20Diliman%20Convention%20Hall%20Quezon%20City&output=embed',
-            is_active: true,
-            updated_at: '2026-01-06T10:20:00+08:00',
-        },
-        {
-            id: 3,
-            event_id: bId,
-            name: 'CHED – Training Room (Sample)',
-            address: 'CHED Complex, Diliman, Quezon City, Metro Manila',
-            google_maps_url:
-                'https://www.google.com/maps/search/?api=1&query=CHED%20Diliman%20Quezon%20City',
-            embed_url: 'https://www.google.com/maps?q=CHED%20Diliman%20Quezon%20City&output=embed',
-            is_active: true, // sample inactive
-            updated_at: '2026-01-04T15:45:00+08:00',
-        },
-    ];
+    toast.error(message || 'Something went wrong. Please try again.');
 }
 
 export default function VenueManagement(props: PageProps) {
-    const serverEvents: EventRow[] = props.events ?? [];
-    const events: EventRow[] = React.useMemo(() => {
-        if (serverEvents.length > 0) return serverEvents;
-        if (!import.meta.env.DEV) return [];
-        return DEV_SAMPLE_EVENTS;
-    }, [serverEvents]);
-
-    const serverVenues: VenueRow[] = props.venues ?? [];
-    const venues: VenueRow[] = React.useMemo(() => {
-        if (serverVenues.length > 0) return serverVenues;
-        if (!import.meta.env.DEV) return [];
-        return makeDevSampleVenues(events);
-    }, [serverVenues, events]);
+    const events: EventRow[] = props.events ?? [];
+    const venues: VenueRow[] = props.venues ?? [];
 
 
     const eventById = React.useMemo(() => new Map(events.map((e) => [e.id, e])), [events]);
@@ -312,14 +247,12 @@ export default function VenueManagement(props: PageProps) {
         address: string;
         google_maps_url: string;
         embed_url: string;
-        is_active: boolean;
     }>({
         event_id: '',
         name: '',
         address: '',
         google_maps_url: '',
         embed_url: '',
-        is_active: true,
     });
 
     function openAdd() {
@@ -337,7 +270,6 @@ export default function VenueManagement(props: PageProps) {
             address: item.address ?? '',
             google_maps_url: item.google_maps_url ?? '',
             embed_url: item.embed_url ?? '',
-            is_active: !!item.is_active,
         });
         form.clearErrors();
         setDialogOpen(true);
@@ -352,7 +284,6 @@ export default function VenueManagement(props: PageProps) {
             address: data.address.trim(),
             google_maps_url: data.google_maps_url.trim() || null,
             embed_url: data.embed_url.trim() || null,
-            is_active: !!data.is_active,
         }));
 
         const options = {
@@ -360,7 +291,9 @@ export default function VenueManagement(props: PageProps) {
             onSuccess: () => {
                 setDialogOpen(false);
                 setEditing(null);
+                toast.success(`Venue ${editing ? 'updated' : 'created'}.`);
             },
+            onError: (errors: Record<string, string | string[]>) => showToastError(errors),
         } as const;
 
         if (editing) form.patch(ENDPOINTS.venues.update(editing.id), options);
@@ -371,7 +304,11 @@ export default function VenueManagement(props: PageProps) {
         router.patch(
             ENDPOINTS.venues.update(item.id),
             { is_active: !item.is_active },
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Venue ${item.is_active ? 'deactivated' : 'activated'}.`),
+                onError: () => toast.error('Unable to update venue status.'),
+            },
         );
     }
 
@@ -389,6 +326,8 @@ export default function VenueManagement(props: PageProps) {
                 setDeleteOpen(false);
                 setDeleteTarget(null);
             },
+            onSuccess: () => toast.success('Venue deleted.'),
+            onError: () => toast.error('Unable to delete venue.'),
         });
     }
 
@@ -478,6 +417,7 @@ export default function VenueManagement(props: PageProps) {
                                             <TableHead className="min-w-[260px]">Venue</TableHead>
                                             <TableHead className="min-w-[260px]">Event</TableHead>
                                             <TableHead className="min-w-[340px]">Address</TableHead>
+                                            <TableHead className="min-w-[200px]">Created By</TableHead>
                                             <TableHead className="w-[140px]">Status</TableHead>
                                             <TableHead className="w-[180px]">Updated</TableHead>
                                             <TableHead className="w-[120px] text-right">Action</TableHead>
@@ -525,10 +465,13 @@ export default function VenueManagement(props: PageProps) {
                                                 </TableCell>
 
                                                 <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <StatusBadge active={v.is_active} />
-                                                        <Switch checked={v.is_active} onCheckedChange={() => toggleActive(v)} />
-                                                    </div>
+                                                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                                                        {v.creator?.name ?? '—'}
+                                                    </span>
+                                                </TableCell>
+
+                                                <TableCell>
+                                                    <StatusBadge active={v.is_active} />
                                                 </TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
@@ -653,18 +596,6 @@ export default function VenueManagement(props: PageProps) {
                                         {form.errors.embed_url ? <div className="text-xs text-red-600">{form.errors.embed_url}</div> : null}
                                     </div>
 
-                                    <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                        <div className="space-y-0.5">
-                                            <div className="text-sm font-medium">Active</div>
-                                            <div className="text-xs text-slate-600 dark:text-slate-400">
-                                                Inactive venues won’t show on public pages.
-                                            </div>
-                                        </div>
-                                        <Switch
-                                            checked={form.data.is_active}
-                                            onCheckedChange={(v) => form.setData('is_active', !!v)}
-                                        />
-                                    </div>
                                 </div>
                             </div>
 
