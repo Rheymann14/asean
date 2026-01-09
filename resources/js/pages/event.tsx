@@ -467,17 +467,22 @@ export default function EventManagement(props: PageProps) {
                                                 <TableCell className="font-semibold text-slate-900 dark:text-slate-100">
                                                     <div className="flex items-center gap-3">
                                                         <div className="grid size-10 place-items-center overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                            {resolveImageUrl(p.image_url) ? (
-                                                                <img
-                                                                    src={resolveImageUrl(p.image_url) ?? undefined}
-                                                                    alt={p.title}
-                                                                    className="h-full w-full object-cover"
-                                                                    loading="lazy"
-                                                                    draggable={false}
-                                                                />
-                                                            ) : (
-                                                                <ImageUp className="h-4 w-4 text-slate-500" />
-                                                            )}
+                                                            {(() => {
+                                                                const imageUrl = resolveImageUrl(p.image_url);
+                                                                if (!imageUrl) {
+                                                                    return <ImageUp className="h-4 w-4 text-slate-500" />;
+                                                                }
+
+                                                                return (
+                                                                    <img
+                                                                        src={imageUrl}
+                                                                        alt={p.title}
+                                                                        className="h-full w-full object-cover"
+                                                                        loading="lazy"
+                                                                        draggable={false}
+                                                                    />
+                                                                );
+                                                            })()}
                                                         </div>
 
                                                         <div className="min-w-0">
@@ -495,16 +500,19 @@ export default function EventManagement(props: PageProps) {
                                                 <TableCell className="text-slate-700 dark:text-slate-300">{p.location}</TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    {resolvePdfUrl(p.pdf_url) ? (
-                                                        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                                            <FileText className="h-4 w-4 text-[#00359c]" />
-                                                            <span className="max-w-[260px] truncate">
-                                                                {basename(resolvePdfUrl(p.pdf_url) ?? p.pdf_url)}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-xs text-slate-500 dark:text-slate-400">—</span>
-                                                    )}
+                                                    {(() => {
+                                                        const pdfUrl = resolvePdfUrl(p.pdf_url);
+                                                        if (!pdfUrl) {
+                                                            return <span className="text-xs text-slate-500 dark:text-slate-400">—</span>;
+                                                        }
+
+                                                        return (
+                                                            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                                                                <FileText className="h-4 w-4 text-[#00359c]" />
+                                                                <span className="max-w-[260px] truncate">{basename(pdfUrl)}</span>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </TableCell>
 
                                                 <TableCell>
