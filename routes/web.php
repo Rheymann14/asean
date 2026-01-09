@@ -30,6 +30,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
+    Route::get('participant-dashboard', function () {
+        return Inertia::render('participant-dashboard');
+    })->name('participant-dashboard');
     Route::get('participant', [ParticipantController::class, 'index'])->name('participant');
 
     Route::resource('participants', ParticipantController::class)->only(['store', 'update', 'destroy']);

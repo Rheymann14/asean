@@ -13,19 +13,19 @@ import {
 import { dashboard, participant, issuancesManagement, contactDetails, venueManagement, scanner } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { Paperclip, House, User, CalendarFold, Building, NotepadText, Headset, ScanLine } from 'lucide-react';
+import { Paperclip, User, Users, Building, NotepadText, Headset, ScanLine } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: House,
+        title: 'Profile',
+        href: '/participant-dashboard',
+        icon: User,
     },
     {
         title: 'Participant',
         href: participant(),
-        icon: User,
+        icon: Users,
     },
  
     {
