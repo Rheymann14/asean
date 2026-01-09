@@ -66,38 +66,6 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
         <RegisterLayout>
             <Head title="Register" />
 
-            {/* ✅ Under development banner */}
-            <div className="mx-auto mb-6 w-full max-w-3xl">
-                <div
-                    role="alert"
-                    className={cn(
-                        'relative overflow-hidden border border-[#FCD116]/35 bg-white/70 p-3',
-                        'shadow-[0_16px_40px_-28px_rgba(2,6,23,0.35)] backdrop-blur'
-                    )}
-                >
-                    <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#FCD116]/18 via-white/0 to-[#0033A0]/12"
-                    />
-                    <div className="relative flex items-start gap-3">
-                        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#FCD116]/20 text-[#0033A0]">
-                            <Info className="h-5 w-5" />
-                        </div>
-
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm font-semibold text-slate-900">
-                                    This page is still under development
-                                </p>
-                            </div>
-                            <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
-                                Some fields, validations, and features may change, and some features may not work yet.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {/* Header */}
             <div className="mb-6 flex flex-col items-center gap-2 text-center">
                 <Link
@@ -136,7 +104,15 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                     return (
                         <>
                             {/* Card */}
-                            <div className="relative border border-slate-200/70 bg-white/92 p-6 shadow-[0_18px_50px_-40px_rgba(2,6,23,0.35)] backdrop-blur">
+                            <div
+                                className={cn(
+                                    'relative rounded-2xl border border-slate-200/70 bg-white/70 p-6',
+                                    'shadow-[0_18px_50px_-40px_rgba(2,6,23,0.35)] backdrop-blur-xl',
+                                    'ring-1 ring-white/40'
+                                )}
+                            >
+
+                                
                                 <div className="grid gap-5">
                                     <div className="grid gap-2">
                                         <Label htmlFor="name">Name</Label>

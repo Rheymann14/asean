@@ -1,18 +1,32 @@
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
-import { type PropsWithChildren } from 'react';
+type RegisterLayoutProps = {
+    children: React.ReactNode;
+};
 
-export default function RegisterLayout({ children }: PropsWithChildren) {
+export default function RegisterLayout({ children }: RegisterLayoutProps) {
     return (
-        <div className="relative min-h-svh w-full overflow-hidden bg-slate-950 text-slate-900">
-            <div className="absolute inset-0 bg-[url('/img/bg.png')] bg-cover bg-center" aria-hidden />
-            <div
-                className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/65 to-white/80"
-                aria-hidden
-            />
+        <div className="relative isolate min-h-[100svh] w-full overflow-hidden bg-slate-50">
+            {/* Full-page background cover (always visible) */}
+            <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+                <img
+                    src="/img/bg.png"
+                    alt=""
+                    draggable={false}
+                    loading="lazy"
+                    className={cn('h-full w-full object-cover object-center')}
+                />
 
-            <div className="relative z-10 flex min-h-svh w-full flex-col items-center justify-start px-4 py-10 sm:py-12">
-                <div className="w-full max-w-5xl">{children}</div>
+                {/* overlays for readability (keep these subtle) */}
+                <div className="absolute inset-0 bg-white/35" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,51,160,0.12),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(252,209,22,0.12),transparent_55%)]" />
             </div>
+
+            {/* Content */}
+            <main className="relative z-10 mx-auto flex w-full max-w-4xl flex-col px-4 py-10 sm:px-6 lg:px-8">
+                {children}
+            </main>
         </div>
     );
 }
