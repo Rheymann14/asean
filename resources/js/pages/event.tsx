@@ -625,7 +625,7 @@ export default function Programme({ programmes = [] }: PageProps) {
                         {items.length ? (
                             <ProgrammeGroups items={items} />
                         ) : (
-                            <EmptyState text="No programmes are available yet." />
+                            <EmptyState text="No event are available yet." />
                         )}
                     </div>
                 </section>
