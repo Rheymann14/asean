@@ -83,7 +83,7 @@ class ProgrammeController extends Controller
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $imageName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
-            $destination = public_path('event');
+            $destination = public_path('event-images');
 
             if (!File::exists($destination)) {
                 File::makeDirectory($destination, 0755, true);
@@ -138,7 +138,7 @@ class ProgrammeController extends Controller
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $imageName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
-            $destination = public_path('event');
+            $destination = public_path('event-images');
 
             if (!File::exists($destination)) {
                 File::makeDirectory($destination, 0755, true);
@@ -147,7 +147,7 @@ class ProgrammeController extends Controller
             $file->move($destination, $imageName);
 
             if ($programme->image_url) {
-                $existing = public_path('event/' . ltrim($programme->image_url, '/'));
+                $existing = public_path('event-images/' . ltrim($programme->image_url, '/'));
                 if (File::exists($existing)) {
                     File::delete($existing);
                 }
@@ -185,7 +185,7 @@ class ProgrammeController extends Controller
     public function destroy(Programme $programme)
     {
         if ($programme->image_url) {
-            $existing = public_path('event/' . ltrim($programme->image_url, '/'));
+            $existing = public_path('event-images/' . ltrim($programme->image_url, '/'));
             if (File::exists($existing)) {
                 File::delete($existing);
             }
