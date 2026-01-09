@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -49,7 +50,7 @@ import {
     XCircle,
 } from 'lucide-react';
 
-type EventRow = {
+type ProgrammeRow = {
     id: number;
     title: string;
     starts_at?: string | null;
@@ -58,7 +59,7 @@ type EventRow = {
 
 type VenueRow = {
     id: number;
-    event_id: number | null;
+    programme_id: number | null;
     name: string;
     address: string;
     google_maps_url: string | null; // open link
@@ -67,11 +68,11 @@ type VenueRow = {
     updated_at?: string | null;
 
     // optional relation
-    event?: EventRow | null;
+    programme?: ProgrammeRow | null;
 };
 
 type PageProps = {
-    events?: EventRow[];
+    programmes?: ProgrammeRow[];
     venues?: VenueRow[];
 };
 
@@ -185,93 +186,24 @@ function MapPreview({
     );
 }
 
-const DEV_SAMPLE_EVENTS: EventRow[] = [
-    {
-        id: 1,
-        title: 'Main Event',
-        starts_at: '2026-01-15T09:00:00+08:00',
-        ends_at: '2026-01-15T17:00:00+08:00',
-    },
-    {
-        id: 2,
-        title: 'Workshop A',
-        starts_at: '2026-01-16T09:00:00+08:00',
-        ends_at: '2026-01-16T12:00:00+08:00',
-    },
-    {
-        id: 3,
-        title: 'Workshop B',
-        starts_at: '2026-01-16T13:30:00+08:00',
-        ends_at: '2026-01-16T16:30:00+08:00',
-    },
-];
-
-function makeDevSampleVenues(events: EventRow[]): VenueRow[] {
-    const byTitle = (t: string) => events.find((e) => e.title.toLowerCase() === t.toLowerCase())?.id ?? null;
-
-    const mainId = byTitle('Main Event') ?? events[0]?.id ?? null;
-    const aId = byTitle('Workshop A') ?? events[1]?.id ?? null;
-    const bId = byTitle('Workshop B') ?? events[2]?.id ?? null;
-
-    return [
-        {
-            id: 1,
-            event_id: mainId,
-            name: 'Commission on Higher Education (CHED)',
-            address: '55 C.P. Garcia Ave, Diliman, Quezon City, 1101 Metro Manila',
-            google_maps_url:
-                'https://www.google.com/maps/search/?api=1&query=Commission%20on%20Higher%20Education%20(CHED)%2055%20C.P.%20Garcia%20Ave%20Diliman%20Quezon%20City',
-            embed_url:
-                'https://www.google.com/maps?q=Commission%20on%20Higher%20Education%20(CHED)%2055%20C.P.%20Garcia%20Ave%20Diliman%20Quezon%20City&output=embed',
-            is_active: true,
-            updated_at: '2026-01-05T08:00:00+08:00',
-        },
-        {
-            id: 2,
-            event_id: aId,
-            name: 'UP Diliman – Convention Hall (Sample)',
-            address: 'University of the Philippines Diliman, Quezon City, Metro Manila',
-            google_maps_url: 'https://www.google.com/maps/search/?api=1&query=UP%20Diliman%20Convention%20Hall%20Quezon%20City',
-            embed_url: 'https://www.google.com/maps?q=UP%20Diliman%20Convention%20Hall%20Quezon%20City&output=embed',
-            is_active: true,
-            updated_at: '2026-01-06T10:20:00+08:00',
-        },
-        {
-            id: 3,
-            event_id: bId,
-            name: 'CHED – Training Room (Sample)',
-            address: 'CHED Complex, Diliman, Quezon City, Metro Manila',
-            google_maps_url: 'https://www.google.com/maps/search/?api=1&query=CHED%20Diliman%20Quezon%20City',
-            embed_url: 'https://www.google.com/maps?q=CHED%20Diliman%20Quezon%20City&output=embed',
-            is_active: true,
-            updated_at: '2026-01-04T15:45:00+08:00',
-        },
-    ];
+function showToastError(errors: Record<string, string | string[]>) {
+    const firstError = Object.values(errors ?? {})[0];
+    const message = Array.isArray(firstError) ? firstError[0] : firstError;
+    toast.error(message || 'Something went wrong. Please try again.');
 }
 
 export default function VenueManagement(props: PageProps) {
-    const serverEvents: EventRow[] = props.events ?? [];
-    const events: EventRow[] = React.useMemo(() => {
-        if (serverEvents.length > 0) return serverEvents;
-        if (!import.meta.env.DEV) return [];
-        return DEV_SAMPLE_EVENTS;
-    }, [serverEvents]);
+    const programmes: ProgrammeRow[] = React.useMemo(() => props.programmes ?? [], [props.programmes]);
+    const venues: VenueRow[] = React.useMemo(() => props.venues ?? [], [props.venues]);
 
-    const serverVenues: VenueRow[] = props.venues ?? [];
-    const venues: VenueRow[] = React.useMemo(() => {
-        if (serverVenues.length > 0) return serverVenues;
-        if (!import.meta.env.DEV) return [];
-        return makeDevSampleVenues(events);
-    }, [serverVenues, events]);
-
-    const eventById = React.useMemo(() => new Map(events.map((e) => [e.id, e])), [events]);
+    const programmeById = React.useMemo(() => new Map(programmes.map((p) => [p.id, p])), [programmes]);
 
     const resolvedVenues = React.useMemo(() => {
         return venues.map((v) => ({
             ...v,
-            event: v.event ?? (v.event_id ? eventById.get(v.event_id) ?? null : null),
+            programme: v.programme ?? (v.programme_id ? programmeById.get(v.programme_id) ?? null : null),
         }));
-    }, [venues, eventById]);
+    }, [venues, programmeById]);
 
     const [q, setQ] = React.useState('');
     const [eventFilter, setEventFilter] = React.useState<string>('all');
@@ -280,8 +212,8 @@ export default function VenueManagement(props: PageProps) {
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
         return resolvedVenues.filter((v) => {
-            const matchesQuery = !query || `${v.name} ${v.address} ${v.event?.title ?? ''}`.toLowerCase().includes(query);
-            const matchesEvent = eventFilter === 'all' || String(v.event_id ?? '') === eventFilter;
+            const matchesQuery = !query || `${v.name} ${v.address} ${v.programme?.title ?? ''}`.toLowerCase().includes(query);
+            const matchesEvent = eventFilter === 'all' || String(v.programme_id ?? '') === eventFilter;
             const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? v.is_active : !v.is_active);
             return matchesQuery && matchesEvent && matchesStatus;
         });
@@ -296,14 +228,14 @@ export default function VenueManagement(props: PageProps) {
     const [deleteTarget, setDeleteTarget] = React.useState<VenueRow | null>(null);
 
     const form = useForm<{
-        event_id: string;
+        programme_id: string;
         name: string;
         address: string;
         google_maps_url: string;
         embed_url: string;
         is_active: boolean;
     }>({
-        event_id: '',
+        programme_id: '',
         name: '',
         address: '',
         google_maps_url: '',
@@ -322,7 +254,7 @@ export default function VenueManagement(props: PageProps) {
     function openEdit(item: VenueRow) {
         setEditing(item);
         form.setData({
-            event_id: item.event_id ? String(item.event_id) : '',
+            programme_id: item.programme_id ? String(item.programme_id) : '',
             name: item.name ?? '',
             address: item.address ?? '',
             google_maps_url: item.google_maps_url ?? '',
@@ -337,7 +269,7 @@ export default function VenueManagement(props: PageProps) {
         e.preventDefault();
 
         form.transform((data) => ({
-            event_id: data.event_id ? Number(data.event_id) : null,
+            programme_id: data.programme_id ? Number(data.programme_id) : null,
             name: data.name.trim(),
             address: data.address.trim(),
             google_maps_url: data.google_maps_url.trim() || null,
@@ -350,7 +282,9 @@ export default function VenueManagement(props: PageProps) {
             onSuccess: () => {
                 setDialogOpen(false);
                 setEditing(null);
+                toast.success(`Venue ${editing ? 'updated' : 'created'}.`);
             },
+            onError: showToastError,
         } as const;
 
         if (editing) form.patch(ENDPOINTS.venues.update(editing.id), options);
@@ -358,7 +292,15 @@ export default function VenueManagement(props: PageProps) {
     }
 
     function toggleActive(item: VenueRow) {
-        router.patch(ENDPOINTS.venues.update(item.id), { is_active: !item.is_active }, { preserveScroll: true });
+        router.patch(
+            ENDPOINTS.venues.update(item.id),
+            { is_active: !item.is_active },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Venue ${item.is_active ? 'deactivated' : 'activated'}.`),
+                onError: () => toast.error('Unable to update venue status.'),
+            },
+        );
     }
 
     function requestDelete(item: VenueRow) {
@@ -375,6 +317,8 @@ export default function VenueManagement(props: PageProps) {
                 setDeleteOpen(false);
                 setDeleteTarget(null);
             },
+            onSuccess: () => toast.success('Venue deleted.'),
+            onError: () => toast.error('Unable to delete venue.'),
         });
     }
 
@@ -415,9 +359,9 @@ export default function VenueManagement(props: PageProps) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Events</SelectItem>
-                                    {events.map((e) => (
-                                        <SelectItem key={e.id} value={String(e.id)}>
-                                            {e.title}
+                                    {programmes.map((p) => (
+                                        <SelectItem key={p.id} value={String(p.id)}>
+                                            {p.title}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -503,7 +447,7 @@ export default function VenueManagement(props: PageProps) {
                                                 </TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    {v.event?.title ?? '—'}
+                                                    {v.programme?.title ?? '—'}
                                                 </TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
@@ -575,19 +519,21 @@ export default function VenueManagement(props: PageProps) {
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-1.5 sm:col-span-2">
                                         <div className="text-sm font-medium">Event</div>
-                                        <Select value={form.data.event_id} onValueChange={(v) => form.setData('event_id', v)}>
+                                        <Select value={form.data.programme_id} onValueChange={(v) => form.setData('programme_id', v)}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select event" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {events.map((e) => (
-                                                    <SelectItem key={e.id} value={String(e.id)}>
-                                                        {e.title}
+                                                {programmes.map((p) => (
+                                                    <SelectItem key={p.id} value={String(p.id)}>
+                                                        {p.title}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        {form.errors.event_id ? <div className="text-xs text-red-600">{form.errors.event_id}</div> : null}
+                                        {form.errors.programme_id ? (
+                                            <div className="text-xs text-red-600">{form.errors.programme_id}</div>
+                                        ) : null}
                                     </div>
 
                                     <div className="space-y-1.5 sm:col-span-2">

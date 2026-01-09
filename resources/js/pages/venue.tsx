@@ -4,7 +4,7 @@ import { Head } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapPin, ExternalLink, RefreshCcw, ArrowUpRight, CalendarDays } from 'lucide-react';
+import { MapPin, ExternalLink, ArrowUpRight, CalendarDays } from 'lucide-react';
 
 type TourismCard = {
     title: string;
@@ -52,126 +52,79 @@ const TOURISM_GALLERY: TourismCard[] = [
     },
 ];
 
+type ProgrammeRow = {
+    id: number;
+    title: string;
+    starts_at?: string | null;
+    ends_at?: string | null;
+};
+
+type VenueRow = {
+    id: number;
+    programme_id: number | null;
+    name: string;
+    address: string;
+    google_maps_url: string | null;
+    embed_url: string | null;
+    programme?: ProgrammeRow | null;
+};
+
 type EventVenue = {
     id: string;
     label: string;
     dateLabel?: string;
     venueName: string;
     address: string;
-    lat: number;
-    lng: number;
-    googleMapsLink: string;
+    googleMapsLink?: string;
+    embedUrl?: string | null;
     tip?: string;
 };
 
-const EVENT_VENUES: EventVenue[] = [
-    {
-        id: 'main',
-        label: 'Main Event',
-        dateLabel: 'Plenary Sessions',
-        venueName: 'Commission on Higher Education (CHED)',
-        address: '55 C.P. Garcia Ave, Diliman, Quezon City, 1101 Metro Manila',
-        lat: 14.653624,
-        lng: 121.0580601,
-        googleMapsLink: 'https://maps.app.goo.gl/9pLGF39s6FWwedoTA',
-        tip: 'Tap “Open in Google Maps” for exact pin and navigation directions.',
-    },
-    {
-        id: 'workshop-a',
-        label: 'Workshop A',
-        dateLabel: 'Breakout Session',
-        venueName: 'CHED (Workshop Room)',
-        address: '55 C.P. Garcia Ave, Diliman, Quezon City, 1101 Metro Manila',
-        lat: 14.653624,
-        lng: 121.0580601,
-        googleMapsLink: 'https://maps.app.goo.gl/9pLGF39s6FWwedoTA',
-        tip: 'Tap “Open in Google Maps” for exact pin and navigation directions.',
-    },
-    {
-        id: 'workshop-b',
-        label: 'Workshop B',
-        dateLabel: 'Breakout Session',
-        venueName: 'CHED (Function Hall)',
-        address: '55 C.P. Garcia Ave, Diliman, Quezon City, 1101 Metro Manila',
-        lat: 14.653624,
-        lng: 121.0580601,
-        googleMapsLink: 'https://maps.app.goo.gl/9pLGF39s6FWwedoTA',
-        tip: 'Tap “Open in Google Maps” for exact pin and navigation directions.',
-    },
-];
+type PageProps = {
+    venues?: VenueRow[];
+};
 
-/** Build stable embed URLs from coordinates */
-function googleEmbedFromLatLng(lat: number, lng: number) {
-    return `https://www.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
-}
-function osmEmbedFromLatLng(lat: number, lng: number, delta = 0.01) {
-    const left = lng - delta;
-    const bottom = lat - delta;
-    const right = lng + delta;
-    const top = lat + delta;
+function formatDateRange(startsAt?: string | null, endsAt?: string | null) {
+    if (!startsAt) return null;
+    const start = new Date(startsAt);
+    const end = endsAt ? new Date(endsAt) : null;
 
-    // OpenStreetMap expects bbox in lon/lat order
-    const bbox = `${left}%2C${bottom}%2C${right}%2C${top}`;
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+    if (Number.isNaN(start.getTime())) return null;
+    const date = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit' }).format(start);
+    const time = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' }).format(start);
+
+    if (!end || Number.isNaN(end.getTime())) return `${date} · ${time}`;
+    const endTime = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' }).format(end);
+    return `${date} · ${time}–${endTime}`;
 }
 
 function MapEmbed({
-    googleSrc,
-    fallbackSrc,
+    embedUrl,
     googleMapsLink,
-    timeoutMs = 7000,
 }: {
-    googleSrc: string;
-    fallbackSrc: string;
-    googleMapsLink: string;
-    timeoutMs?: number;
+    embedUrl?: string | null;
+    googleMapsLink?: string | null;
 }) {
-    const [src, setSrc] = React.useState(googleSrc);
     const [loaded, setLoaded] = React.useState(false);
-    const [usingFallback, setUsingFallback] = React.useState(false);
-    const [reloadKey, setReloadKey] = React.useState(0);
 
-    // refs to avoid stale state inside setTimeout
-    const loadedRef = React.useRef(false);
-    const timerRef = React.useRef<number | null>(null);
-
-    const clearTimer = React.useCallback(() => {
-        if (timerRef.current) {
-            window.clearTimeout(timerRef.current);
-            timerRef.current = null;
-        }
-    }, []);
-
-    const startGoogleAttempt = React.useCallback(() => {
-        clearTimer();
-
-        loadedRef.current = false;
-        setLoaded(false);
-        setUsingFallback(false);
-
-        // reset back to Google first
-        setSrc(googleSrc);
-        setReloadKey((k) => k + 1);
-
-        timerRef.current = window.setTimeout(() => {
-            if (!loadedRef.current) {
-                setSrc(fallbackSrc);
-                setUsingFallback(true);
-                setReloadKey((k) => k + 1);
-            }
-        }, timeoutMs);
-    }, [clearTimer, googleSrc, fallbackSrc, timeoutMs]);
-
-    React.useEffect(() => {
-        startGoogleAttempt();
-        return clearTimer;
-    }, [startGoogleAttempt, clearTimer]);
-
-    const handleLoad = () => {
-        loadedRef.current = true;
-        setLoaded(true);
-        clearTimer();
-    };
+    if (!embedUrl) {
+        return (
+            <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+                <div className="space-y-2">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">Map preview unavailable</p>
+                    <p>Add an embed URL to show the map here.</p>
+                    {googleMapsLink ? (
+                        <Button asChild className="mt-2 h-9 rounded-2xl bg-[#0033A0] text-white hover:opacity-95">
+                            <a href={googleMapsLink} target="_blank" rel="noopener noreferrer">
+                                Open in Google Maps
+                                <ExternalLink className="ml-2 h-4 w-4" />
+                            </a>
+                        </Button>
+                    ) : null}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="relative aspect-[16/9] w-full">
@@ -185,49 +138,23 @@ function MapEmbed({
             )}
 
             <iframe
-                key={reloadKey}
                 title="Venue location map"
-                src={src}
+                src={embedUrl}
                 className="h-full w-full"
                 loading="lazy"
                 allowFullScreen
-                onLoad={handleLoad}
+                onLoad={() => setLoaded(true)}
             />
-
-            {usingFallback && loaded && (
-                <div className="absolute bottom-3 left-3 right-3 z-20 flex flex-col gap-2 rounded-2xl border border-amber-200/70 bg-amber-50/90 p-3 text-amber-950 shadow-sm backdrop-blur dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs sm:text-sm">
-                        Google Maps didn’t load (privacy/adblock sometimes blocks it). Showing a preview map instead.
-                    </p>
-
-                    <div className="flex gap-2">
-                        <Button type="button" variant="secondary" className="h-9 rounded-2xl" onClick={startGoogleAttempt}>
-                            <RefreshCcw className="mr-2 h-4 w-4" />
-                            Retry
-                        </Button>
-
-                        <Button asChild className="h-9 rounded-2xl bg-[#0033A0] text-white hover:opacity-95">
-                            <a href={googleMapsLink} target="_blank" rel="noopener noreferrer">
-                                Open Google Maps
-                                <ExternalLink className="ml-2 h-4 w-4" />
-                            </a>
-                        </Button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
 
 function EventVenuePanel({ event }: { event: EventVenue }) {
-    const googleEmbedSrc = googleEmbedFromLatLng(event.lat, event.lng);
-    const osmEmbedSrc = osmEmbedFromLatLng(event.lat, event.lng, 0.01);
-
     return (
         <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-12">
             {/* Map (no backdrop-blur here to avoid iframe flakiness) */}
             <Card className="overflow-hidden rounded-2xl border-slate-200/70 bg-white shadow-[0_12px_40px_-25px_rgba(2,6,23,0.35)] dark:border-white/10 dark:bg-slate-900 lg:col-span-8">
-                <MapEmbed googleSrc={googleEmbedSrc} fallbackSrc={osmEmbedSrc} googleMapsLink={event.googleMapsLink} timeoutMs={7000} />
+                <MapEmbed embedUrl={event.embedUrl} googleMapsLink={event.googleMapsLink} />
             </Card>
 
             {/* Details */}
@@ -251,15 +178,25 @@ function EventVenuePanel({ event }: { event: EventVenue }) {
                 </div>
 
                 <div className="mt-6 grid gap-3">
-                    <Button
-                        asChild
-                        className="h-11 rounded-2xl bg-gradient-to-r from-[#0033A0] to-[#1e3c73] text-white hover:opacity-95"
-                    >
-                        <a href={event.googleMapsLink} target="_blank" rel="noopener noreferrer">
-                            Open in Google Maps
-                            <ExternalLink className="ml-2 h-4 w-4" />
-                        </a>
-                    </Button>
+                    {event.googleMapsLink ? (
+                        <Button
+                            asChild
+                            className="h-11 rounded-2xl bg-gradient-to-r from-[#0033A0] to-[#1e3c73] text-white hover:opacity-95"
+                        >
+                            <a href={event.googleMapsLink} target="_blank" rel="noopener noreferrer">
+                                Open in Google Maps
+                                <ExternalLink className="ml-2 h-4 w-4" />
+                            </a>
+                        </Button>
+                    ) : (
+                        <Button
+                            type="button"
+                            disabled
+                            className="h-11 rounded-2xl bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        >
+                            Google Maps link unavailable
+                        </Button>
+                    )}
                 </div>
 
                 <div className="mt-6 rounded-2xl border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100">
@@ -273,7 +210,20 @@ function EventVenuePanel({ event }: { event: EventVenue }) {
     );
 }
 
-export default function Venue() {
+export default function Venue({ venues = [] }: PageProps) {
+    const eventVenues = React.useMemo(() => {
+        return venues.map((venue) => ({
+            id: String(venue.id),
+            label: venue.programme?.title ?? venue.name,
+            dateLabel: formatDateRange(venue.programme?.starts_at ?? null, venue.programme?.ends_at ?? null) ?? undefined,
+            venueName: venue.name,
+            address: venue.address,
+            googleMapsLink: venue.google_maps_url ?? undefined,
+            embedUrl: venue.embed_url ?? undefined,
+            tip: 'Tap “Open in Google Maps” for the exact pin and navigation directions.',
+        }));
+    }, [venues]);
+
     return (
         <>
             <Head title="Venue" />
@@ -304,56 +254,62 @@ export default function Venue() {
 
                     {/* ✅ Event Tabs */}
                     <div className="mx-auto mt-10 max-w-6xl">
-                        <Tabs defaultValue={EVENT_VENUES[0]?.id ?? 'main'} className="w-full">
-                            <div className="flex items-center justify-center">
-                                <TabsList
-                                    className={[
-                                        // compact container
-                                        'h-auto w-full max-w-6xl justify-start gap-1.5 rounded-2xl border border-slate-200/70 bg-white/70 p-1.5',
-                                        'shadow-[0_10px_30px_-28px_rgba(2,6,23,0.25)] backdrop-blur-md',
-                                        // horizontal scroll (good for up to 20+)
-                                        'overflow-x-auto overflow-y-hidden',
-                                        '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-                                        'dark:border-white/10 dark:bg-slate-900/40',
-                                    ].join(' ')}
-                                >
-                                    {EVENT_VENUES.map((ev) => (
-                                        <TabsTrigger
-                                            key={ev.id}
-                                            value={ev.id}
-                                            className={[
-                                                // ✅ smaller pills
-                                                'h-8 shrink-0 rounded-full px-2.5 text-[11px] font-semibold leading-none',
-                                                'tracking-wide',
-                                                // ✅ subtle inactive
-                                                'data-[state=inactive]:text-slate-700 data-[state=inactive]:hover:bg-slate-100/80',
-                                                // ✅ strong active
-                                                'data-[state=active]:bg-[#0033A0] data-[state=active]:text-white',
-                                                // ✅ dark mode
-                                                'dark:data-[state=inactive]:text-slate-200 dark:data-[state=inactive]:hover:bg-white/10',
-                                                // ✅ keep long labels neat
-                                                'max-w-[160px] truncate',
-                                            ].join(' ')}
-                                            title={ev.label}
-                                        >
-                                            {ev.label}
-                                        </TabsTrigger>
+                        {eventVenues.length === 0 ? (
+                            <Card className="rounded-2xl border-dashed border-slate-200/70 bg-white/70 p-8 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+                                <p className="text-base font-semibold text-slate-900 dark:text-slate-100">No venues yet</p>
+                                <p className="mt-2">Please check back soon for venue updates.</p>
+                            </Card>
+                        ) : (
+                            <Tabs defaultValue={eventVenues[0]?.id ?? ''} className="w-full">
+                                <div className="flex items-center justify-center">
+                                    <TabsList
+                                        className={[
+                                            // compact container
+                                            'h-auto w-full max-w-6xl justify-start gap-1.5 rounded-2xl border border-slate-200/70 bg-white/70 p-1.5',
+                                            'shadow-[0_10px_30px_-28px_rgba(2,6,23,0.25)] backdrop-blur-md',
+                                            // horizontal scroll (good for up to 20+)
+                                            'overflow-x-auto overflow-y-hidden',
+                                            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                                            'dark:border-white/10 dark:bg-slate-900/40',
+                                        ].join(' ')}
+                                    >
+                                        {eventVenues.map((ev) => (
+                                            <TabsTrigger
+                                                key={ev.id}
+                                                value={ev.id}
+                                                className={[
+                                                    // ✅ smaller pills
+                                                    'h-8 shrink-0 rounded-full px-2.5 text-[11px] font-semibold leading-none',
+                                                    'tracking-wide',
+                                                    // ✅ subtle inactive
+                                                    'data-[state=inactive]:text-slate-700 data-[state=inactive]:hover:bg-slate-100/80',
+                                                    // ✅ strong active
+                                                    'data-[state=active]:bg-[#0033A0] data-[state=active]:text-white',
+                                                    // ✅ dark mode
+                                                    'dark:data-[state=inactive]:text-slate-200 dark:data-[state=inactive]:hover:bg-white/10',
+                                                    // ✅ keep long labels neat
+                                                    'max-w-[160px] truncate',
+                                                ].join(' ')}
+                                                title={ev.label}
+                                            >
+                                                {ev.label}
+                                            </TabsTrigger>
+                                        ))}
+                                    </TabsList>
+                                </div>
+
+                                <div className="mt-6">
+                                    {eventVenues.map((ev) => (
+                                        <TabsContent key={ev.id} value={ev.id} className="m-0 outline-none">
+                                            {/* key ensures map fully resets when switching events */}
+                                            <div key={ev.id} className="animate-in fade-in-0 duration-300">
+                                                <EventVenuePanel event={ev} />
+                                            </div>
+                                        </TabsContent>
                                     ))}
-                                </TabsList>
-                            </div>
-
-
-                            <div className="mt-6">
-                                {EVENT_VENUES.map((ev) => (
-                                    <TabsContent key={ev.id} value={ev.id} className="m-0 outline-none">
-                                        {/* key ensures map fully resets when switching events */}
-                                        <div key={ev.id} className="animate-in fade-in-0 duration-300">
-                                            <EventVenuePanel event={ev} />
-                                        </div>
-                                    </TabsContent>
-                                ))}
-                            </div>
-                        </Tabs>
+                                </div>
+                            </Tabs>
+                        )}
                     </div>
 
                     {/* Tourism section (unchanged) */}
