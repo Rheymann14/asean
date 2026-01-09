@@ -511,7 +511,7 @@ export default function EventManagement(props: PageProps) {
                                     <TableHeader>
                                         <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                             <TableHead className="min-w-[360px]">Event</TableHead>
-                                            <TableHead className="min-w-[200px]">Added by</TableHead>
+                              
                                             <TableHead className="min-w-[260px]">Schedule</TableHead>
                                             <TableHead className="min-w-[220px]">View more (PDF)</TableHead>
                                             <TableHead className="w-[160px]">Event Status</TableHead>
@@ -551,9 +551,7 @@ export default function EventManagement(props: PageProps) {
                                                     </div>
                                                 </TableCell>
 
-                                                <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    {p.created_by?.name ?? '—'}
-                                                </TableCell>
+                                      
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
                                                     <div className="font-medium">{formatDatePill(p.starts_at, p.ends_at)}</div>
