@@ -9,6 +9,7 @@ use App\Http\Controllers\UserTypeController;
 use App\Http\Controllers\IssuanceController;
 use App\Http\Controllers\ContactDetailController;
 use App\Http\Controllers\ProgrammeController;
+use App\Http\Controllers\VenueController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -18,9 +19,7 @@ Route::get('/', function () {
 
 Route::get('/contact-us', [ContactDetailController::class, 'publicIndex'])->name('contact-us');
 
-Route::get('/venue', function () {
-    return Inertia::render('venue');
-})->name('venue');
+Route::get('/venue', [VenueController::class, 'publicIndex'])->name('venue');
 
 Route::get('/event', [ProgrammeController::class, 'publicIndex'])->name('event');
 
@@ -37,7 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('participants/countries', CountryController::class)->only(['store', 'update', 'destroy']);
     Route::resource('participants/user-types', UserTypeController::class)->only(['store', 'update', 'destroy']);
 
-    Route::get('venue-management', fn () => Inertia::render('venue-management'))->name('venue-management');
+    Route::get('venue-management', [VenueController::class, 'index'])->name('venue-management');
+    Route::resource('venues', VenueController::class)->only(['store', 'update', 'destroy']);
 
     Route::get('issuances-management', [IssuanceController::class, 'index'])->name('issuances-management');
     Route::resource('issuances', IssuanceController::class)->only(['store', 'update', 'destroy']);
