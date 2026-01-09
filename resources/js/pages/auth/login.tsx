@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import AuthLayout from '@/layouts/auth-layout';
+import LoginLayout from '@/layouts/login-layout';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 
@@ -22,7 +22,7 @@ export default function Login({ status, canResetPassword, canRegister }: LoginPr
     const [showPassword, setShowPassword] = React.useState(false);
 
     return (
-        <AuthLayout title="" description="">
+        <LoginLayout>
             <Head title="Log in" />
 
             {/* ✅ use 100svh to avoid mobile vh whitespace */}
@@ -181,6 +181,6 @@ export default function Login({ status, canResetPassword, canRegister }: LoginPr
                     </div>
                 </div>
             </div>
-        </AuthLayout>
+        </LoginLayout>
     );
 }
