@@ -4,6 +4,7 @@ import { participant } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -120,21 +121,6 @@ const ENDPOINTS = {
     },
 };
 
-const ASEAN_DEFAULTS: Array<{ code: string; name: string }> = [
-    { code: 'BN', name: 'Brunei' },
-    { code: 'KH', name: 'Cambodia' },
-    { code: 'ID', name: 'Indonesia' },
-    { code: 'LA', name: 'Laos' },
-    { code: 'MY', name: 'Malaysia' },
-    { code: 'MM', name: 'Myanmar' },
-    { code: 'PH', name: 'Philippines' },
-    { code: 'SG', name: 'Singapore' },
-    { code: 'TH', name: 'Thailand' },
-    { code: 'VN', name: 'Vietnam' },
-];
-
-const USER_TYPE_DEFAULTS: Array<{ name: string }> = [{ name: 'Prime Minister' }, { name: 'Staff' }, { name: 'CHED' }];
-
 // ✅ Accent color requested (#00359c) — apply to all primary buttons
 const PRIMARY_BTN =
     'bg-[#00359c] text-white hover:bg-[#00359c]/90 focus-visible:ring-[#00359c]/30 dark:bg-[#00359c] dark:hover:bg-[#00359c]/90';
@@ -188,26 +174,6 @@ function EmptyState({
     );
 }
 
-const ASEAN_FLAG_BY_CODE: Record<string, string> = {
-    BN: 'brunei.jpg',
-    KH: 'cambodia.jpg',
-    ID: 'indonesia.jpg',
-    LA: 'laos.jpg',
-    MY: 'malaysia.jpg',
-    MM: 'myanmar.jpg',
-    PH: 'philippines.jpg',
-    SG: 'singapore.jpg',
-    TH: 'thailand.jpg',
-    VN: 'vietnam.jpg',
-};
-
-function getCountryFlagSrc(country?: Country | null) {
-    if (!country) return null;
-    if (country.flag_url) return country.flag_url; // backend override if provided
-    const file = ASEAN_FLAG_BY_CODE[(country.code || '').toUpperCase()];
-    return file ? `/asean/${file}` : null;
-}
-
 function FlagThumb({
     country,
     size = 20,
@@ -217,10 +183,17 @@ function FlagThumb({
     size?: number;
     eager?: boolean;
 }) {
-    const src = getCountryFlagSrc(country);
+    const candidates = React.useMemo(() => buildFlagCandidates(country.code, country.name, country.flag_url), [country.code, country.name, country.flag_url]);
+    const candidateKey = React.useMemo(() => candidates.join('|'), [candidates]);
     const [ok, setOk] = React.useState(true);
+    const [idx, setIdx] = React.useState(0);
 
-    React.useEffect(() => setOk(true), [src]);
+    const src = candidates[idx] ?? null;
+
+    React.useEffect(() => {
+        setOk(true);
+        setIdx(0);
+    }, [candidateKey]);
 
     return (
         <div
@@ -237,7 +210,10 @@ function FlagThumb({
                     loading={eager ? 'eager' : 'lazy'}
                     decoding="async"
                     draggable={false}
-                    onError={() => setOk(false)}
+                    onError={() => {
+                        if (idx < candidates.length - 1) setIdx((v) => v + 1);
+                        else setOk(false);
+                    }}
                 />
             ) : (
                 <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
@@ -292,6 +268,12 @@ function buildFlagCandidates(code: string, name: string, preferred?: string | nu
     return Array.from(new Set(candidates));
 }
 
+function showToastError(errors: Record<string, string | string[]>) {
+    const first = Object.values(errors)[0];
+    const message = Array.isArray(first) ? first[0] : first;
+    toast.error(message || 'Something went wrong. Please try again.');
+}
+
 function FlagImage({
     code,
     name,
@@ -331,82 +313,11 @@ function FlagImage({
 
 
 export default function ParticipantPage(props: PageProps) {
-    // ✅ fallback demo data if backend props not yet wired
-    const countries: Country[] =
-        props.countries?.length
-            ? props.countries
-            : ASEAN_DEFAULTS.map((c, idx) => ({
-                id: idx + 1,
-                code: c.code,
-                name: c.name,
-                is_active: true,
-                // ✅ auto-guess flags inside public/asean/
-                flag_url: `/asean/${ASEAN_FLAG_BY_CODE[c.code]?.toString() ?? ''}`,
+    const countries: Country[] = props.countries ?? [];
 
-            }));
+    const userTypes: UserType[] = props.userTypes ?? [];
 
-
-    const userTypes: UserType[] =
-        props.userTypes?.length
-            ? props.userTypes
-            : USER_TYPE_DEFAULTS.map((u, idx) => ({
-                id: idx + 1,
-                name: u.name,
-                slug: u.name.toLowerCase().replace(/\s+/g, '-'),
-                is_active: true,
-            }));
-
-    const serverParticipants: ParticipantRow[] = props.participants ?? [];
-
-    const participants: ParticipantRow[] = React.useMemo(() => {
-        if (serverParticipants.length > 0) return serverParticipants;
-        if (!import.meta.env.DEV) return [];
-
-        const countryIdByCode = new Map(countries.map((c) => [c.code, c.id]));
-        const typeIdByName = new Map(userTypes.map((u) => [u.name.toLowerCase(), u.id]));
-
-        const cId = (code: string) => countryIdByCode.get(code) ?? null;
-        const tId = (name: string) => typeIdByName.get(name.toLowerCase()) ?? null;
-
-        return [
-            {
-                id: 1,
-                full_name: 'H.E. Maria L. Santos',
-                email: 'pm.ph@asean.test',
-                country_id: cId('PH'),
-                user_type_id: tId('Prime Minister'),
-                is_active: true,
-                created_at: '2026-01-02T09:10:00+08:00',
-            },
-            {
-                id: 2,
-                full_name: 'Ahmad Firdaus',
-                email: 'staff.my@asean.test',
-                country_id: cId('MY'),
-                user_type_id: tId('Staff'),
-                is_active: true,
-                created_at: '2026-01-02T10:05:00+08:00',
-            },
-            {
-                id: 3,
-                full_name: 'Grace D. Mercado',
-                email: 'ched.ph@asean.test',
-                country_id: cId('PH'),
-                user_type_id: tId('CHED'),
-                is_active: false,
-                created_at: '2026-01-01T15:30:00+08:00',
-            },
-            {
-                id: 4,
-                full_name: 'Sokha Dara',
-                email: 'staff.kh@asean.test',
-                country_id: cId('KH'),
-                user_type_id: tId('Staff'),
-                is_active: true,
-                created_at: '2026-01-03T08:20:00+08:00',
-            },
-        ];
-    }, [serverParticipants, countries, userTypes]);
+    const participants: ParticipantRow[] = props.participants ?? [];
 
 
     // ---------------------------------------
@@ -572,20 +483,32 @@ export default function ParticipantPage(props: PageProps) {
                 onSuccess: () => {
                     setParticipantDialogOpen(false);
                     setEditingParticipant(null);
+                    toast.success('Participant updated.');
                 },
+                onError: showToastError,
             });
         } else {
             participantForm.post(ENDPOINTS.participants.store, {
                 preserveScroll: true,
                 onSuccess: () => {
                     setParticipantDialogOpen(false);
+                    toast.success('Participant added.');
                 },
+                onError: showToastError,
             });
         }
     }
 
     function toggleParticipantActive(p: ParticipantRow) {
-        router.patch(ENDPOINTS.participants.update(p.id), { is_active: !p.is_active }, { preserveScroll: true });
+        router.patch(
+            ENDPOINTS.participants.update(p.id),
+            { is_active: !p.is_active },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Participant ${p.is_active ? 'deactivated' : 'activated'}.`),
+                onError: () => toast.error('Unable to update participant status.'),
+            },
+        );
     }
 
     function requestDelete(kind: 'participant' | 'country' | 'userType', id: number, label: string) {
@@ -611,6 +534,8 @@ export default function ParticipantPage(props: PageProps) {
                 setDeleteOpen(false);
                 setDeleteTarget(null);
             },
+            onSuccess: () => toast.success('Record deleted.'),
+            onError: () => toast.error('Unable to delete record.'),
         });
     }
 
@@ -674,7 +599,9 @@ export default function ParticipantPage(props: PageProps) {
             onSuccess: () => {
                 setCountryDialogOpen(false);
                 setEditingCountry(null);
+                toast.success(`Country ${editingCountry ? 'updated' : 'added'}.`);
             },
+            onError: showToastError,
         } as const;
 
         if (editingCountry) {
@@ -685,7 +612,15 @@ export default function ParticipantPage(props: PageProps) {
     }
 
     function toggleCountryActive(c: Country) {
-        router.patch(ENDPOINTS.countries.update(c.id), { is_active: !c.is_active }, { preserveScroll: true });
+        router.patch(
+            ENDPOINTS.countries.update(c.id),
+            { is_active: !c.is_active },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Country ${c.is_active ? 'deactivated' : 'activated'}.`),
+                onError: () => toast.error('Unable to update country status.'),
+            },
+        );
     }
 
     // User types
@@ -717,18 +652,32 @@ export default function ParticipantPage(props: PageProps) {
                 onSuccess: () => {
                     setUserTypeDialogOpen(false);
                     setEditingUserType(null);
+                    toast.success('User type updated.');
                 },
+                onError: showToastError,
             });
         } else {
             userTypeForm.post(ENDPOINTS.userTypes.store, {
                 preserveScroll: true,
-                onSuccess: () => setUserTypeDialogOpen(false),
+                onSuccess: () => {
+                    setUserTypeDialogOpen(false);
+                    toast.success('User type added.');
+                },
+                onError: showToastError,
             });
         }
     }
 
     function toggleUserTypeActive(u: UserType) {
-        router.patch(ENDPOINTS.userTypes.update(u.id), { is_active: !u.is_active }, { preserveScroll: true });
+        router.patch(
+            ENDPOINTS.userTypes.update(u.id),
+            { is_active: !u.is_active },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`User type ${u.is_active ? 'deactivated' : 'activated'}.`),
+                onError: () => toast.error('Unable to update user type status.'),
+            },
+        );
     }
 
     return (
