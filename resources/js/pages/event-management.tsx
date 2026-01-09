@@ -598,16 +598,16 @@ export default function EventManagement(props: PageProps) {
 
                                                         <DropdownMenuContent align="end" className="w-52">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => openEdit(p)}>
+                                                            <DropdownMenuItem onSelect={() => openEdit(p)}>
                                                                 <Pencil className="mr-2 h-4 w-4" />
                                                                 Edit
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => toggleActive(p)}>
+                                                            <DropdownMenuItem onSelect={() => toggleActive(p)}>
                                                                 <BadgeCheck className="mr-2 h-4 w-4" />
                                                                 {p.is_active ? 'Set Inactive' : 'Set Active'}
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => requestDelete(p)}>
+                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onSelect={() => requestDelete(p)}>
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 Delete
                                                             </DropdownMenuItem>
