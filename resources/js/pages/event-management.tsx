@@ -365,6 +365,8 @@ export default function EventManagement(props: PageProps) {
     function submit(e: React.FormEvent) {
         e.preventDefault();
 
+        const hasUploads = Boolean(form.data.image || form.data.pdf);
+
         form.transform((data) => {
             const payload: any = {
                 title: data.title.trim(),
@@ -377,13 +379,14 @@ export default function EventManagement(props: PageProps) {
             // only send if selected (so editing won't overwrite existing files)
             if (data.image) payload.image = data.image;
             if (data.pdf) payload.pdf = data.pdf;
+            if (editing) payload._method = 'patch';
 
             return payload;
         });
 
         const options = {
             preserveScroll: true,
-            forceFormData: true,
+            forceFormData: hasUploads,
             onSuccess: () => {
                 setDialogOpen(false);
                 setEditing(null);
@@ -392,7 +395,7 @@ export default function EventManagement(props: PageProps) {
             onError: (errors: Record<string, string | string[]>) => showToastError(errors),
         } as const;
 
-        if (editing) form.patch(ENDPOINTS.programmes.update(editing.id), options);
+        if (editing) form.post(ENDPOINTS.programmes.update(editing.id), options);
         else form.post(ENDPOINTS.programmes.store, options);
     }
 
