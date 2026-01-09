@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -65,29 +64,6 @@ type Issuance = {
 type PageProps = {
     issuances?: Issuance[];
 };
-
-const DEV_SAMPLE_ISSUANCES: Issuance[] = [
-    {
-        id: 1,
-        title: 'Self-Registration User Guide',
-        issued_at: '2026-01-05',
-        pdf_url: '/downloadables/asean2025.pdf',
-        is_active: true,
-        created_at: '2026-01-05T08:00:00+08:00',
-        updated_at: '2026-01-05T08:00:00+08:00',
-    },
-    {
-        id: 2,
-        title: 'CHED Memorandum – ASEAN PH 2026',
-        issued_at: '2026-01-03',
-        pdf_url: '/downloadables/ched_memo.pdf',
-        is_active: true,
-        created_at: '2026-01-03T10:00:00+08:00',
-        updated_at: '2026-01-04T09:15:00+08:00',
-    },
-
-];
-
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -195,15 +171,7 @@ function PdfThumb({ href, title }: { href: string; title: string }) {
 }
 
 export default function IssuancesManagement(props: PageProps) {
-    const serverIssuances = props.issuances ?? [];
-
-    const issuances = React.useMemo(() => {
-        // If backend provides data, use it
-        if (serverIssuances.length > 0) return serverIssuances;
-
-        // DEV-only: show sample data when DB is empty (won't appear in production builds)
-        return import.meta.env.DEV ? DEV_SAMPLE_ISSUANCES : [];
-    }, [serverIssuances]);
+    const issuances = props.issuances ?? [];
 
     const [view, setView] = React.useState<'grid' | 'table'>('grid');
     const [q, setQ] = React.useState('');
@@ -226,12 +194,10 @@ export default function IssuancesManagement(props: PageProps) {
         title: string;
         issued_at: string;
         pdf: File | null;
-        is_active: boolean;
     }>({
         title: '',
         issued_at: '',
         pdf: null,
-        is_active: true,
     });
 
     const filtered = React.useMemo(() => {
@@ -260,7 +226,6 @@ export default function IssuancesManagement(props: PageProps) {
             title: item.title ?? '',
             issued_at: item.issued_at ?? '',
             pdf: null,
-            is_active: !!item.is_active,
         });
         form.clearErrors();
         if (pdfPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(pdfPreviewUrl);
@@ -288,7 +253,6 @@ export default function IssuancesManagement(props: PageProps) {
             const payload: any = {
                 title: data.title.trim(),
                 issued_at: data.issued_at,
-                is_active: data.is_active,
             };
             if (data.pdf) payload.pdf = data.pdf;
             return payload;
@@ -455,11 +419,6 @@ export default function IssuancesManagement(props: PageProps) {
                                             <div className="mt-3 space-y-1">
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span className="text-xs font-medium text-slate-500">{formatDate(item.issued_at)}</span>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs text-slate-500">Active</span>
-                                                        <Switch checked={item.is_active} onCheckedChange={() => toggleActive(item)} />
-                                                    </div>
                                                 </div>
 
                                                 <p className="line-clamp-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -487,7 +446,6 @@ export default function IssuancesManagement(props: PageProps) {
                                                 <TableHead>Title</TableHead>
                                                 <TableHead className="w-[150px]">Issued</TableHead>
                                                 <TableHead className="w-[140px]">Status</TableHead>
-                                                <TableHead className="w-[140px]">Toggle</TableHead>
                                                 <TableHead className="w-[170px]">Updated</TableHead>
                                                 <TableHead className="w-[120px] text-right">Actions</TableHead>
                                             </TableRow>
@@ -533,13 +491,6 @@ export default function IssuancesManagement(props: PageProps) {
 
                                                     <TableCell>
                                                         <StatusBadge active={item.is_active} />
-                                                    </TableCell>
-
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <Switch checked={item.is_active} onCheckedChange={() => toggleActive(item)} />
-                                                            <span className="text-xs text-slate-500">{item.is_active ? 'On' : 'Off'}</span>
-                                                        </div>
                                                     </TableCell>
 
                                                     <TableCell className="text-slate-700 dark:text-slate-300">
@@ -603,14 +554,6 @@ export default function IssuancesManagement(props: PageProps) {
                                 <div className="text-sm font-medium">Issued date</div>
                                 <Input type="date" value={form.data.issued_at} onChange={(e) => form.setData('issued_at', e.target.value)} />
                                 {form.errors.issued_at ? <div className="text-xs text-red-600">{form.errors.issued_at}</div> : null}
-                            </div>
-
-                            <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 dark:border-slate-800">
-                                <div className="space-y-0.5">
-                                    <div className="text-sm font-medium">Active</div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400">Inactive issuances won’t show on the public Issuances page.</div>
-                                </div>
-                                <Switch checked={form.data.is_active} onCheckedChange={(v) => form.setData('is_active', !!v)} />
                             </div>
 
                             <div className="space-y-1.5 sm:col-span-2">

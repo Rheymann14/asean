@@ -6,6 +6,7 @@ use Laravel\Fortify\Features;
 use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\UserTypeController;
+use App\Http\Controllers\IssuanceController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -24,9 +25,7 @@ Route::get('/venue', function () {
 Route::get('/programme', fn () => Inertia::render('programme'))->name('programme');
 
 
-Route::get('/issuances', function () {
-    return Inertia::render('issuances');
-})->name('issuances');
+Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issuances');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
@@ -40,7 +39,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('venue-management', fn () => Inertia::render('venue-management'))->name('venue-management');
 
-    Route::get('issuances-management', fn () => Inertia::render('issuances-management'))->name('issuances-management');
+    Route::get('issuances-management', [IssuanceController::class, 'index'])->name('issuances-management');
+    Route::resource('issuances', IssuanceController::class)->only(['store', 'update', 'destroy']);
 
     Route::get('contact-details', fn () => Inertia::render('contact-details'))->name('contact-details');
 
