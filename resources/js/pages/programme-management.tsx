@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -54,6 +54,9 @@ type ProgrammeRow = {
     tag: string;
     title: string;
     description: string;
+    created_by?: {
+        name: string;
+    } | null;
 
     starts_at: string | null; // ISO string
     ends_at: string | null; // ISO string
@@ -82,52 +85,6 @@ const ENDPOINTS = {
 
 const PRIMARY_BTN =
     'bg-[#00359c] text-white hover:bg-[#00359c]/90 focus-visible:ring-[#00359c]/30 dark:bg-[#00359c] dark:hover:bg-[#00359c]/90';
-
-// -------------------- DEV SAMPLE DATA --------------------
-const DEV_SAMPLE_PROGRAMMES: ProgrammeRow[] = [
-    {
-        id: 1,
-        tag: 'Plenary & Panels',
-        title: 'Track Discussions',
-        description:
-            'Track-based panels and guided discussions. Share insights, build outputs, and align next steps across participating groups.',
-        starts_at: '2026-03-02T09:00:00+08:00',
-        ends_at: '2026-03-02T17:00:00+08:00',
-        location: 'Conference Hall B',
-        image_url: '/event/event1.jpg',
-        pdf_url: '/docs/programme/track-discussions.pdf',
-        is_active: true,
-        updated_at: '2026-01-05T08:00:00+08:00',
-    },
-    {
-        id: 2,
-        tag: 'Workshops & Outputs',
-        title: 'Facilitated Workshops',
-        description:
-            'Facilitated activities for planning, drafting commitments, and building outputs participants can bring back to their institutions.',
-        starts_at: '2026-03-03T09:00:00+08:00',
-        ends_at: '2026-03-03T16:30:00+08:00',
-        location: 'Workshop Rooms',
-        image_url: '/event/event2.jpg',
-        pdf_url: '/docs/programme/facilitated-workshops.pdf',
-        is_active: true,
-        updated_at: '2026-01-05T09:15:00+08:00',
-    },
-    {
-        id: 3,
-        tag: 'Highlights & Closing',
-        title: 'Closing Session',
-        description:
-            'Key moments, official updates, and downloadable references—kept in one place for participants and partners.',
-        starts_at: '2026-03-04T09:00:00+08:00',
-        ends_at: '2026-03-04T12:00:00+08:00',
-        location: 'Main Auditorium',
-        image_url: '/event/event3.jpg',
-        pdf_url: null,
-        is_active: true,
-        updated_at: '2026-01-06T10:05:00+08:00',
-    },
-];
 
 // -------------------- helpers --------------------
 function formatDatePill(starts_at?: string | null, ends_at?: string | null) {
@@ -185,6 +142,31 @@ function basename(u: string) {
     return parts[parts.length - 1] ?? u;
 }
 
+function resolvePdfUrl(pdfUrl?: string | null) {
+    if (!pdfUrl) return null;
+    if (pdfUrl.startsWith('http') || pdfUrl.startsWith('/')) return pdfUrl;
+    return `/downloadables/${pdfUrl}`;
+}
+
+function resolveImageUrl(imageUrl?: string | null) {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
+    return `/event/${imageUrl}`;
+}
+
+function getEventStatus(starts_at?: string | null, ends_at?: string | null) {
+    if (!starts_at) return 'open';
+    const start = new Date(starts_at);
+    if (Number.isNaN(start.getTime())) return 'open';
+
+    const end = ends_at ? new Date(ends_at) : null;
+    const now = new Date();
+
+    if (end && !Number.isNaN(end.getTime()) && now > end) return 'closed';
+    if (now < start) return 'open';
+    return 'ongoing';
+}
+
 function StatusBadge({ active }: { active: boolean }) {
     return (
         <span
@@ -196,9 +178,31 @@ function StatusBadge({ active }: { active: boolean }) {
             )}
         >
             {active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-            {active ? 'Open' : 'Closed'}
+            {active ? 'Active' : 'Inactive'}
         </span>
     );
+}
+
+function EventStatusBadge({ status }: { status: 'open' | 'ongoing' | 'closed' }) {
+    const styles = {
+        open: 'bg-sky-600/10 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+        ongoing: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+        closed: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    } as const;
+
+    const labels = {
+        open: 'Open',
+        ongoing: 'Ongoing',
+        closed: 'Closed',
+    } as const;
+
+    return <span className={cn('inline-flex rounded-full px-2.5 py-1 text-[12px] font-medium', styles[status])}>{labels[status]}</span>;
+}
+
+function showToastError(errors: Record<string, string | string[]>) {
+    const firstError = Object.values(errors ?? {})[0];
+    const message = Array.isArray(firstError) ? firstError[0] : firstError;
+    toast.error(message || 'Something went wrong. Please try again.');
 }
 
 function EmptyState({
@@ -229,21 +233,19 @@ function EmptyState({
 export default function ProgrammeManagement(props: PageProps) {
     const serverProgrammes: ProgrammeRow[] = props.programmes ?? [];
 
-    const programmes: ProgrammeRow[] = React.useMemo(() => {
-        if (serverProgrammes.length > 0) return serverProgrammes;
-        if (!import.meta.env.DEV) return [];
-        return DEV_SAMPLE_PROGRAMMES;
-    }, [serverProgrammes]);
+    const programmes: ProgrammeRow[] = React.useMemo(() => serverProgrammes, [serverProgrammes]);
 
     // filters
     const [q, setQ] = React.useState('');
-    const [statusFilter, setStatusFilter] = React.useState<'all' | 'open' | 'closed'>('all');
+    const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
 
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
         return programmes.filter((p) => {
-            const matchesQuery = !query || `${p.title} ${p.tag} ${p.location} ${p.description}`.toLowerCase().includes(query);
-            const matchesStatus = statusFilter === 'all' || (statusFilter === 'open' ? p.is_active : !p.is_active);
+            const createdBy = p.created_by?.name ?? '';
+            const matchesQuery =
+                !query || `${p.title} ${p.tag} ${p.location} ${p.description} ${createdBy}`.toLowerCase().includes(query);
+            const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? p.is_active : !p.is_active);
             return matchesQuery && matchesStatus;
         });
     }, [programmes, q, statusFilter]);
@@ -318,8 +320,8 @@ export default function ProgrammeManagement(props: PageProps) {
     function openEdit(item: ProgrammeRow) {
         setEditing(item);
 
-        setCurrentImageUrl(item.image_url ?? null);
-        setCurrentPdfUrl(item.pdf_url ?? null);
+        setCurrentImageUrl(resolveImageUrl(item.image_url));
+        setCurrentPdfUrl(resolvePdfUrl(item.pdf_url));
 
         form.setData({
             tag: item.tag ?? '',
@@ -336,8 +338,8 @@ export default function ProgrammeManagement(props: PageProps) {
         form.clearErrors();
 
         // show existing as "preview" until new upload
-        resetImagePreview(item.image_url ?? null);
-        setPdfLabel(item.pdf_url ? basename(item.pdf_url) : '');
+        resetImagePreview(resolveImageUrl(item.image_url));
+        setPdfLabel(item.pdf_url ? basename(resolvePdfUrl(item.pdf_url) ?? item.pdf_url) : '');
 
         setDialogOpen(true);
     }
@@ -377,7 +379,7 @@ export default function ProgrammeManagement(props: PageProps) {
                 location: data.location.trim(),
                 starts_at: data.starts_at ? new Date(data.starts_at).toISOString() : null,
                 ends_at: data.ends_at ? new Date(data.ends_at).toISOString() : null,
-                is_active: !!data.is_active,
+                is_active: editing ? !!editing.is_active : !!data.is_active,
             };
 
             // only send if selected (so editing won't overwrite existing files)
@@ -393,7 +395,9 @@ export default function ProgrammeManagement(props: PageProps) {
             onSuccess: () => {
                 setDialogOpen(false);
                 setEditing(null);
+                toast.success(`Programme ${editing ? 'updated' : 'created'}.`);
             },
+            onError: (errors: Record<string, string | string[]>) => showToastError(errors),
         } as const;
 
         if (editing) form.patch(ENDPOINTS.programmes.update(editing.id), options);
@@ -401,7 +405,15 @@ export default function ProgrammeManagement(props: PageProps) {
     }
 
     function toggleActive(item: ProgrammeRow) {
-        router.patch(ENDPOINTS.programmes.update(item.id), { is_active: !item.is_active }, { preserveScroll: true });
+        router.patch(
+            ENDPOINTS.programmes.update(item.id),
+            { is_active: !item.is_active },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Programme ${item.is_active ? 'deactivated' : 'activated'}.`),
+                onError: () => toast.error('Unable to update programme status.'),
+            },
+        );
     }
 
     function requestDelete(item: ProgrammeRow) {
@@ -418,6 +430,8 @@ export default function ProgrammeManagement(props: PageProps) {
                 setDeleteOpen(false);
                 setDeleteTarget(null);
             },
+            onSuccess: () => toast.success('Programme deleted.'),
+            onError: () => toast.error('Unable to delete programme.'),
         });
     }
 
@@ -457,8 +471,8 @@ export default function ProgrammeManagement(props: PageProps) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All</SelectItem>
-                                    <SelectItem value="open">Open</SelectItem>
-                                    <SelectItem value="closed">Closed</SelectItem>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="inactive">Inactive</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -490,9 +504,11 @@ export default function ProgrammeManagement(props: PageProps) {
                                     <TableHeader>
                                         <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                             <TableHead className="min-w-[360px]">Programme</TableHead>
+                                            <TableHead className="min-w-[200px]">Added by</TableHead>
                                             <TableHead className="min-w-[260px]">Schedule</TableHead>
                                             <TableHead className="min-w-[220px]">Location</TableHead>
                                             <TableHead className="min-w-[220px]">View more (PDF)</TableHead>
+                                            <TableHead className="w-[160px]">Event Status</TableHead>
                                             <TableHead className="w-[140px]">Status</TableHead>
                                             <TableHead className="w-[180px]">Updated</TableHead>
                                             <TableHead className="w-[120px] text-right">Action</TableHead>
@@ -505,17 +521,22 @@ export default function ProgrammeManagement(props: PageProps) {
                                                 <TableCell className="font-semibold text-slate-900 dark:text-slate-100">
                                                     <div className="flex items-center gap-3">
                                                         <div className="grid size-10 place-items-center overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                            {p.image_url ? (
-                                                                <img
-                                                                    src={p.image_url}
-                                                                    alt={p.title}
-                                                                    className="h-full w-full object-cover"
-                                                                    loading="lazy"
-                                                                    draggable={false}
-                                                                />
-                                                            ) : (
-                                                                <ImageUp className="h-4 w-4 text-slate-500" />
-                                                            )}
+                                                            {(() => {
+                                                                const imageUrl = resolveImageUrl(p.image_url);
+                                                                if (!imageUrl) {
+                                                                    return <ImageUp className="h-4 w-4 text-slate-500" />;
+                                                                }
+
+                                                                return (
+                                                                    <img
+                                                                        src={imageUrl}
+                                                                        alt={p.title}
+                                                                        className="h-full w-full object-cover"
+                                                                        loading="lazy"
+                                                                        draggable={false}
+                                                                    />
+                                                                );
+                                                            })()}
                                                         </div>
 
                                                         <div className="min-w-0">
@@ -526,6 +547,10 @@ export default function ProgrammeManagement(props: PageProps) {
                                                 </TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
+                                                    {p.created_by?.name ?? '—'}
+                                                </TableCell>
+
+                                                <TableCell className="text-slate-700 dark:text-slate-300">
                                                     <div className="font-medium">{formatDatePill(p.starts_at, p.ends_at)}</div>
                                                     <div className="text-xs text-slate-500 dark:text-slate-400">{daysToGo(p.starts_at) ?? '—'}</div>
                                                 </TableCell>
@@ -533,21 +558,32 @@ export default function ProgrammeManagement(props: PageProps) {
                                                 <TableCell className="text-slate-700 dark:text-slate-300">{p.location}</TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    {p.pdf_url ? (
-                                                        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                                            <FileText className="h-4 w-4 text-[#00359c]" />
-                                                            <span className="max-w-[260px] truncate">{basename(p.pdf_url)}</span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-xs text-slate-500 dark:text-slate-400">—</span>
-                                                    )}
+                                                    {(() => {
+                                                        const pdfUrl = resolvePdfUrl(p.pdf_url);
+                                                        if (!pdfUrl) {
+                                                            return <span className="text-xs text-slate-500 dark:text-slate-400">—</span>;
+                                                        }
+
+                                                        return (
+                                                            <a
+                                                                href={pdfUrl}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-[#00359c] hover:text-[#00359c] dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                                                            >
+                                                                <FileText className="h-4 w-4 text-[#00359c]" />
+                                                                <span className="max-w-[260px] truncate">{basename(pdfUrl)}</span>
+                                                            </a>
+                                                        );
+                                                    })()}
                                                 </TableCell>
 
                                                 <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <StatusBadge active={p.is_active} />
-                                                        <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} />
-                                                    </div>
+                                                    <EventStatusBadge status={getEventStatus(p.starts_at, p.ends_at)} />
+                                                </TableCell>
+
+                                                <TableCell>
+                                                    <StatusBadge active={p.is_active} />
                                                 </TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">{formatDateTimeSafe(p.updated_at)}</TableCell>
@@ -568,7 +604,7 @@ export default function ProgrammeManagement(props: PageProps) {
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => toggleActive(p)}>
                                                                 <BadgeCheck className="mr-2 h-4 w-4" />
-                                                                {p.is_active ? 'Set Closed' : 'Set Open'}
+                                                                {p.is_active ? 'Set Inactive' : 'Set Active'}
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => requestDelete(p)}>
@@ -702,14 +738,6 @@ export default function ProgrammeManagement(props: PageProps) {
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                        <div className="space-y-0.5">
-                                            <div className="text-sm font-medium">Open</div>
-                                            <div className="text-xs text-slate-600 dark:text-slate-400">Closed items won’t appear as “Open” on public.</div>
-                                        </div>
-                                        <Switch checked={form.data.is_active} onCheckedChange={(v) => form.setData('is_active', !!v)} />
                                     </div>
                                 </div>
                             </div>
