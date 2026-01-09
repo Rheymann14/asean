@@ -51,7 +51,6 @@ import {
 
 type ProgrammeRow = {
     id: number;
-    tag: string;
     title: string;
     description: string;
     created_by?: {
@@ -60,7 +59,6 @@ type ProgrammeRow = {
 
     starts_at: string | null; // ISO string
     ends_at: string | null; // ISO string
-    location: string;
 
     image_url: string | null; // server-provided
     pdf_url: string | null; // server-provided (for "View more")
@@ -155,15 +153,15 @@ function resolveImageUrl(imageUrl?: string | null) {
 }
 
 function getEventStatus(starts_at?: string | null, ends_at?: string | null) {
-    if (!starts_at) return 'open';
+    if (!starts_at) return 'upcoming';
     const start = new Date(starts_at);
-    if (Number.isNaN(start.getTime())) return 'open';
+    if (Number.isNaN(start.getTime())) return 'upcoming';
 
     const end = ends_at ? new Date(ends_at) : null;
     const now = new Date();
 
     if (end && !Number.isNaN(end.getTime()) && now > end) return 'closed';
-    if (now < start) return 'open';
+    if (now < start) return 'upcoming';
     return 'ongoing';
 }
 
@@ -183,15 +181,15 @@ function StatusBadge({ active }: { active: boolean }) {
     );
 }
 
-function EventStatusBadge({ status }: { status: 'open' | 'ongoing' | 'closed' }) {
+function EventStatusBadge({ status }: { status: 'upcoming' | 'ongoing' | 'closed' }) {
     const styles = {
-        open: 'bg-sky-600/10 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+        upcoming: 'bg-sky-600/10 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
         ongoing: 'bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
         closed: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     } as const;
 
     const labels = {
-        open: 'Open',
+        upcoming: 'Upcoming',
         ongoing: 'Ongoing',
         closed: 'Closed',
     } as const;
@@ -238,17 +236,19 @@ export default function EventManagement(props: PageProps) {
     // filters
     const [q, setQ] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
+    const [eventFilter, setEventFilter] = React.useState<'all' | 'upcoming' | 'ongoing' | 'closed'>('all');
 
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
         return programmes.filter((p) => {
             const createdBy = p.created_by?.name ?? '';
-            const matchesQuery =
-                !query || `${p.title} ${p.tag} ${p.location} ${p.description} ${createdBy}`.toLowerCase().includes(query);
+            const matchesQuery = !query || `${p.title} ${p.description} ${createdBy}`.toLowerCase().includes(query);
             const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? p.is_active : !p.is_active);
-            return matchesQuery && matchesStatus;
+            const phase = getEventStatus(p.starts_at, p.ends_at);
+            const matchesEvent = eventFilter === 'all' || phase === eventFilter;
+            return matchesQuery && matchesStatus && matchesEvent;
         });
-    }, [programmes, q, statusFilter]);
+    }, [programmes, q, statusFilter, eventFilter]);
 
     // dialogs + editing
     const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -275,22 +275,18 @@ export default function EventManagement(props: PageProps) {
     }, [imagePreview]);
 
     const form = useForm<{
-        tag: string;
         title: string;
         description: string;
         starts_at: string; // datetime-local
         ends_at: string; // datetime-local
-        location: string;
         image: File | null;
         pdf: File | null;
         is_active: boolean;
     }>({
-        tag: '',
         title: '',
         description: '',
         starts_at: '',
         ends_at: '',
-        location: '',
         image: null,
         pdf: null,
         is_active: true,
@@ -324,12 +320,10 @@ export default function EventManagement(props: PageProps) {
         setCurrentPdfUrl(resolvePdfUrl(item.pdf_url));
 
         form.setData({
-            tag: item.tag ?? '',
             title: item.title ?? '',
             description: item.description ?? '',
             starts_at: toLocalInputValue(item.starts_at),
             ends_at: toLocalInputValue(item.ends_at),
-            location: item.location ?? '',
             image: null,
             pdf: null,
             is_active: !!item.is_active,
@@ -373,10 +367,8 @@ export default function EventManagement(props: PageProps) {
 
         form.transform((data) => {
             const payload: any = {
-                tag: data.tag.trim(),
                 title: data.title.trim(),
                 description: data.description.trim(),
-                location: data.location.trim(),
                 starts_at: data.starts_at ? new Date(data.starts_at).toISOString() : null,
                 ends_at: data.ends_at ? new Date(data.ends_at).toISOString() : null,
                 is_active: editing ? !!editing.is_active : !!data.is_active,
@@ -460,7 +452,7 @@ export default function EventManagement(props: PageProps) {
                                 <Input
                                     value={q}
                                     onChange={(e) => setQ(e.target.value)}
-                                    placeholder="Search title, tag, location..."
+                                    placeholder="Search title or description..."
                                     className="pl-9"
                                 />
                             </div>
@@ -473,6 +465,18 @@ export default function EventManagement(props: PageProps) {
                                     <SelectItem value="all">All</SelectItem>
                                     <SelectItem value="active">Active</SelectItem>
                                     <SelectItem value="inactive">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            <Select value={eventFilter} onValueChange={(v) => setEventFilter(v as any)}>
+                                <SelectTrigger className="w-full sm:w-[190px]">
+                                    <SelectValue placeholder="Event phase" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All phases</SelectItem>
+                                    <SelectItem value="ongoing">Ongoing</SelectItem>
+                                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                                    <SelectItem value="closed">Closed</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -506,7 +510,6 @@ export default function EventManagement(props: PageProps) {
                                             <TableHead className="min-w-[360px]">Event</TableHead>
                                             <TableHead className="min-w-[200px]">Added by</TableHead>
                                             <TableHead className="min-w-[260px]">Schedule</TableHead>
-                                            <TableHead className="min-w-[220px]">Location</TableHead>
                                             <TableHead className="min-w-[220px]">View more (PDF)</TableHead>
                                             <TableHead className="w-[160px]">Event Status</TableHead>
                                             <TableHead className="w-[140px]">Status</TableHead>
@@ -540,7 +543,6 @@ export default function EventManagement(props: PageProps) {
                                                         </div>
 
                                                         <div className="min-w-0">
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">{p.tag}</div>
                                                             <div className="truncate">{p.title}</div>
                                                         </div>
                                                     </div>
@@ -554,8 +556,6 @@ export default function EventManagement(props: PageProps) {
                                                     <div className="font-medium">{formatDatePill(p.starts_at, p.ends_at)}</div>
                                                     <div className="text-xs text-slate-500 dark:text-slate-400">{daysToGo(p.starts_at) ?? '—'}</div>
                                                 </TableCell>
-
-                                                <TableCell className="text-slate-700 dark:text-slate-300">{p.location}</TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
                                                     {(() => {
@@ -639,12 +639,6 @@ export default function EventManagement(props: PageProps) {
                             <div className="mt-4 grid gap-4">
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Tag (small header)</div>
-                                        <Input value={form.data.tag} onChange={(e) => form.setData('tag', e.target.value)} placeholder="e.g. Plenary & Panels" />
-                                        {form.errors.tag ? <div className="text-xs text-red-600">{form.errors.tag}</div> : null}
-                                    </div>
-
-                                    <div className="space-y-1.5 sm:col-span-2">
                                         <div className="text-sm font-medium">Title (big text)</div>
                                         <Input value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} placeholder="e.g. Track Discussions" />
                                         {form.errors.title ? <div className="text-xs text-red-600">{form.errors.title}</div> : null}
@@ -671,12 +665,6 @@ export default function EventManagement(props: PageProps) {
                                         <div className="text-sm font-medium">Ends at</div>
                                         <Input type="datetime-local" value={form.data.ends_at} onChange={(e) => form.setData('ends_at', e.target.value)} />
                                         {form.errors.ends_at ? <div className="text-xs text-red-600">{form.errors.ends_at}</div> : null}
-                                    </div>
-
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Location</div>
-                                        <Input value={form.data.location} onChange={(e) => form.setData('location', e.target.value)} placeholder="e.g. Conference Hall B" />
-                                        {form.errors.location ? <div className="text-xs text-red-600">{form.errors.location}</div> : null}
                                     </div>
 
                                     {/* IMAGE (upload only) */}

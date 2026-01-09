@@ -3,16 +3,14 @@ import PublicLayout from '@/layouts/public-layout';
 import { Head } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CalendarClock, MapPin, Timer, CircleCheck, CircleX } from 'lucide-react';
+import { ArrowRight, CalendarClock, Timer, CircleCheck, CircleX } from 'lucide-react';
 
 type ProgrammeRow = {
     id: number;
-    tag: string;
     title: string;
     description: string;
     starts_at: string | null;
     ends_at: string | null;
-    location: string;
     image_url: string | null;
     pdf_url: string | null;
     is_active: boolean;
@@ -24,12 +22,10 @@ type PageProps = {
 
 type FlexHoverItem = {
     title: string;
-    subtitle: string;
     body: string;
     image: string;
     tint: string;
 
-    venue: string;
     startsAt: string;
     endsAt?: string;
 
@@ -187,14 +183,12 @@ function FeaturedOngoingCompact({ item, nowTs }: { item: FlexHoverItem; nowTs: n
                     <BadgePill tone="info" icon={<CalendarClock className="h-3.5 w-3.5" />}>
                         {formatEventWindow(item.startsAt, item.endsAt)}
                     </BadgePill>
-                    <BadgePill icon={<MapPin className="h-3.5 w-3.5" />}>{item.venue}</BadgePill>
                     <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>{d === 0 ? 'Today' : `${d}d`}</BadgePill>
                 </div>
 
                 <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_220px] sm:items-start">
                     <div className="min-w-0">
                         <div className="text-sm font-semibold text-slate-900 sm:text-base line-clamp-1">{item.title}</div>
-                        <div className="mt-0.5 text-sm font-medium text-slate-800 line-clamp-1">{item.subtitle}</div>
                         <p className="mt-1.5 text-sm leading-relaxed text-slate-600 line-clamp-2">{item.body}</p>
                     </div>
 
@@ -284,14 +278,6 @@ function EventTile({
 
                 <div className={cn('mt-2 text-sm font-semibold text-slate-900 line-clamp-1', isClosed && 'text-slate-700')}>
                     {item.title}
-                </div>
-                <div className={cn('mt-0.5 text-sm font-medium text-slate-800 line-clamp-1', isClosed && 'text-slate-600')}>
-                    {item.subtitle}
-                </div>
-
-                <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-600">
-                    <MapPin className="h-3.5 w-3.5 text-slate-500" />
-                    <span className="line-clamp-1">{item.venue}</span>
                 </div>
 
                 <p className={cn('mt-2 text-sm leading-relaxed text-slate-600 line-clamp-2', isClosed && 'text-slate-500')}>
@@ -392,12 +378,10 @@ export default function Programme({ programmes = [] }: PageProps) {
             const startsAt = programme.starts_at ?? new Date().toISOString();
 
             return {
-                title: programme.tag || programme.title,
-                subtitle: programme.title || programme.tag,
+                title: programme.title,
                 body: programme.description,
                 image: resolveImageUrl(programme.image_url),
                 tint: TINTS[index % TINTS.length],
-                venue: programme.location,
                 startsAt,
                 endsAt: programme.ends_at ?? undefined,
                 cta: pdfUrl ? { label: 'View more', href: pdfUrl } : undefined,
