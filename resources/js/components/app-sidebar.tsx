@@ -18,8 +18,9 @@ import AppLogo from './app-logo';
 
 export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
-    const roleName = (auth.user?.userType?.name ?? '').toUpperCase();
-    const roleSlug = (auth.user?.userType?.slug ?? '').toUpperCase();
+    const userType = auth.user?.user_type ?? auth.user?.userType;
+    const roleName = (userType?.name ?? '').toUpperCase();
+    const roleSlug = (userType?.slug ?? '').toUpperCase();
     const isChed = roleName === 'CHED' || roleSlug === 'CHED';
 
     const mainNavItems: NavItem[] = isChed

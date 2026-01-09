@@ -37,6 +37,11 @@ export interface User {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
+    user_type?: {
+        id: number;
+        name: string;
+        slug: string;
+    } | null;
     userType?: {
         id: number;
         name: string;
