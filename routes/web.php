@@ -3,6 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
+use App\Http\Controllers\ParticipantController;
+use App\Http\Controllers\CountryController;
+use App\Http\Controllers\UserTypeController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -29,9 +32,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
-    Route::get('participant', function () {
-        return Inertia::render('participant');
-    })->name('participant');
+    Route::get('participant', [ParticipantController::class, 'index'])->name('participant');
+
+    Route::resource('participants', ParticipantController::class)->only(['store', 'update', 'destroy']);
+    Route::resource('participants/countries', CountryController::class)->only(['store', 'update', 'destroy']);
+    Route::resource('participants/user-types', UserTypeController::class)->only(['store', 'update', 'destroy']);
 
     Route::get('venue-management', fn () => Inertia::render('venue-management'))->name('venue-management');
 
