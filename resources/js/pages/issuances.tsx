@@ -11,6 +11,7 @@ type Issuance = {
     title: string;
     issued_at: string; // YYYY-MM-DD
     href: string; // /downloadables/file.pdf
+    is_active?: boolean;
 };
 
 type PageProps = {
@@ -158,16 +159,20 @@ function IssuanceTile({ item }: { item: Issuance }) {
 export default function Issuances(props: PageProps) {
     const [q, setQ] = React.useState('');
     const issuances = props.issuances ?? [];
+    const activeIssuances = React.useMemo(
+        () => issuances.filter((item) => item.is_active !== false),
+        [issuances]
+    );
 
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
-        if (!query) return issuances;
+        if (!query) return activeIssuances;
 
-        return issuances.filter((x) => {
+        return activeIssuances.filter((x) => {
             const hay = `${x.title} ${x.issued_at}`.toLowerCase();
             return hay.includes(query);
         });
-    }, [q, issuances]);
+    }, [q, activeIssuances]);
 
     return (
         <>

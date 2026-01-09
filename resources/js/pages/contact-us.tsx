@@ -10,6 +10,7 @@ type ContactDetail = {
     key: ContactCardKey;
     title: string;
     value: string;
+    is_active?: boolean;
 };
 
 type PageProps = {
@@ -24,6 +25,7 @@ function iconFor(key: ContactCardKey) {
 
 export default function ContactUs(props: PageProps) {
     const items = props.items ?? [];
+    const activeItems = React.useMemo(() => items.filter((item) => item.is_active !== false), [items]);
 
     return (
         <>
@@ -91,7 +93,7 @@ export default function ContactUs(props: PageProps) {
 
                         {/* Contact Cards (NOT clickable) */}
                         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {items.map((item) => (
+                            {activeItems.map((item) => (
                                 <Card
                                     key={item.key}
                                     className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-6 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:border-[#1e3c73]/20 hover:bg-white/80 hover:shadow-md"
