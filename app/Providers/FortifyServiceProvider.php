@@ -81,6 +81,8 @@ class FortifyServiceProvider extends ServiceProvider
                 ]),
             'registrantTypes' => UserType::query()
                 ->where('is_active', true)
+                ->where('slug', '!=', 'ched')
+                ->where('name', '!=', 'CHED')
                 ->orderBy('name')
                 ->get()
                 ->map(fn (UserType $type) => [

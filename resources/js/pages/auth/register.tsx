@@ -48,9 +48,14 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
         [countries, country]
     );
 
+    const filteredRegistrantTypes = React.useMemo(
+        () => registrantTypes.filter((type) => type.name !== 'CHED' && type.slug !== 'ched'),
+        [registrantTypes]
+    );
+
     const selectedType = React.useMemo(
-        () => registrantTypes.find((t) => String(t.id) === registrantType) ?? null,
-        [registrantType, registrantTypes]
+        () => filteredRegistrantTypes.find((t) => String(t.id) === registrantType) ?? null,
+        [registrantType, filteredRegistrantTypes]
     );
 
     const inputClass =
@@ -297,7 +302,7 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                                     <CommandInput placeholder="Search type…" />
                                                     <CommandEmpty>No type found.</CommandEmpty>
                                                     <CommandGroup>
-                                                        {registrantTypes.map((item) => (
+                                                        {filteredRegistrantTypes.map((item) => (
                                                             <CommandItem
                                                                 key={item.id}
                                                                 value={item.name}
