@@ -97,17 +97,17 @@ function daysUntil(startsAt: string, nowTs: number) {
     return Math.ceil(diff / 86_400_000);
 }
 
-function getEventStatus(startsAt: string, endsAt: string | undefined, nowTs: number) {
+function getEventStatus(startsAt: string, endsAt: string | undefined, nowTs: number): 'ongoing' | 'upcoming' | 'closed' {
     const startTs = new Date(startsAt).getTime();
     const endTs = endsAt ? new Date(endsAt).getTime() : null;
 
     if (endTs !== null) {
-        if (nowTs < startTs) return 'open';
-        if (nowTs >= startTs && nowTs <= endTs) return 'open';
+        if (nowTs < startTs) return 'upcoming';
+        if (nowTs >= startTs && nowTs <= endTs) return 'ongoing';
         return 'closed';
     }
 
-    return nowTs <= startTs ? 'open' : 'closed';
+    return nowTs < startTs ? 'upcoming' : 'ongoing';
 }
 
 function BadgePill({
@@ -270,16 +270,16 @@ function LightFlexHoverCards({ items }: { items: FlexHoverItem[] }) {
                                                     {d === 0 ? 'Today / Started' : `${d} day${d > 1 ? 's' : ''} to go`}
                                                 </BadgePill>
                                                 <BadgePill
-                                                    tone={status === 'open' ? 'success' : 'danger'}
+                                                    tone={status === 'ongoing' ? 'success' : status === 'upcoming' ? 'info' : 'danger'}
                                                     icon={
-                                                        status === 'open' ? (
-                                                            <CircleCheck className="h-3.5 w-3.5" />
-                                                        ) : (
+                                                        status === 'closed' ? (
                                                             <CircleX className="h-3.5 w-3.5" />
+                                                        ) : (
+                                                            <CircleCheck className="h-3.5 w-3.5" />
                                                         )
                                                     }
                                                 >
-                                                    {status === 'open' ? 'Open' : 'Closed'}
+                                                    {status === 'ongoing' ? 'Ongoing' : status === 'upcoming' ? 'Upcoming' : 'Closed'}
                                                 </BadgePill>
                                             </div>
                                         </div>
@@ -302,20 +302,18 @@ function LightFlexHoverCards({ items }: { items: FlexHoverItem[] }) {
                                                     {d === 0 ? 'Today / Started' : `${d} day${d > 1 ? 's' : ''} to go`}
                                                 </BadgePill>
                                                 <BadgePill
-                                                    tone={status === 'open' ? 'success' : 'danger'}
+                                                    tone={status === 'ongoing' ? 'success' : status === 'upcoming' ? 'info' : 'danger'}
                                                     icon={
-                                                        status === 'open' ? (
-                                                            <CircleCheck className="h-3.5 w-3.5" />
-                                                        ) : (
+                                                        status === 'closed' ? (
                                                             <CircleX className="h-3.5 w-3.5" />
+                                                        ) : (
+                                                            <CircleCheck className="h-3.5 w-3.5" />
                                                         )
                                                     }
                                                 >
-                                                    {status === 'open' ? 'Open' : 'Closed'}
+                                                    {status === 'ongoing' ? 'Ongoing' : status === 'upcoming' ? 'Upcoming' : 'Closed'}
                                                 </BadgePill>
                                             </div>
-
-                                            <div className="mt-3 text-sm font-semibold text-slate-900">{item.title}</div>
 
                                             <div className="mt-3 grid flex-1 grid-cols-[1fr_1.05fr] gap-6">
                                                 {/* left */}
@@ -377,22 +375,34 @@ function LightFlexHoverCards({ items }: { items: FlexHoverItem[] }) {
 
 export default function Programme({ programmes = [] }: PageProps) {
     const items = React.useMemo<FlexHoverItem[]>(() => {
-        return programmes.map((programme, index) => {
-            const pdfUrl = resolvePdfUrl(programme.pdf_url);
-            const startsAt = programme.starts_at ?? new Date().toISOString();
+        const nowTs = Date.now();
+        const statusOrder = { ongoing: 0, upcoming: 1, closed: 2 } as const;
 
-            return {
-                title: programme.tag || programme.title,
-                subtitle: programme.title || programme.tag,
-                body: programme.description,
-                image: resolveImageUrl(programme.image_url),
-                tint: TINTS[index % TINTS.length],
-                venue: programme.location,
-                startsAt,
-                endsAt: programme.ends_at ?? undefined,
-                cta: pdfUrl ? { label: 'View more', href: pdfUrl } : undefined,
-            };
-        });
+        return programmes
+            .map((programme, index) => {
+                const pdfUrl = resolvePdfUrl(programme.pdf_url);
+                const startsAt = programme.starts_at ?? new Date().toISOString();
+                const status = getEventStatus(startsAt, programme.ends_at ?? undefined, nowTs);
+
+                return {
+                    title: programme.title,
+                    subtitle: programme.title,
+                    body: programme.description,
+                    image: resolveImageUrl(programme.image_url),
+                    tint: TINTS[index % TINTS.length],
+                    venue: programme.location,
+                    startsAt,
+                    endsAt: programme.ends_at ?? undefined,
+                    cta: pdfUrl ? { label: 'View more', href: pdfUrl } : undefined,
+                    status,
+                };
+            })
+            .sort((a, b) => {
+                const orderDelta = statusOrder[a.status] - statusOrder[b.status];
+                if (orderDelta !== 0) return orderDelta;
+                return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
+            })
+            .map(({ status, ...item }) => item);
     }, [programmes]);
 
     return (

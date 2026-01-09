@@ -46,6 +46,7 @@ import {
     MapPin,
     ExternalLink,
     Building2,
+    CalendarClock,
     CheckCircle2,
     XCircle,
 } from 'lucide-react';
@@ -84,6 +85,9 @@ const ENDPOINTS = {
         update: (id: number) => `/venues/${id}`,
         destroy: (id: number) => `/venues/${id}`,
     },
+    programmes: {
+        update: (id: number) => `/programmes/${id}`,
+    },
 };
 
 const PRIMARY_BTN =
@@ -116,6 +120,51 @@ function StatusBadge({ active }: { active: boolean }) {
             {active ? 'Active' : 'Inactive'}
         </span>
     );
+}
+
+function getEventStatus(startsAt?: string | null, endsAt?: string | null): 'upcoming' | 'ongoing' | 'closed' {
+    if (!startsAt) return 'upcoming';
+    const start = new Date(startsAt);
+    if (Number.isNaN(start.getTime())) return 'upcoming';
+
+    const end = endsAt ? new Date(endsAt) : null;
+    const now = new Date();
+
+    if (end && !Number.isNaN(end.getTime())) {
+        if (now < start) return 'upcoming';
+        if (now >= start && now <= end) return 'ongoing';
+        return 'closed';
+    }
+
+    return now < start ? 'upcoming' : 'ongoing';
+}
+
+function buildStatusDates(event: EventRow, status: 'upcoming' | 'ongoing' | 'closed') {
+    const now = new Date();
+    const start = event.starts_at ? new Date(event.starts_at) : null;
+    const end = event.ends_at ? new Date(event.ends_at) : null;
+    const hasValidStart = start && !Number.isNaN(start.getTime());
+    const hasValidEnd = end && !Number.isNaN(end.getTime());
+    const durationMs =
+        hasValidStart && hasValidEnd && end!.getTime() > start!.getTime()
+            ? end!.getTime() - start!.getTime()
+            : 2 * 60 * 60 * 1000;
+
+    if (status === 'upcoming') {
+        const nextStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const nextEnd = new Date(nextStart.getTime() + durationMs);
+        return { starts_at: nextStart.toISOString(), ends_at: nextEnd.toISOString() };
+    }
+
+    if (status === 'ongoing') {
+        const nextStart = new Date(now.getTime() - durationMs / 2);
+        const nextEnd = new Date(now.getTime() + durationMs / 2);
+        return { starts_at: nextStart.toISOString(), ends_at: nextEnd.toISOString() };
+    }
+
+    const nextEnd = new Date(now.getTime() - 60 * 60 * 1000);
+    const nextStart = new Date(nextEnd.getTime() - durationMs);
+    return { starts_at: nextStart.toISOString(), ends_at: nextEnd.toISOString() };
 }
 
 function EmptyState({
@@ -281,6 +330,7 @@ export default function VenueManagement(props: PageProps) {
     const [q, setQ] = React.useState('');
     const [eventFilter, setEventFilter] = React.useState<string>('all');
     const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
+    const [eventStatusFilter, setEventStatusFilter] = React.useState<'all' | 'ongoing' | 'upcoming' | 'closed'>('all');
 
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
@@ -294,9 +344,13 @@ export default function VenueManagement(props: PageProps) {
             const matchesStatus =
                 statusFilter === 'all' || (statusFilter === 'active' ? v.is_active : !v.is_active);
 
-            return matchesQuery && matchesEvent && matchesStatus;
+            const matchesEventStatus =
+                eventStatusFilter === 'all' ||
+                (v.event ? getEventStatus(v.event.starts_at, v.event.ends_at) === eventStatusFilter : false);
+
+            return matchesQuery && matchesEvent && matchesStatus && matchesEventStatus;
         });
-    }, [resolvedVenues, q, eventFilter, statusFilter]);
+    }, [resolvedVenues, q, eventFilter, statusFilter, eventStatusFilter]);
 
     // dialogs
     const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -375,6 +429,14 @@ export default function VenueManagement(props: PageProps) {
         );
     }
 
+    function updateEventStatus(eventId: number, status: 'ongoing' | 'upcoming' | 'closed') {
+        const event = eventById.get(eventId);
+        if (!event) return;
+
+        const dates = buildStatusDates(event, status);
+        router.patch(ENDPOINTS.programmes.update(eventId), dates, { preserveScroll: true });
+    }
+
     function requestDelete(item: VenueRow) {
         setDeleteTarget(item);
         setDeleteOpen(true);
@@ -434,6 +496,18 @@ export default function VenueManagement(props: PageProps) {
                                             {e.title}
                                         </SelectItem>
                                     ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Select value={eventStatusFilter} onValueChange={(v) => setEventStatusFilter(v as any)}>
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Event status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Event Status</SelectItem>
+                                    <SelectItem value="ongoing">Ongoing</SelectItem>
+                                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                                    <SelectItem value="closed">Closed</SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -552,6 +626,29 @@ export default function VenueManagement(props: PageProps) {
                                                             <DropdownMenuItem onClick={() => toggleActive(v)}>
                                                                 <BadgeCheck className="mr-2 h-4 w-4" />
                                                                 {v.is_active ? 'Set Inactive' : 'Set Active'}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuLabel>Event Status</DropdownMenuLabel>
+                                                            <DropdownMenuItem
+                                                                onClick={() => v.event_id && updateEventStatus(v.event_id, 'ongoing')}
+                                                                disabled={!v.event_id}
+                                                            >
+                                                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                                                Set Ongoing
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => v.event_id && updateEventStatus(v.event_id, 'upcoming')}
+                                                                disabled={!v.event_id}
+                                                            >
+                                                                <CalendarClock className="mr-2 h-4 w-4" />
+                                                                Set Upcoming
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => v.event_id && updateEventStatus(v.event_id, 'closed')}
+                                                                disabled={!v.event_id}
+                                                            >
+                                                                <XCircle className="mr-2 h-4 w-4" />
+                                                                Set Closed
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem
