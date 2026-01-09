@@ -22,6 +22,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 
 import { Mail, Phone, MapPin, MoreHorizontal, Pencil, Save, X, CheckCircle2, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 type ContactCardKey = 'email' | 'phone' | 'office';
 
@@ -32,6 +33,7 @@ type ContactDetail = {
     value: string;
     is_active: boolean;
     updated_at?: string | null;
+    updated_by_name?: string | null;
 };
 
 type PageProps = {
@@ -46,19 +48,6 @@ const ENDPOINTS = {
 
 const PRIMARY_BTN =
     'bg-[#00359c] text-white hover:bg-[#00359c]/90 focus-visible:ring-[#00359c]/30 dark:bg-[#00359c] dark:hover:bg-[#00359c]/90';
-
-const DEFAULT_ITEMS: ContactDetail[] = [
-    { id: 1, key: 'email', title: 'Email', value: 'info@ched.gov.ph', is_active: true, updated_at: null },
-    { id: 2, key: 'phone', title: 'Phone', value: '(02) 8441-1260', is_active: true, updated_at: null },
-    {
-        id: 3,
-        key: 'office',
-        title: 'Office',
-        value: 'Higher Education Development Center Building, C.P. Garcia Ave, Diliman, Quezon City, Philippines',
-        is_active: true,
-        updated_at: null,
-    },
-];
 
 function iconFor(key: ContactCardKey) {
     if (key === 'email') return <Mail className="h-5 w-5" />;
@@ -96,7 +85,7 @@ function StatusBadge({ active }: { active: boolean }) {
 }
 
 export default function ContactDetails(props: PageProps) {
-    const items = (props.items?.length ? props.items : DEFAULT_ITEMS).slice(0, 3);
+    const items = props.items ?? [];
 
     const [editOpen, setEditOpen] = React.useState(false);
     const [editing, setEditing] = React.useState<ContactDetail | null>(null);
@@ -133,8 +122,16 @@ export default function ContactDetails(props: PageProps) {
             onSuccess: () => {
                 setEditOpen(false);
                 setEditing(null);
+                toast.success('Contact details updated.');
             },
+            onError: (errors) => showToastError(errors as Record<string, string | string[]>),
         });
+    }
+
+    function showToastError(errors: Record<string, string | string[]>) {
+        const firstError = Object.values(errors)?.[0];
+        const message = Array.isArray(firstError) ? firstError[0] : firstError;
+        toast.error(message || 'Something went wrong. Please try again.');
     }
 
     return (
@@ -205,6 +202,9 @@ export default function ContactDetails(props: PageProps) {
                                     </div>
                                     <span>Updated: {formatDateTimeSafe(item.updated_at)}</span>
                                 </div>
+                                <div className="mt-2 text-[11px] text-slate-500">
+                                    Updated by: {item.updated_by_name || '—'}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -244,16 +244,19 @@ export default function ContactDetails(props: PageProps) {
                         {/* ✅ Switch like your other pages */}
                         <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 dark:border-slate-800">
                             <div className="space-y-0.5">
-                                <div className="text-sm font-medium">Active</div>
+                                <div className="text-sm font-medium">{form.data.is_active ? 'Active' : 'Inactive'}</div>
                                 <div className="text-xs text-slate-600 dark:text-slate-400">
                                     Inactive cards can be hidden from the public page.
                                 </div>
                             </div>
 
-                            <Switch
-                                checked={form.data.is_active}
-                                onCheckedChange={(v) => form.setData('is_active', !!v)}
-                            />
+                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <span>{form.data.is_active ? 'On' : 'Off'}</span>
+                                <Switch
+                                    checked={form.data.is_active}
+                                    onCheckedChange={(v) => form.setData('is_active', !!v)}
+                                />
+                            </div>
                         </div>
 
                         <DialogFooter className="gap-2 sm:gap-0">

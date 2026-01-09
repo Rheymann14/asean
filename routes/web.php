@@ -7,6 +7,7 @@ use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\UserTypeController;
 use App\Http\Controllers\IssuanceController;
+use App\Http\Controllers\ContactDetailController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -14,9 +15,7 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-Route::get('/contact-us', function () {
-    return Inertia::render('contact-us');
-})->name('contact-us');
+Route::get('/contact-us', [ContactDetailController::class, 'publicIndex'])->name('contact-us');
 
 Route::get('/venue', function () {
     return Inertia::render('venue');
@@ -42,7 +41,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('issuances-management', [IssuanceController::class, 'index'])->name('issuances-management');
     Route::resource('issuances', IssuanceController::class)->only(['store', 'update', 'destroy']);
 
-    Route::get('contact-details', fn () => Inertia::render('contact-details'))->name('contact-details');
+    Route::get('contact-details', [ContactDetailController::class, 'index'])->name('contact-details');
+    Route::patch('contact-details/{contactDetail}', [ContactDetailController::class, 'update'])->name('contact-details.update');
 
     Route::get('programme-management', fn () => Inertia::render('programme-management'))->name('programme-management');
 
