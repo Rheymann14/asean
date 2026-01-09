@@ -1,142 +1,56 @@
 import * as React from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { Head, router, useForm } from '@inertiajs/react';
-import { type BreadcrumbItem } from '@/types';
+import PublicLayout from '@/layouts/public-layout';
+import { Head } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
-
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
+import { ArrowRight, CalendarClock, MapPin, Timer, CircleCheck, CircleX } from 'lucide-react';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-import {
-    Plus,
-    Search,
-    MoreHorizontal,
-    Pencil,
-    Trash2,
-    BadgeCheck,
-    CalendarDays,
-    ImageUp,
-    FileText,
-    CheckCircle2,
-    XCircle,
-} from 'lucide-react';
+import useEmblaCarousel from 'embla-carousel-react';
+import AutoScroll from 'embla-carousel-auto-scroll';
 
 type ProgrammeRow = {
     id: number;
     tag: string;
     title: string;
     description: string;
-
-    starts_at: string | null; // ISO string
-    ends_at: string | null; // ISO string
+    starts_at: string | null;
+    ends_at: string | null;
     location: string;
-
-    image_url: string | null; // server-provided
-    pdf_url: string | null; // server-provided (for "View more")
-
+    image_url: string | null;
+    pdf_url: string | null;
     is_active: boolean;
-    updated_at?: string | null;
 };
 
 type PageProps = {
     programmes?: ProgrammeRow[];
 };
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Event Management', href: '/event-management' }];
+type FlexHoverItem = {
+    title: string;
+    subtitle: string;
+    body: string;
+    image: string;
+    tint: string;
 
-const ENDPOINTS = {
-    programmes: {
-        store: '/programmes',
-        update: (id: number) => `/programmes/${id}`,
-        destroy: (id: number) => `/programmes/${id}`,
-    },
+    venue: string;
+    startsAt: string;
+    endsAt?: string;
+
+    cta?: { label: string; href: string };
 };
 
-const PRIMARY_BTN =
-    'bg-[#00359c] text-white hover:bg-[#00359c]/90 focus-visible:ring-[#00359c]/30 dark:bg-[#00359c] dark:hover:bg-[#00359c]/90';
+const TINTS = [
+    'bg-gradient-to-br from-[#dbeafe] via-white to-[#fef9c3]',
+    'bg-gradient-to-br from-[#fce7f3] via-white to-[#e0e7ff]',
+    'bg-gradient-to-br from-[#ffedd5] via-white to-[#e2e8f0]',
+];
 
-// -------------------- helpers --------------------
-function formatDatePill(starts_at?: string | null, ends_at?: string | null) {
-    if (!starts_at) return '—';
-    const s = new Date(starts_at);
-    const e = ends_at ? new Date(ends_at) : null;
-    if (Number.isNaN(s.getTime())) return '—';
+const FALLBACK_IMAGE = '/img/asean_banner_logo.png';
 
-    const d = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).format(s);
-    const time = (dt: Date) => new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' }).format(dt);
-
-    if (!e || Number.isNaN(e.getTime())) return `${d} · ${time(s)}`;
-    return `${d} · ${time(s)}–${time(e)}`;
-}
-
-function daysToGo(starts_at?: string | null) {
-    if (!starts_at) return null;
-    const s = new Date(starts_at);
-    if (Number.isNaN(s.getTime())) return null;
-
-    const now = new Date();
-    const diff = s.getTime() - now.getTime();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-    if (days < 0) return 'Ended';
-    if (days === 0) return 'Today';
-    if (days === 1) return '1 day to go';
-    return `${days} days to go`;
-}
-
-function formatDateTimeSafe(value?: string | null) {
-    if (!value) return '—';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '—';
-    return new Intl.DateTimeFormat('en-PH', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(d);
-}
-
-function toLocalInputValue(iso: string | null | undefined) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function basename(u: string) {
-    const s = u.split('?')[0].split('#')[0];
-    const parts = s.split('/').filter(Boolean);
-    return parts[parts.length - 1] ?? u;
+function resolveImageUrl(imageUrl?: string | null) {
+    if (!imageUrl) return FALLBACK_IMAGE;
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
+    return `/event-images/${imageUrl}`;
 }
 
 function resolvePdfUrl(pdfUrl?: string | null) {
@@ -145,581 +59,385 @@ function resolvePdfUrl(pdfUrl?: string | null) {
     return `/downloadables/${pdfUrl}`;
 }
 
-function resolveImageUrl(imageUrl?: string | null) {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
-    return `/event-images/${imageUrl}`;
+function formatEventWindow(startsAt: string, endsAt?: string) {
+    const start = new Date(startsAt);
+    const end = endsAt ? new Date(endsAt) : null;
+
+    const dateFmt = new Intl.DateTimeFormat('en-PH', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    });
+
+    const timeFmt = new Intl.DateTimeFormat('en-PH', {
+        hour: 'numeric',
+        minute: '2-digit',
+    });
+
+    const date = dateFmt.format(start);
+    const startTime = timeFmt.format(start);
+
+    if (!end) return `${date} • ${startTime}`;
+
+    const sameDay =
+        start.getFullYear() === end.getFullYear() &&
+        start.getMonth() === end.getMonth() &&
+        start.getDate() === end.getDate();
+
+    const endTime = timeFmt.format(end);
+    if (sameDay) return `${date} • ${startTime}–${endTime}`;
+
+    return `${dateFmt.format(start)} ${startTime} → ${dateFmt.format(end)} ${timeFmt.format(end)}`;
 }
 
-function StatusBadge({ active }: { active: boolean }) {
+function daysUntil(startsAt: string, nowTs: number) {
+    const startTs = new Date(startsAt).getTime();
+    const diff = startTs - nowTs;
+    if (diff <= 0) return 0;
+    return Math.ceil(diff / 86_400_000);
+}
+
+function getEventStatus(startsAt: string, endsAt: string | undefined, nowTs: number) {
+    const startTs = new Date(startsAt).getTime();
+    const endTs = endsAt ? new Date(endsAt).getTime() : null;
+
+    if (endTs !== null) {
+        if (nowTs < startTs) return 'open';
+        if (nowTs >= startTs && nowTs <= endTs) return 'open';
+        return 'closed';
+    }
+
+    return nowTs <= startTs ? 'open' : 'closed';
+}
+
+function BadgePill({
+    icon,
+    children,
+    tone = 'neutral',
+}: {
+    icon?: React.ReactNode;
+    children: React.ReactNode;
+    tone?: 'neutral' | 'info' | 'success' | 'danger';
+}) {
+    const toneClass =
+        tone === 'success'
+            ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
+            : tone === 'danger'
+              ? 'bg-rose-50 text-rose-800 ring-rose-200'
+              : tone === 'info'
+                ? 'bg-blue-50 text-blue-800 ring-blue-200'
+                : 'bg-white/70 text-slate-700 ring-slate-200';
+
     return (
         <span
             className={cn(
-                'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium',
-                active
-                    ? 'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                    : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                'inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-medium ring-1 backdrop-blur',
+                toneClass,
             )}
         >
-            {active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-            {active ? 'Open' : 'Closed'}
+            {icon ? <span className="shrink-0 opacity-90">{icon}</span> : null}
+            <span className="whitespace-nowrap">{children}</span>
         </span>
     );
 }
 
-function EmptyState({
-    icon,
-    title,
-    subtitle,
-    action,
-}: {
-    icon: React.ReactNode;
-    title: string;
-    subtitle: string;
-    action?: React.ReactNode;
-}) {
+function LightFlexHoverCards({ items }: { items: FlexHoverItem[] }) {
+    const [active, setActive] = React.useState<number | null>(null);
+    const [nowTs, setNowTs] = React.useState(() => Date.now());
+
+    React.useEffect(() => {
+        const t = window.setInterval(() => setNowTs(Date.now()), 60_000);
+        return () => window.clearInterval(t);
+    }, []);
+
+    // ✅ compact height so nothing gets cut
+    const CARD_H = 'h-[360px] sm:h-[380px] lg:h-[400px]';
+    const RIGHT_IMG_H = 'h-[140px] sm:h-[155px] lg:h-[165px]';
+
+    const autoScroll = React.useMemo(
+        () =>
+            AutoScroll({
+                playOnInit: true,
+                speed: 1.15,
+                stopOnInteraction: false,
+                stopOnMouseEnter: true,
+            }),
+        [],
+    );
+
+    const [emblaRef, emblaApi] = useEmblaCarousel(
+        {
+            loop: true,
+            align: 'start',
+            dragFree: true,
+            containScroll: 'trimSnaps',
+        },
+        [autoScroll],
+    );
+
+    React.useEffect(() => {
+        if (!emblaApi) return;
+        emblaApi.reInit();
+    }, [emblaApi, active]);
+
+    const onMouseLeave = React.useCallback(() => {
+        setActive(null);
+        autoScroll.play?.();
+        emblaApi?.reInit();
+    }, [autoScroll, emblaApi]);
+
     return (
-        <div className="grid place-items-center rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center dark:border-slate-800 dark:bg-slate-950">
-            <div className="grid place-items-center gap-2">
-                <div className="grid size-12 place-items-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                    {icon}
+        <div className="mt-8">
+            <div className="relative" onMouseLeave={onMouseLeave}>
+                {/* ✅ removed next/prev buttons + edge fade boxes */}
+                <div ref={emblaRef} className="overflow-hidden">
+                    <div className="flex gap-5">
+                        {items.map((item, i) => {
+                            const isActive = active === i;
+                            const isCollapsed = active !== null && !isActive;
+
+                            const slideBasis =
+                                active === null
+                                    ? 'md:basis-1/3'
+                                    : isActive
+                                      ? 'md:basis-[60%]'
+                                      : 'md:basis-[20%]';
+
+                            const d = daysUntil(item.startsAt, nowTs);
+                            const status = getEventStatus(item.startsAt, item.endsAt, nowTs);
+
+                            return (
+                                <div
+                                    key={`${item.title}-${item.startsAt}`}
+                                    className={cn(
+                                        'shrink-0 grow-0',
+                                        'basis-[88%] sm:basis-[72%]',
+                                        slideBasis,
+                                        'transition-[flex-basis] duration-700 ease-[cubic-bezier(.2,.8,.2,1)]',
+                                    )}
+                                >
+                                    <div
+                                        onMouseEnter={() => {
+                                            setActive(i);
+                                            autoScroll.stop?.();
+                                            emblaApi?.scrollTo(i);
+                                        }}
+                                        className={cn(
+                                            'group relative overflow-hidden rounded-3xl border border-slate-200 bg-white',
+                                            CARD_H,
+                                            'shadow-[0_18px_55px_-45px_rgba(2,6,23,0.22)]',
+                                            'transition-[transform,box-shadow] duration-500 ease-out',
+                                            'hover:-translate-y-0.5 hover:shadow-[0_26px_80px_-58px_rgba(2,6,23,0.30)]',
+                                            'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                                        )}
+                                    >
+                                        <div className={cn('absolute inset-0', item.tint)} />
+                                        <div className="absolute inset-0 bg-gradient-to-b from-white/55 via-white/25 to-white/70" />
+                                        <div
+                                            aria-hidden
+                                            className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-black/5"
+                                        />
+
+                                        {/* COLLAPSED */}
+                                        <div
+                                            className={cn(
+                                                'absolute inset-0',
+                                                isCollapsed ? 'opacity-100' : 'opacity-0',
+                                                'transition-opacity duration-500',
+                                            )}
+                                        >
+                                            <img
+                                                src={item.image}
+                                                alt={item.title}
+                                                className="h-full w-full object-cover"
+                                                loading="lazy"
+                                                draggable={false}
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/5 to-white/70" />
+
+                                            <div className="absolute left-1/2 top-5 -translate-x-1/2">
+                                                <div className="[writing-mode:vertical-rl] rotate-180 text-sm font-semibold tracking-wide text-slate-900/90">
+                                                    {item.title}
+                                                </div>
+                                            </div>
+
+                                            <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
+                                                <BadgePill tone="info" icon={<CalendarClock className="h-3.5 w-3.5" />}>
+                                                    {formatEventWindow(item.startsAt, item.endsAt)}
+                                                </BadgePill>
+                                                <BadgePill icon={<MapPin className="h-3.5 w-3.5" />}>{item.venue}</BadgePill>
+                                                <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>
+                                                    {d === 0 ? 'Today / Started' : `${d} day${d > 1 ? 's' : ''} to go`}
+                                                </BadgePill>
+                                                <BadgePill
+                                                    tone={status === 'open' ? 'success' : 'danger'}
+                                                    icon={
+                                                        status === 'open' ? (
+                                                            <CircleCheck className="h-3.5 w-3.5" />
+                                                        ) : (
+                                                            <CircleX className="h-3.5 w-3.5" />
+                                                        )
+                                                    }
+                                                >
+                                                    {status === 'open' ? 'Open' : 'Closed'}
+                                                </BadgePill>
+                                            </div>
+                                        </div>
+
+                                        {/* EXPANDED / DEFAULT */}
+                                        <div
+                                            className={cn(
+                                                'relative h-full p-5 md:p-6',
+                                                'flex flex-col',
+                                                active === null ? 'opacity-100' : isActive ? 'opacity-100' : 'opacity-0',
+                                                'transition-opacity duration-300',
+                                            )}
+                                        >
+                                            <div className="flex flex-wrap gap-2">
+                                                <BadgePill tone="info" icon={<CalendarClock className="h-3.5 w-3.5" />}>
+                                                    {formatEventWindow(item.startsAt, item.endsAt)}
+                                                </BadgePill>
+                                                <BadgePill icon={<MapPin className="h-3.5 w-3.5" />}>{item.venue}</BadgePill>
+                                                <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>
+                                                    {d === 0 ? 'Today / Started' : `${d} day${d > 1 ? 's' : ''} to go`}
+                                                </BadgePill>
+                                                <BadgePill
+                                                    tone={status === 'open' ? 'success' : 'danger'}
+                                                    icon={
+                                                        status === 'open' ? (
+                                                            <CircleCheck className="h-3.5 w-3.5" />
+                                                        ) : (
+                                                            <CircleX className="h-3.5 w-3.5" />
+                                                        )
+                                                    }
+                                                >
+                                                    {status === 'open' ? 'Open' : 'Closed'}
+                                                </BadgePill>
+                                            </div>
+
+                                            <div className="mt-3 text-sm font-semibold text-slate-900">{item.title}</div>
+
+                                            <div className="mt-3 grid flex-1 grid-cols-[1fr_1.05fr] gap-6">
+                                                {/* left */}
+                                                <div className="min-w-0">
+                                                    <p className="text-lg font-semibold leading-snug text-slate-900 md:text-xl">
+                                                        {item.subtitle}
+                                                    </p>
+
+                                                    <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.body}</p>
+                                                </div>
+
+                                                {/* right */}
+                                                <div className="flex flex-col">
+                                                    <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-[0_14px_40px_-30px_rgba(2,6,23,0.20)]">
+                                                        <div className="p-3">
+                                                            <div className="relative overflow-hidden rounded-xl ring-1 ring-slate-200">
+                                                                <img
+                                                                    src={item.image}
+                                                                    alt={item.title}
+                                                                    className={cn('w-full object-cover', RIGHT_IMG_H)}
+                                                                    loading="lazy"
+                                                                    draggable={false}
+                                                                />
+                                                                <span className="absolute left-2 top-2 h-3 w-3 border-l-2 border-t-2 border-[#0033A0]/40" />
+                                                                <span className="absolute right-2 top-2 h-3 w-3 border-r-2 border-t-2 border-[#0033A0]/40" />
+                                                                <span className="absolute left-2 bottom-2 h-3 w-3 border-b-2 border-l-2 border-[#0033A0]/40" />
+                                                                <span className="absolute right-2 bottom-2 h-3 w-3 border-b-2 border-r-2 border-[#0033A0]/40" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* ✅ keep CTA INSIDE (no translate) so it won’t be cropped */}
+                                                    {item.cta ? (
+                                                        <div className="mt-3 flex justify-end">
+                                                            <Button
+                                                                asChild
+                                                                className="h-10 rounded-2xl bg-[#0033A0] text-white shadow hover:bg-[#0033A0]/95"
+                                                            >
+                                                                <a href={item.cta.href}>
+                                                                    {item.cta.label}
+                                                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                                                </a>
+                                                            </Button>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
-                <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">{title}</div>
-                <div className="max-w-md text-sm text-slate-600 dark:text-slate-400">{subtitle}</div>
-                {action ? <div className="mt-4">{action}</div> : null}
             </div>
         </div>
     );
 }
 
-export default function EventManagement(props: PageProps) {
-    const serverProgrammes: ProgrammeRow[] = props.programmes ?? [];
+export default function Programme({ programmes = [] }: PageProps) {
+    const items = React.useMemo<FlexHoverItem[]>(() => {
+        return programmes.map((programme, index) => {
+            const pdfUrl = resolvePdfUrl(programme.pdf_url);
+            const startsAt = programme.starts_at ?? new Date().toISOString();
 
-    const programmes: ProgrammeRow[] = React.useMemo(() => serverProgrammes, [serverProgrammes]);
-
-    // filters
-    const [q, setQ] = React.useState('');
-    const [statusFilter, setStatusFilter] = React.useState<'all' | 'open' | 'closed'>('all');
-
-    const filtered = React.useMemo(() => {
-        const query = q.trim().toLowerCase();
-        return programmes.filter((p) => {
-            const matchesQuery = !query || `${p.title} ${p.tag} ${p.location} ${p.description}`.toLowerCase().includes(query);
-            const matchesStatus = statusFilter === 'all' || (statusFilter === 'open' ? p.is_active : !p.is_active);
-            return matchesQuery && matchesStatus;
-        });
-    }, [programmes, q, statusFilter]);
-
-    // dialogs + editing
-    const [dialogOpen, setDialogOpen] = React.useState(false);
-    const [editing, setEditing] = React.useState<ProgrammeRow | null>(null);
-
-    // delete
-    const [deleteOpen, setDeleteOpen] = React.useState(false);
-    const [deleteTarget, setDeleteTarget] = React.useState<ProgrammeRow | null>(null);
-
-    // ✅ existing file urls (server) when editing
-    const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
-    const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null);
-
-    // image preview
-    const [imagePreview, setImagePreview] = React.useState<string | null>(null);
-
-    // pdf label
-    const [pdfLabel, setPdfLabel] = React.useState<string>('');
-
-    React.useEffect(() => {
-        return () => {
-            if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
-        };
-    }, [imagePreview]);
-
-    const form = useForm<{
-        tag: string;
-        title: string;
-        description: string;
-        starts_at: string; // datetime-local
-        ends_at: string; // datetime-local
-        location: string;
-        image: File | null;
-        pdf: File | null;
-        is_active: boolean;
-    }>({
-        tag: '',
-        title: '',
-        description: '',
-        starts_at: '',
-        ends_at: '',
-        location: '',
-        image: null,
-        pdf: null,
-        is_active: true,
-    });
-
-    function resetImagePreview(next: string | null) {
-        setImagePreview((prev) => {
-            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
-            return next;
-        });
-    }
-
-    function openAdd() {
-        setEditing(null);
-        form.reset();
-        form.clearErrors();
-
-        setCurrentImageUrl(null);
-        setCurrentPdfUrl(null);
-
-        resetImagePreview(null);
-        setPdfLabel('');
-
-        setDialogOpen(true);
-    }
-
-    function openEdit(item: ProgrammeRow) {
-        setEditing(item);
-
-        setCurrentImageUrl(resolveImageUrl(item.image_url));
-        setCurrentPdfUrl(resolvePdfUrl(item.pdf_url));
-
-        form.setData({
-            tag: item.tag ?? '',
-            title: item.title ?? '',
-            description: item.description ?? '',
-            starts_at: toLocalInputValue(item.starts_at),
-            ends_at: toLocalInputValue(item.ends_at),
-            location: item.location ?? '',
-            image: null,
-            pdf: null,
-            is_active: !!item.is_active,
-        });
-
-        form.clearErrors();
-
-        // show existing as "preview" until new upload
-        resetImagePreview(resolveImageUrl(item.image_url));
-        setPdfLabel(item.pdf_url ? basename(resolvePdfUrl(item.pdf_url) ?? item.pdf_url) : '');
-
-        setDialogOpen(true);
-    }
-
-    function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0] ?? null;
-        form.setData('image', file);
-
-        if (!file) {
-            resetImagePreview(currentImageUrl);
-            return;
-        }
-
-        resetImagePreview(URL.createObjectURL(file));
-    }
-
-    function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0] ?? null;
-        form.setData('pdf', file);
-
-        if (!file) {
-            setPdfLabel(currentPdfUrl ? basename(currentPdfUrl) : '');
-            return;
-        }
-
-        setPdfLabel(file.name);
-    }
-
-    function submit(e: React.FormEvent) {
-        e.preventDefault();
-
-        form.transform((data) => {
-            const payload: any = {
-                tag: data.tag.trim(),
-                title: data.title.trim(),
-                description: data.description.trim(),
-                location: data.location.trim(),
-                starts_at: data.starts_at ? new Date(data.starts_at).toISOString() : null,
-                ends_at: data.ends_at ? new Date(data.ends_at).toISOString() : null,
-                is_active: !!data.is_active,
+            return {
+                title: programme.tag || programme.title,
+                subtitle: programme.title || programme.tag,
+                body: programme.description,
+                image: resolveImageUrl(programme.image_url),
+                tint: TINTS[index % TINTS.length],
+                venue: programme.location,
+                startsAt,
+                endsAt: programme.ends_at ?? undefined,
+                cta: pdfUrl ? { label: 'View more', href: pdfUrl } : undefined,
             };
-
-            // only send if selected (so editing won't overwrite existing files)
-            if (data.image) payload.image = data.image;
-            if (data.pdf) payload.pdf = data.pdf;
-
-            return payload;
         });
-
-        const options = {
-            preserveScroll: true,
-            forceFormData: true,
-            onSuccess: () => {
-                setDialogOpen(false);
-                setEditing(null);
-            },
-        } as const;
-
-        if (editing) form.patch(ENDPOINTS.programmes.update(editing.id), options);
-        else form.post(ENDPOINTS.programmes.store, options);
-    }
-
-    function toggleActive(item: ProgrammeRow) {
-        router.patch(ENDPOINTS.programmes.update(item.id), { is_active: !item.is_active }, { preserveScroll: true });
-    }
-
-    function requestDelete(item: ProgrammeRow) {
-        setDeleteTarget(item);
-        setDeleteOpen(true);
-    }
-
-    function confirmDelete() {
-        if (!deleteTarget) return;
-
-        router.delete(ENDPOINTS.programmes.destroy(deleteTarget.id), {
-            preserveScroll: true,
-            onFinish: () => {
-                setDeleteOpen(false);
-                setDeleteTarget(null);
-            },
-        });
-    }
+    }, [programmes]);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Event Management" />
+        <>
+            <Head title="Programme" />
 
-            {/* ✅ removed overflow-x-auto here */}
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {/* header */}
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                        <CalendarDays className="h-5 w-5 text-[#00359c]" />
-                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                            Event Management
-                        </h1>
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Manage event cards shown on the public Event page.</p>
-                </div>
+            <PublicLayout navActive="/event">
+                <section className="relative isolate mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 via-white to-slate-50"
+                    />
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute -left-24 -top-24 -z-10 h-72 w-72 rounded-full bg-[#0033A0]/10 blur-3xl"
+                    />
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute -right-24 top-24 -z-10 h-72 w-72 rounded-full bg-[#FCD116]/15 blur-3xl"
+                    />
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-                            <div className="relative w-full sm:w-[360px]">
-                                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                                <Input
-                                    value={q}
-                                    onChange={(e) => setQ(e.target.value)}
-                                    placeholder="Search title, tag, location..."
-                                    className="pl-9"
-                                />
-                            </div>
+                    <div className="mx-auto max-w-5xl text-center">
+                        <h2 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
+                            <span className="relative inline-block">
+                                <span className="relative z-10 text-[#0033A0]">Programme</span>
+                                <span className="pointer-events-none absolute inset-x-0 bottom-1 -z-0 h-2 rounded-full bg-[#0033A0]/15 blur-[1px]" />
+                            </span>
+                        </h2>
 
-                            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                                <SelectTrigger className="w-full sm:w-[170px]">
-                                    <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All</SelectItem>
-                                    <SelectItem value="open">Open</SelectItem>
-                                    <SelectItem value="closed">Closed</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="mx-auto mt-6 flex items-center justify-center gap-3">
+                            <span className="h-px w-12 bg-slate-200" />
+                            <span className="h-2 w-2 rounded-full bg-[#FCD116] shadow-[0_0_0_6px_rgba(252,209,22,0.12)]" />
+                            <span className="h-px w-12 bg-slate-200" />
                         </div>
-
-                        <Button onClick={openAdd} className={cn('w-full sm:w-auto', PRIMARY_BTN)}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Event
-                        </Button>
                     </div>
 
-                    <Separator className="my-4" />
-
-                    <div className="text-sm text-slate-600 dark:text-slate-400">
-                        Showing <span className="font-semibold text-slate-900 dark:text-slate-100">{filtered.length}</span>{' '}
-                        item{filtered.length === 1 ? '' : 's'}
-                    </div>
-
-                    <div className="mt-4">
-                        {filtered.length === 0 ? (
-                            <EmptyState
-                                icon={<CalendarDays className="h-5 w-5" />}
-                                title="No event items found"
-                                subtitle="Try adjusting your search/filter, or add a new event item."
-                            />
-                        ) : (
-                            // ✅ scrollbar only in table area
-                            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
-                                <Table className="min-w-[1280px]">
-                                    <TableHeader>
-                                        <TableRow className="bg-slate-50 dark:bg-slate-900/40">
-                                            <TableHead className="min-w-[360px]">Event</TableHead>
-                                            <TableHead className="min-w-[260px]">Schedule</TableHead>
-                                            <TableHead className="min-w-[220px]">Location</TableHead>
-                                            <TableHead className="min-w-[220px]">View more (PDF)</TableHead>
-                                            <TableHead className="w-[140px]">Status</TableHead>
-                                            <TableHead className="w-[180px]">Updated</TableHead>
-                                            <TableHead className="w-[120px] text-right">Action</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-
-                                    <TableBody>
-                                        {filtered.map((p) => (
-                                            <TableRow key={p.id}>
-                                                <TableCell className="font-semibold text-slate-900 dark:text-slate-100">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="grid size-10 place-items-center overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                            {(() => {
-                                                                const imageUrl = resolveImageUrl(p.image_url);
-                                                                if (!imageUrl) {
-                                                                    return <ImageUp className="h-4 w-4 text-slate-500" />;
-                                                                }
-
-                                                                return (
-                                                                    <img
-                                                                        src={imageUrl}
-                                                                        alt={p.title}
-                                                                        className="h-full w-full object-cover"
-                                                                        loading="lazy"
-                                                                        draggable={false}
-                                                                    />
-                                                                );
-                                                            })()}
-                                                        </div>
-
-                                                        <div className="min-w-0">
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">{p.tag}</div>
-                                                            <div className="truncate">{p.title}</div>
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-
-                                                <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    <div className="font-medium">{formatDatePill(p.starts_at, p.ends_at)}</div>
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">{daysToGo(p.starts_at) ?? '—'}</div>
-                                                </TableCell>
-
-                                                <TableCell className="text-slate-700 dark:text-slate-300">{p.location}</TableCell>
-
-                                                <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    {(() => {
-                                                        const pdfUrl = resolvePdfUrl(p.pdf_url);
-                                                        if (!pdfUrl) {
-                                                            return <span className="text-xs text-slate-500 dark:text-slate-400">—</span>;
-                                                        }
-
-                                                        return (
-                                                            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                                                <FileText className="h-4 w-4 text-[#00359c]" />
-                                                                <span className="max-w-[260px] truncate">{basename(pdfUrl)}</span>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </TableCell>
-
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <StatusBadge active={p.is_active} />
-                                                        <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} />
-                                                    </div>
-                                                </TableCell>
-
-                                                <TableCell className="text-slate-700 dark:text-slate-300">{formatDateTimeSafe(p.updated_at)}</TableCell>
-
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="rounded-full">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-
-                                                        <DropdownMenuContent align="end" className="w-52">
-                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => openEdit(p)}>
-                                                                <Pencil className="mr-2 h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => toggleActive(p)}>
-                                                                <BadgeCheck className="mr-2 h-4 w-4" />
-                                                                {p.is_active ? 'Set Closed' : 'Set Open'}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => requestDelete(p)}>
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Add/Edit Dialog (NO live preview, NO URL inputs) */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className={cn('w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-[760px]', 'max-h-[85vh] overflow-hidden p-0')}>
-                    <form onSubmit={submit} className="flex max-h-[85vh] flex-col">
-                        <div className="px-6 pt-6">
-                            <DialogHeader>
-                                <DialogTitle>{editing ? 'Edit Event' : 'Add Event'}</DialogTitle>
-                                <DialogDescription>Upload image + PDF for “View more” on the public page.</DialogDescription>
-                            </DialogHeader>
+                    {items.length ? (
+                        <LightFlexHoverCards items={items} />
+                    ) : (
+                        <div className="mx-auto mt-12 max-w-3xl rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-600">
+                            No programmes are available yet.
                         </div>
-
-                        <div className="flex-1 overflow-y-auto px-6 pb-6">
-                            <div className="mt-4 grid gap-4">
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Tag (small header)</div>
-                                        <Input value={form.data.tag} onChange={(e) => form.setData('tag', e.target.value)} placeholder="e.g. Plenary & Panels" />
-                                        {form.errors.tag ? <div className="text-xs text-red-600">{form.errors.tag}</div> : null}
-                                    </div>
-
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Title (big text)</div>
-                                        <Input value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} placeholder="e.g. Track Discussions" />
-                                        {form.errors.title ? <div className="text-xs text-red-600">{form.errors.title}</div> : null}
-                                    </div>
-
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Description</div>
-                                        <Textarea
-                                            value={form.data.description}
-                                            onChange={(e) => form.setData('description', e.target.value)}
-                                            placeholder="Short description shown on the card"
-                                            className="min-h-[96px]"
-                                        />
-                                        {form.errors.description ? <div className="text-xs text-red-600">{form.errors.description}</div> : null}
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <div className="text-sm font-medium">Starts at</div>
-                                        <Input type="datetime-local" value={form.data.starts_at} onChange={(e) => form.setData('starts_at', e.target.value)} />
-                                        {form.errors.starts_at ? <div className="text-xs text-red-600">{form.errors.starts_at}</div> : null}
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <div className="text-sm font-medium">Ends at</div>
-                                        <Input type="datetime-local" value={form.data.ends_at} onChange={(e) => form.setData('ends_at', e.target.value)} />
-                                        {form.errors.ends_at ? <div className="text-xs text-red-600">{form.errors.ends_at}</div> : null}
-                                    </div>
-
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Location</div>
-                                        <Input value={form.data.location} onChange={(e) => form.setData('location', e.target.value)} placeholder="e.g. Conference Hall B" />
-                                        {form.errors.location ? <div className="text-xs text-red-600">{form.errors.location}</div> : null}
-                                    </div>
-
-                                    {/* IMAGE (upload only) */}
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Image</div>
-
-                                        <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
-                                            <div className="space-y-2">
-                                                <Input type="file" accept="image/*" onChange={handleImageUpload} />
-                                                {(form.errors as any).image ? <div className="text-xs text-red-600">{(form.errors as any).image}</div> : null}
-
-                                                {currentImageUrl && !form.data.image ? (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                        Current: <span className="font-semibold">{basename(currentImageUrl)}</span>
-                                                    </div>
-                                                ) : null}
-                                            </div>
-
-                                            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                <div className="aspect-square bg-slate-100 dark:bg-slate-900">
-                                                    {imagePreview ? (
-                                                        <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" draggable={false} />
-                                                    ) : (
-                                                        <div className="grid h-full place-items-center text-xs text-slate-500">No image</div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* PDF (upload only) */}
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">PDF (View more)</div>
-
-                                        <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
-                                            <div className="space-y-2">
-                                                <Input type="file" accept="application/pdf" onChange={handlePdfUpload} />
-                                                {(form.errors as any).pdf ? <div className="text-xs text-red-600">{(form.errors as any).pdf}</div> : null}
-
-                                                {currentPdfUrl && !form.data.pdf ? (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                        Current: <span className="font-semibold">{basename(currentPdfUrl)}</span>
-                                                    </div>
-                                                ) : null}
-                                            </div>
-
-                                            <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">Selected</div>
-                                                <div className="mt-2 flex items-center gap-2">
-                                                    <div className="grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                                                        <FileText className="h-4 w-4" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                            {pdfLabel || 'No PDF selected'}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500 dark:text-slate-400">Opens when users click “View more”.</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                        <div className="space-y-0.5">
-                                            <div className="text-sm font-medium">Open</div>
-                                            <div className="text-xs text-slate-600 dark:text-slate-400">Closed items won’t appear as “Open” on public.</div>
-                                        </div>
-                                        <Switch checked={form.data.is_active} onCheckedChange={(v) => form.setData('is_active', !!v)} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="sticky bottom-0 z-10 border-t border-slate-200 bg-white/85 px-6 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
-                            <DialogFooter className="gap-2 sm:gap-0">
-                                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={form.processing}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit" className={PRIMARY_BTN} disabled={form.processing}>
-                                    {editing ? 'Save changes' : 'Create'}
-                                </Button>
-                            </DialogFooter>
-                        </div>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Confirm */}
-            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this event?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will permanently delete{' '}
-                            <span className="font-semibold text-slate-900 dark:text-slate-100">{deleteTarget?.title ?? 'this item'}</span>.
-                            This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setDeleteOpen(false)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDelete}>
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </AppLayout>
+                    )}
+                </section>
+            </PublicLayout>
+        </>
     );
 }
