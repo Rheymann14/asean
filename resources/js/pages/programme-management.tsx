@@ -148,6 +148,12 @@ function resolvePdfUrl(pdfUrl?: string | null) {
     return `/downloadables/${pdfUrl}`;
 }
 
+function resolveImageUrl(imageUrl?: string | null) {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
+    return `/event/${imageUrl}`;
+}
+
 function getEventStatus(starts_at?: string | null, ends_at?: string | null) {
     if (!starts_at) return 'open';
     const start = new Date(starts_at);
@@ -314,8 +320,8 @@ export default function ProgrammeManagement(props: PageProps) {
     function openEdit(item: ProgrammeRow) {
         setEditing(item);
 
-        setCurrentImageUrl(item.image_url ?? null);
-        setCurrentPdfUrl(item.pdf_url ?? null);
+        setCurrentImageUrl(resolveImageUrl(item.image_url));
+        setCurrentPdfUrl(resolvePdfUrl(item.pdf_url));
 
         form.setData({
             tag: item.tag ?? '',
@@ -332,8 +338,8 @@ export default function ProgrammeManagement(props: PageProps) {
         form.clearErrors();
 
         // show existing as "preview" until new upload
-        resetImagePreview(item.image_url ?? null);
-        setPdfLabel(item.pdf_url ? basename(item.pdf_url) : '');
+        resetImagePreview(resolveImageUrl(item.image_url));
+        setPdfLabel(item.pdf_url ? basename(resolvePdfUrl(item.pdf_url) ?? item.pdf_url) : '');
 
         setDialogOpen(true);
     }
@@ -515,17 +521,22 @@ export default function ProgrammeManagement(props: PageProps) {
                                                 <TableCell className="font-semibold text-slate-900 dark:text-slate-100">
                                                     <div className="flex items-center gap-3">
                                                         <div className="grid size-10 place-items-center overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                            {p.image_url ? (
-                                                                <img
-                                                                    src={p.image_url}
-                                                                    alt={p.title}
-                                                                    className="h-full w-full object-cover"
-                                                                    loading="lazy"
-                                                                    draggable={false}
-                                                                />
-                                                            ) : (
-                                                                <ImageUp className="h-4 w-4 text-slate-500" />
-                                                            )}
+                                                            {(() => {
+                                                                const imageUrl = resolveImageUrl(p.image_url);
+                                                                if (!imageUrl) {
+                                                                    return <ImageUp className="h-4 w-4 text-slate-500" />;
+                                                                }
+
+                                                                return (
+                                                                    <img
+                                                                        src={imageUrl}
+                                                                        alt={p.title}
+                                                                        className="h-full w-full object-cover"
+                                                                        loading="lazy"
+                                                                        draggable={false}
+                                                                    />
+                                                                );
+                                                            })()}
                                                         </div>
 
                                                         <div className="min-w-0">
