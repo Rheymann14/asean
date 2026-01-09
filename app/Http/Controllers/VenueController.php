@@ -91,16 +91,18 @@ class VenueController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string'],
             'google_maps_url' => ['nullable', 'url', 'max:2048'],
-            'embed_url' => ['nullable', 'url', 'max:2048'],
+            'embed_url' => ['nullable', 'string', 'max:2048'],
             'is_active' => ['nullable', 'boolean'],
         ]);
+
+        $validated['embed_url'] = $this->extractIframeSrc($validated['embed_url'] ?? null);
 
         Venue::create([
             'programme_id' => $validated['programme_id'] ?? null,
             'name' => $validated['name'],
             'address' => $validated['address'],
             'google_maps_url' => $validated['google_maps_url'] ?? null,
-            'embed_url' => $validated['embed_url'] ?? null,
+            'embed_url' => $validated['embed_url'] ?: null,
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
@@ -114,9 +116,13 @@ class VenueController extends Controller
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'address' => ['sometimes', 'required', 'string'],
             'google_maps_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
-            'embed_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
+            'embed_url' => ['sometimes', 'nullable', 'string', 'max:2048'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        if (array_key_exists('embed_url', $validated)) {
+            $validated['embed_url'] = $this->extractIframeSrc($validated['embed_url']);
+        }
 
         $venue->update($validated);
 
@@ -128,5 +134,27 @@ class VenueController extends Controller
         $venue->delete();
 
         return back();
+    }
+
+    private function extractIframeSrc(?string $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (!str_contains($trimmed, '<iframe')) {
+            return $trimmed;
+        }
+
+        if (preg_match('/src=["\']([^"\']+)["\']/i', $trimmed, $matches)) {
+            return $matches[1];
+        }
+
+        return $trimmed;
     }
 }

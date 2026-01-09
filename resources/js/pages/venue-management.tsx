@@ -192,6 +192,14 @@ function showToastError(errors: Record<string, string | string[]>) {
     toast.error(message || 'Something went wrong. Please try again.');
 }
 
+function extractIframeSrc(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (!trimmed.includes('<iframe')) return trimmed;
+    const match = trimmed.match(/src=["']([^"']+)["']/i);
+    return match?.[1] ?? trimmed;
+}
+
 export default function VenueManagement(props: PageProps) {
     const programmes: ProgrammeRow[] = React.useMemo(() => props.programmes ?? [], [props.programmes]);
     const venues: VenueRow[] = React.useMemo(() => props.venues ?? [], [props.venues]);
@@ -273,7 +281,7 @@ export default function VenueManagement(props: PageProps) {
             name: data.name.trim(),
             address: data.address.trim(),
             google_maps_url: data.google_maps_url.trim() || null,
-            embed_url: data.embed_url.trim() || null,
+            embed_url: extractIframeSrc(data.embed_url) || null,
             is_active: !!data.is_active,
         }));
 
