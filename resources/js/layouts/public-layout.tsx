@@ -11,7 +11,7 @@ type NavItem = { label: string; href: string };
 export const PUBLIC_NAV_ITEMS: NavItem[] = [
     { label: 'Home', href: '/' },
     { label: 'Venue', href: '/venue' },
-    { label: 'Event', href: '/event' },
+    { label: 'Programme', href: '/programme' },
     { label: 'Issuances', href: '/issuances' },
     { label: 'Contact Us', href: '/contact-us' },
 ];

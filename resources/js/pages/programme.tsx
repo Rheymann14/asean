@@ -418,9 +418,9 @@ export default function Programme() {
 
     return (
         <>
-            <Head title="Event" />
+            <Head title="Programme" />
 
-            <PublicLayout navActive="/event">
+            <PublicLayout navActive="/programme">
                 <section className="relative isolate mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
                     <div
                         aria-hidden
