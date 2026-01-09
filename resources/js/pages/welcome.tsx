@@ -306,18 +306,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                                 </Link>
                                             </Button>
 
-                                            <div className="mx-auto mt-6 flex max-w-md flex-col items-center gap-3">
-                                                <div className="h-px w-16 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
-
-                                                <p className="text-xs font-semibold tracking-[0.22em] text-slate-700">
-                                                    JANUARY – DECEMBER • 2026
-                                                </p>
-
-                                                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/60 px-4 py-2 text-sm shadow-sm backdrop-blur-md">
-                                                    <span className="font-medium text-slate-900">Venue:</span>
-                                                    <span className="text-slate-600">Commission on Higher Education, Quezon City</span>
-                                                </div>
-                                            </div>
+                                         
                                         </div>
                                     </div>
                                 </div>

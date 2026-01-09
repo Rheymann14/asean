@@ -10,10 +10,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard, participant, issuancesManagement, contactDetails, venueManagement, programmeManagement, scanner } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { Paperclip, ScanQrCode, House, User, CalendarFold, Building, NotepadText, Headset } from 'lucide-react';
+import { Paperclip, House, User, CalendarFold, Building, NotepadText, Headset, ScanLine } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -24,32 +24,28 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Participant',
-        href: dashboard(),
+        href: participant(),
         icon: User,
     },
-    {
-        title: 'Event List',
-        href: dashboard(),
-        icon: CalendarFold,
-    },
+ 
     {
         title: 'Venue',
-        href: dashboard(),
+        href: venueManagement(),
         icon: Building,
     },
     {
-        title: 'Programme',
-        href: dashboard(),
+        title: 'Event',
+        href: programmeManagement(),
         icon: NotepadText,
     },
     {
         title: 'Issuances',
-        href: dashboard(),
+        href: issuancesManagement(),
         icon: Paperclip,
     },
     {
         title: 'Contact Details',
-        href: dashboard(),
+        href: contactDetails(),
         icon: Headset,
     },
 ];
@@ -57,8 +53,8 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'QR Code Scanner',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: ScanQrCode,
+        href: scanner(),
+        icon: ScanLine,
     },
     // {
     //     title: 'Documentation',
