@@ -73,6 +73,7 @@ type ParticipantRow = {
     id: number;
     full_name: string;
     email: string;
+    contact_number?: string | null;
     country_id: number | null;
     user_type_id: number | null;
     is_active: boolean;
@@ -366,12 +367,14 @@ export default function ParticipantPage(props: PageProps) {
     const participantForm = useForm<{
         full_name: string;
         email: string;
+        contact_number: string;
         country_id: string; // Select uses string
         user_type_id: string; // Select uses string
         is_active: boolean;
     }>({
         full_name: '',
         email: '',
+        contact_number: '',
         country_id: '',
         user_type_id: '',
         is_active: true,
@@ -419,6 +422,7 @@ export default function ParticipantPage(props: PageProps) {
                 !q ||
                 p.full_name.toLowerCase().includes(q) ||
                 p.email.toLowerCase().includes(q) ||
+                (p.contact_number ?? '').toLowerCase().includes(q) ||
                 (p.country?.name ?? '').toLowerCase().includes(q) ||
                 (p.user_type?.name ?? '').toLowerCase().includes(q);
 
@@ -458,6 +462,7 @@ export default function ParticipantPage(props: PageProps) {
         participantForm.setData({
             full_name: p.full_name ?? '',
             email: p.email ?? '',
+            contact_number: p.contact_number ?? '',
             country_id: p.country_id ? String(p.country_id) : '',
             user_type_id: p.user_type_id ? String(p.user_type_id) : '',
             is_active: !!p.is_active,
@@ -472,6 +477,7 @@ export default function ParticipantPage(props: PageProps) {
         participantForm.transform((data) => ({
             full_name: data.full_name.trim(),
             email: data.email.trim(),
+            contact_number: data.contact_number.trim() || null,
             country_id: data.country_id ? Number(data.country_id) : null,
             user_type_id: data.user_type_id ? Number(data.user_type_id) : null,
             is_active: data.is_active,
@@ -807,9 +813,10 @@ export default function ParticipantPage(props: PageProps) {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow className="bg-slate-50 dark:bg-slate-900/40">
-                                                    <TableHead className="w-[260px]">Name</TableHead>
-                                                    <TableHead>Email</TableHead>
                                                     <TableHead className="w-[220px]">Country</TableHead>
+                                                    <TableHead className="w-[240px]">Name</TableHead>
+                                                    <TableHead>Email</TableHead>
+                                                    <TableHead className="w-[200px]">Contact Number</TableHead>
                                                     <TableHead className="w-[200px]">User Type</TableHead>
                                                     <TableHead className="w-[140px]">Status</TableHead>
                                                     <TableHead className="w-[140px]">Created</TableHead>
@@ -819,8 +826,6 @@ export default function ParticipantPage(props: PageProps) {
                                             <TableBody>
                                                 {filteredParticipants.map((p) => (
                                                     <TableRow key={p.id}>
-                                                        <TableCell className="font-medium text-slate-900 dark:text-slate-100">{p.full_name}</TableCell>
-                                                        <TableCell className="text-slate-700 dark:text-slate-300">{p.email}</TableCell>
                                                         <TableCell className="text-slate-700 dark:text-slate-300">
                                                             {p.country ? (
                                                                 <div className="flex items-center gap-2">
@@ -831,7 +836,9 @@ export default function ParticipantPage(props: PageProps) {
                                                                 '—'
                                                             )}
                                                         </TableCell>
-
+                                                        <TableCell className="font-medium text-slate-900 dark:text-slate-100">{p.full_name}</TableCell>
+                                                        <TableCell className="text-slate-700 dark:text-slate-300">{p.email}</TableCell>
+                                                        <TableCell className="text-slate-700 dark:text-slate-300">{p.contact_number ?? '—'}</TableCell>
                                                         <TableCell className="text-slate-700 dark:text-slate-300">{p.user_type?.name ?? '—'}</TableCell>
                                                         <TableCell>
                                                             <StatusBadge active={p.is_active} />
@@ -1061,6 +1068,24 @@ export default function ParticipantPage(props: PageProps) {
                                     placeholder="e.g. juan@example.com"
                                 />
                                 {participantForm.errors.email ? <div className="text-xs text-red-600">{participantForm.errors.email}</div> : null}
+                            </div>
+
+                            <div className="space-y-1.5 sm:col-span-2">
+                                <div className="text-sm font-medium">Contact number</div>
+                                <Input
+                                    type="tel"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={participantForm.data.contact_number}
+                                    onChange={(e) => participantForm.setData('contact_number', e.target.value)}
+                                    onInput={(event) => {
+                                        event.currentTarget.value = event.currentTarget.value.replace(/[^0-9]/g, '');
+                                    }}
+                                    placeholder="e.g. 639123456789"
+                                />
+                                {participantForm.errors.contact_number ? (
+                                    <div className="text-xs text-red-600">{participantForm.errors.contact_number}</div>
+                                ) : null}
                             </div>
 
                             <div className="space-y-1.5">
