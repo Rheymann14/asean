@@ -148,7 +148,7 @@ function resolvePdfUrl(pdfUrl?: string | null) {
 function resolveImageUrl(imageUrl?: string | null) {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
-    return `/event/${imageUrl}`;
+    return `/event-images/${imageUrl}`;
 }
 
 function StatusBadge({ active }: { active: boolean }) {
