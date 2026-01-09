@@ -37,6 +37,7 @@ class ParticipantController extends Controller
                     'id' => $user->id,
                     'full_name' => $user->name,
                     'email' => $user->email,
+                    'contact_number' => $user->contact_number,
                     'country_id' => $user->country_id,
                     'user_type_id' => $user->user_type_id,
                     'is_active' => $user->is_active,
@@ -73,6 +74,7 @@ class ParticipantController extends Controller
         $validated = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'contact_number' => ['nullable', 'string', 'max:30'],
             'country_id' => ['nullable', 'exists:countries,id'],
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'is_active' => ['boolean'],
@@ -81,6 +83,7 @@ class ParticipantController extends Controller
         User::create([
             'name' => $validated['full_name'],
             'email' => $validated['email'],
+            'contact_number' => $validated['contact_number'] ?? null,
             'password' => Hash::make(Str::random(32)),
             'country_id' => $validated['country_id'] ?? null,
             'user_type_id' => $validated['user_type_id'] ?? null,
@@ -95,6 +98,7 @@ class ParticipantController extends Controller
         $validated = $request->validate([
             'full_name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $participant->id],
+            'contact_number' => ['sometimes', 'nullable', 'string', 'max:30'],
             'country_id' => ['nullable', 'exists:countries,id'],
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'is_active' => ['sometimes', 'boolean'],
@@ -108,6 +112,10 @@ class ParticipantController extends Controller
 
         if (array_key_exists('email', $validated)) {
             $updates['email'] = $validated['email'];
+        }
+
+        if (array_key_exists('contact_number', $validated)) {
+            $updates['contact_number'] = $validated['contact_number'];
         }
 
         if (array_key_exists('country_id', $validated)) {
