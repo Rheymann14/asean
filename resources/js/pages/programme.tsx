@@ -379,7 +379,7 @@ function ProgrammeEvents({ items }: { items: FlexHoverItem[] }) {
     );
 }
 
-export default function Event() {
+export default function Programme() {
     const items: FlexHoverItem[] = [
         {
             title: 'Plenary & Panels',

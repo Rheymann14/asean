@@ -18,9 +18,8 @@ Route::get('/venue', function () {
     return Inertia::render('venue');
 })->name('venue');
 
-Route::get('/event', function () {
-    return Inertia::render('event');
-})->name('event');
+Route::get('/programme', fn () => Inertia::render('programme'))->name('programme');
+
 
 Route::get('/issuances', function () {
     return Inertia::render('issuances');
