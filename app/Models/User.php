@@ -10,6 +10,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 use App\Models\Country;
 use App\Models\UserType;
+use App\Models\Issuance;
 
 class User extends Authenticatable
 {
@@ -65,5 +66,10 @@ class User extends Authenticatable
     public function userType()
     {
         return $this->belongsTo(UserType::class);
+    }
+
+    public function issuances()
+    {
+        return $this->hasMany(Issuance::class);
     }
 }
