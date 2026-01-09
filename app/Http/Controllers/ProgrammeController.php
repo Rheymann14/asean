@@ -68,12 +68,12 @@ class ProgrammeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'tag' => ['required', 'string', 'max:255'],
+            'tag' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
-            'location' => ['required', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'max:10240'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
             'is_active' => ['nullable', 'boolean'],
@@ -95,24 +95,24 @@ class ProgrammeController extends Controller
         $pdfName = null;
         if ($request->hasFile('pdf')) {
             $file = $request->file('pdf');
-            $pdfName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
             $destination = public_path('downloadables');
 
             if (!File::exists($destination)) {
                 File::makeDirectory($destination, 0755, true);
             }
 
+            $pdfName = $this->resolveUploadName($file->getClientOriginalName(), $destination);
             $file->move($destination, $pdfName);
         }
 
         Programme::create([
             'user_id' => $request->user()->id,
-            'tag' => $validated['tag'],
+            'tag' => $validated['tag'] ?? '',
             'title' => $validated['title'],
             'description' => $validated['description'],
             'starts_at' => $validated['starts_at'] ?? null,
             'ends_at' => $validated['ends_at'] ?? null,
-            'location' => $validated['location'],
+            'location' => $validated['location'] ?? '',
             'image_url' => $imageName,
             'pdf_url' => $pdfName,
             'is_active' => $validated['is_active'] ?? true,
@@ -124,12 +124,12 @@ class ProgrammeController extends Controller
     public function update(Request $request, Programme $programme)
     {
         $validated = $request->validate([
-            'tag' => ['sometimes', 'required', 'string', 'max:255'],
+            'tag' => ['sometimes', 'nullable', 'string', 'max:255'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'required', 'string'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
-            'location' => ['sometimes', 'required', 'string', 'max:255'],
+            'location' => ['sometimes', 'nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'max:10240'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
             'is_active' => ['sometimes', 'boolean'],
@@ -158,13 +158,13 @@ class ProgrammeController extends Controller
 
         if ($request->hasFile('pdf')) {
             $file = $request->file('pdf');
-            $pdfName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
             $destination = public_path('downloadables');
 
             if (!File::exists($destination)) {
                 File::makeDirectory($destination, 0755, true);
             }
 
+            $pdfName = $this->resolveUploadName($file->getClientOriginalName(), $destination);
             $file->move($destination, $pdfName);
 
             if ($programme->pdf_url) {
@@ -201,5 +201,27 @@ class ProgrammeController extends Controller
         $programme->delete();
 
         return back();
+    }
+
+    private function resolveUploadName(string $originalName, string $destination): string
+    {
+        $candidate = $originalName;
+        $path = $destination . DIRECTORY_SEPARATOR . $candidate;
+
+        if (!File::exists($path)) {
+            return $candidate;
+        }
+
+        $base = pathinfo($originalName, PATHINFO_FILENAME);
+        $ext = pathinfo($originalName, PATHINFO_EXTENSION);
+        $suffix = 1;
+
+        do {
+            $candidate = $base . '-' . $suffix . ($ext ? '.' . $ext : '');
+            $path = $destination . DIRECTORY_SEPARATOR . $candidate;
+            $suffix++;
+        } while (File::exists($path));
+
+        return $candidate;
     }
 }
