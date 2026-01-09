@@ -70,7 +70,7 @@ type PageProps = {
     programmes?: ProgrammeRow[];
 };
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Programme Management', href: '/programme-management' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Event Management', href: '/event-management' }];
 
 const ENDPOINTS = {
     programmes: {
@@ -82,52 +82,6 @@ const ENDPOINTS = {
 
 const PRIMARY_BTN =
     'bg-[#00359c] text-white hover:bg-[#00359c]/90 focus-visible:ring-[#00359c]/30 dark:bg-[#00359c] dark:hover:bg-[#00359c]/90';
-
-// -------------------- DEV SAMPLE DATA --------------------
-const DEV_SAMPLE_PROGRAMMES: ProgrammeRow[] = [
-    {
-        id: 1,
-        tag: 'Plenary & Panels',
-        title: 'Track Discussions',
-        description:
-            'Track-based panels and guided discussions. Share insights, build outputs, and align next steps across participating groups.',
-        starts_at: '2026-03-02T09:00:00+08:00',
-        ends_at: '2026-03-02T17:00:00+08:00',
-        location: 'Conference Hall B',
-        image_url: '/event/event1.jpg',
-        pdf_url: '/docs/programme/track-discussions.pdf',
-        is_active: true,
-        updated_at: '2026-01-05T08:00:00+08:00',
-    },
-    {
-        id: 2,
-        tag: 'Workshops & Outputs',
-        title: 'Facilitated Workshops',
-        description:
-            'Facilitated activities for planning, drafting commitments, and building outputs participants can bring back to their institutions.',
-        starts_at: '2026-03-03T09:00:00+08:00',
-        ends_at: '2026-03-03T16:30:00+08:00',
-        location: 'Workshop Rooms',
-        image_url: '/event/event2.jpg',
-        pdf_url: '/docs/programme/facilitated-workshops.pdf',
-        is_active: true,
-        updated_at: '2026-01-05T09:15:00+08:00',
-    },
-    {
-        id: 3,
-        tag: 'Highlights & Closing',
-        title: 'Closing Session',
-        description:
-            'Key moments, official updates, and downloadable references—kept in one place for participants and partners.',
-        starts_at: '2026-03-04T09:00:00+08:00',
-        ends_at: '2026-03-04T12:00:00+08:00',
-        location: 'Main Auditorium',
-        image_url: '/event/event3.jpg',
-        pdf_url: null,
-        is_active: true,
-        updated_at: '2026-01-06T10:05:00+08:00',
-    },
-];
 
 // -------------------- helpers --------------------
 function formatDatePill(starts_at?: string | null, ends_at?: string | null) {
@@ -185,6 +139,18 @@ function basename(u: string) {
     return parts[parts.length - 1] ?? u;
 }
 
+function resolvePdfUrl(pdfUrl?: string | null) {
+    if (!pdfUrl) return null;
+    if (pdfUrl.startsWith('http') || pdfUrl.startsWith('/')) return pdfUrl;
+    return `/downloadables/${pdfUrl}`;
+}
+
+function resolveImageUrl(imageUrl?: string | null) {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
+    return `/event/${imageUrl}`;
+}
+
 function StatusBadge({ active }: { active: boolean }) {
     return (
         <span
@@ -226,14 +192,10 @@ function EmptyState({
     );
 }
 
-export default function ProgrammeManagement(props: PageProps) {
+export default function EventManagement(props: PageProps) {
     const serverProgrammes: ProgrammeRow[] = props.programmes ?? [];
 
-    const programmes: ProgrammeRow[] = React.useMemo(() => {
-        if (serverProgrammes.length > 0) return serverProgrammes;
-        if (!import.meta.env.DEV) return [];
-        return DEV_SAMPLE_PROGRAMMES;
-    }, [serverProgrammes]);
+    const programmes: ProgrammeRow[] = React.useMemo(() => serverProgrammes, [serverProgrammes]);
 
     // filters
     const [q, setQ] = React.useState('');
@@ -318,8 +280,8 @@ export default function ProgrammeManagement(props: PageProps) {
     function openEdit(item: ProgrammeRow) {
         setEditing(item);
 
-        setCurrentImageUrl(item.image_url ?? null);
-        setCurrentPdfUrl(item.pdf_url ?? null);
+        setCurrentImageUrl(resolveImageUrl(item.image_url));
+        setCurrentPdfUrl(resolvePdfUrl(item.pdf_url));
 
         form.setData({
             tag: item.tag ?? '',
@@ -336,8 +298,8 @@ export default function ProgrammeManagement(props: PageProps) {
         form.clearErrors();
 
         // show existing as "preview" until new upload
-        resetImagePreview(item.image_url ?? null);
-        setPdfLabel(item.pdf_url ? basename(item.pdf_url) : '');
+        resetImagePreview(resolveImageUrl(item.image_url));
+        setPdfLabel(item.pdf_url ? basename(resolvePdfUrl(item.pdf_url) ?? item.pdf_url) : '');
 
         setDialogOpen(true);
     }
@@ -423,7 +385,7 @@ export default function ProgrammeManagement(props: PageProps) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Programme Management" />
+            <Head title="Event Management" />
 
             {/* ✅ removed overflow-x-auto here */}
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
@@ -432,10 +394,10 @@ export default function ProgrammeManagement(props: PageProps) {
                     <div className="flex items-center gap-2">
                         <CalendarDays className="h-5 w-5 text-[#00359c]" />
                         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                            Programme Management
+                            Event Management
                         </h1>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Manage programme cards shown on the public Programme page.</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Manage event cards shown on the public Event page.</p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
@@ -465,7 +427,7 @@ export default function ProgrammeManagement(props: PageProps) {
 
                         <Button onClick={openAdd} className={cn('w-full sm:w-auto', PRIMARY_BTN)}>
                             <Plus className="mr-2 h-4 w-4" />
-                            Add Programme
+                            Add Event
                         </Button>
                     </div>
 
@@ -480,8 +442,8 @@ export default function ProgrammeManagement(props: PageProps) {
                         {filtered.length === 0 ? (
                             <EmptyState
                                 icon={<CalendarDays className="h-5 w-5" />}
-                                title="No programme items found"
-                                subtitle="Try adjusting your search/filter, or add a new programme item."
+                                title="No event items found"
+                                subtitle="Try adjusting your search/filter, or add a new event item."
                             />
                         ) : (
                             // ✅ scrollbar only in table area
@@ -489,7 +451,7 @@ export default function ProgrammeManagement(props: PageProps) {
                                 <Table className="min-w-[1280px]">
                                     <TableHeader>
                                         <TableRow className="bg-slate-50 dark:bg-slate-900/40">
-                                            <TableHead className="min-w-[360px]">Programme</TableHead>
+                                            <TableHead className="min-w-[360px]">Event</TableHead>
                                             <TableHead className="min-w-[260px]">Schedule</TableHead>
                                             <TableHead className="min-w-[220px]">Location</TableHead>
                                             <TableHead className="min-w-[220px]">View more (PDF)</TableHead>
@@ -505,9 +467,9 @@ export default function ProgrammeManagement(props: PageProps) {
                                                 <TableCell className="font-semibold text-slate-900 dark:text-slate-100">
                                                     <div className="flex items-center gap-3">
                                                         <div className="grid size-10 place-items-center overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                            {p.image_url ? (
+                                                            {resolveImageUrl(p.image_url) ? (
                                                                 <img
-                                                                    src={p.image_url}
+                                                                    src={resolveImageUrl(p.image_url) ?? undefined}
                                                                     alt={p.title}
                                                                     className="h-full w-full object-cover"
                                                                     loading="lazy"
@@ -533,10 +495,12 @@ export default function ProgrammeManagement(props: PageProps) {
                                                 <TableCell className="text-slate-700 dark:text-slate-300">{p.location}</TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    {p.pdf_url ? (
+                                                    {resolvePdfUrl(p.pdf_url) ? (
                                                         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
                                                             <FileText className="h-4 w-4 text-[#00359c]" />
-                                                            <span className="max-w-[260px] truncate">{basename(p.pdf_url)}</span>
+                                                            <span className="max-w-[260px] truncate">
+                                                                {basename(resolvePdfUrl(p.pdf_url) ?? p.pdf_url)}
+                                                            </span>
                                                         </div>
                                                     ) : (
                                                         <span className="text-xs text-slate-500 dark:text-slate-400">—</span>
@@ -594,7 +558,7 @@ export default function ProgrammeManagement(props: PageProps) {
                     <form onSubmit={submit} className="flex max-h-[85vh] flex-col">
                         <div className="px-6 pt-6">
                             <DialogHeader>
-                                <DialogTitle>{editing ? 'Edit Programme' : 'Add Programme'}</DialogTitle>
+                                <DialogTitle>{editing ? 'Edit Event' : 'Add Event'}</DialogTitle>
                                 <DialogDescription>Upload image + PDF for “View more” on the public page.</DialogDescription>
                             </DialogHeader>
                         </div>
@@ -733,7 +697,7 @@ export default function ProgrammeManagement(props: PageProps) {
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this programme?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete this event?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This will permanently delete{' '}
                             <span className="font-semibold text-slate-900 dark:text-slate-100">{deleteTarget?.title ?? 'this item'}</span>.

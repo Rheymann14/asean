@@ -21,7 +21,7 @@ Route::get('/venue', function () {
     return Inertia::render('venue');
 })->name('venue');
 
-Route::get('/programme', fn () => Inertia::render('programme'))->name('programme');
+Route::get('/event', fn () => Inertia::render('event'))->name('event');
 
 
 Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issuances');
@@ -44,7 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('contact-details', [ContactDetailController::class, 'index'])->name('contact-details');
     Route::patch('contact-details/{contactDetail}', [ContactDetailController::class, 'update'])->name('contact-details.update');
 
-    Route::get('programme-management', fn () => Inertia::render('programme-management'))->name('programme-management');
+    Route::get('event-management', fn () => Inertia::render('event-management'))->name('event-management');
 
     Route::get('scanner', fn () => Inertia::render('scanner'))->name('scanner');
 
