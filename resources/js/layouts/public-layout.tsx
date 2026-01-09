@@ -11,7 +11,7 @@ type NavItem = { label: string; href: string };
 export const PUBLIC_NAV_ITEMS: NavItem[] = [
     { label: 'Home', href: '/' },
     { label: 'Venue', href: '/venue' },
-    { label: 'Programme', href: '/programme' },
+    { label: 'Event', href: '/event' },
     { label: 'Issuances', href: '/issuances' },
     { label: 'Contact Us', href: '/contact-us' },
 ];
@@ -347,7 +347,7 @@ export default function PublicLayout({
                                 <ul className="mt-5 space-y-3 text-sm">
                                     {[
                                         { label: 'Venue', href: '/venue' },
-                                        { label: 'Programme', href: '/programme' },
+                                        { label: 'Event', href: '/event' },
                                         { label: 'Issuances', href: '/issuances' },
                                         { label: 'Contact Us', href: '/contact-us' },
                                     ].map((item) => (

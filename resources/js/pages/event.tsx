@@ -379,7 +379,7 @@ function ProgrammeEvents({ items }: { items: FlexHoverItem[] }) {
     );
 }
 
-export default function Programme() {
+export default function Event() {
     const items: FlexHoverItem[] = [
         {
             title: 'Plenary & Panels',
@@ -418,9 +418,9 @@ export default function Programme() {
 
     return (
         <>
-            <Head title="Programme" />
+            <Head title="Event" />
 
-            <PublicLayout navActive="/programme">
+            <PublicLayout navActive="/event">
                 <section className="relative isolate mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
                     <div
                         aria-hidden
