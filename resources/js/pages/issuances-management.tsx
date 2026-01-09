@@ -50,6 +50,7 @@ import {
     CheckCircle2,
     XCircle,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Issuance = {
     id: number;
@@ -99,6 +100,12 @@ function formatDateTimeSafe(value?: string | null) {
         hour: '2-digit',
         minute: '2-digit',
     }).format(d);
+}
+
+function showToastError(errors: Record<string, string | string[]>) {
+    const firstError = Object.values(errors)?.[0];
+    const message = Array.isArray(firstError) ? firstError[0] : firstError;
+    toast.error(message || 'Something went wrong. Please try again.');
 }
 
 function StatusBadge({ active }: { active: boolean }) {
@@ -264,7 +271,9 @@ export default function IssuancesManagement(props: PageProps) {
             onSuccess: () => {
                 setDialogOpen(false);
                 setEditing(null);
+                toast.success(`Issuance ${editing ? 'updated' : 'created'}.`);
             },
+            onError: showToastError,
         } as const;
 
         if (editing) form.patch(ENDPOINTS.update(editing.id), options);
@@ -272,7 +281,15 @@ export default function IssuancesManagement(props: PageProps) {
     }
 
     function toggleActive(item: Issuance) {
-        router.patch(ENDPOINTS.update(item.id), { is_active: !item.is_active }, { preserveScroll: true });
+        router.patch(
+            ENDPOINTS.update(item.id),
+            { is_active: !item.is_active },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Issuance ${item.is_active ? 'deactivated' : 'activated'}.`),
+                onError: () => toast.error('Unable to update issuance status.'),
+            },
+        );
     }
 
     function requestDelete(item: Issuance) {
@@ -289,6 +306,8 @@ export default function IssuancesManagement(props: PageProps) {
                 setDeleteOpen(false);
                 setDeleteTarget(null);
             },
+            onSuccess: () => toast.success('Issuance deleted.'),
+            onError: () => toast.error('Unable to delete issuance.'),
         });
     }
 
@@ -361,6 +380,7 @@ export default function IssuancesManagement(props: PageProps) {
                         <TabsContent value="grid" className="mt-0">
                             {filtered.length === 0 ? (
                                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center dark:border-slate-800 dark:bg-slate-900/30">
+                                    <FileText className="mx-auto h-7 w-7 text-slate-400" />
                                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200">No issuances found.</p>
                                     <p className="mt-1 text-sm text-slate-500">Try another keyword.</p>
                                 </div>
@@ -435,6 +455,7 @@ export default function IssuancesManagement(props: PageProps) {
                         <TabsContent value="table" className="mt-0">
                             {filtered.length === 0 ? (
                                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center dark:border-slate-800 dark:bg-slate-900/30">
+                                    <FileText className="mx-auto h-7 w-7 text-slate-400" />
                                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200">No issuances found.</p>
                                     <p className="mt-1 text-sm text-slate-500">Try another keyword.</p>
                                 </div>

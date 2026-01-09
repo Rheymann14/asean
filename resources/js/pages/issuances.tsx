@@ -211,6 +211,7 @@ export default function Issuances(props: PageProps) {
                     <div className="mx-auto mt-8 max-w-6xl">
                         {filtered.length === 0 ? (
                             <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+                                <FileText className="mx-auto h-7 w-7 text-slate-400" />
                                 <p className="text-sm font-medium text-slate-700">No issuances found.</p>
                                 <p className="mt-1 text-sm text-slate-500">Try another keyword.</p>
                             </div>
