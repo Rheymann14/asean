@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LoginResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
@@ -31,6 +32,7 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureActions();
+        $this->configureResponses();
         $this->configureViews();
         $this->configureRateLimiting();
     }
@@ -42,6 +44,33 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+    }
+
+    /**
+     * Configure Fortify responses.
+     */
+    private function configureResponses(): void
+    {
+        $this->app->singleton(LoginResponse::class, function () {
+            return new class implements LoginResponse {
+                public function toResponse($request)
+                {
+                    $user = $request->user();
+
+                    if ($user) {
+                        $user->loadMissing('userType');
+                        $roleName = Str::upper((string) ($user->userType->name ?? ''));
+                        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
+
+                        if ($roleName === 'CHED' || $roleSlug === 'CHED') {
+                            return redirect('/dashboard');
+                        }
+                    }
+
+                    return redirect('/participant-dashboard');
+                }
+            };
+        });
     }
 
     /**
