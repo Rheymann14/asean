@@ -251,6 +251,8 @@ export default function VenueManagement(props: PageProps) {
         is_active: true,
     });
 
+    const embedPreviewUrl = React.useMemo(() => extractIframeSrc(form.data.embed_url), [form.data.embed_url]);
+
     function openAdd() {
         setEditing(null);
         form.reset();
@@ -628,7 +630,7 @@ export default function VenueManagement(props: PageProps) {
                                     ) : null}
                                 </div>
 
-                                <MapPreview embedUrl={form.data.embed_url} googleMapsUrl={form.data.google_maps_url} />
+                                <MapPreview embedUrl={embedPreviewUrl} googleMapsUrl={form.data.google_maps_url} />
 
                                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-200">
                                     <div className="font-semibold">Public page will show</div>

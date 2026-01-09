@@ -90,8 +90,8 @@ class VenueController extends Controller
             'programme_id' => ['nullable', 'exists:programmes,id'],
             'name' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string'],
-            'google_maps_url' => ['nullable', 'url', 'max:2048'],
-            'embed_url' => ['nullable', 'string', 'max:2048'],
+            'google_maps_url' => ['nullable', 'url'],
+            'embed_url' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
@@ -115,8 +115,8 @@ class VenueController extends Controller
             'programme_id' => ['sometimes', 'nullable', 'exists:programmes,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'address' => ['sometimes', 'required', 'string'],
-            'google_maps_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
-            'embed_url' => ['sometimes', 'nullable', 'string', 'max:2048'],
+            'google_maps_url' => ['sometimes', 'nullable', 'url'],
+            'embed_url' => ['sometimes', 'nullable', 'string'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
