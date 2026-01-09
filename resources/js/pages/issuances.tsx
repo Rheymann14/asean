@@ -9,23 +9,13 @@ import { Calendar, Download, ExternalLink, FileText, Search } from 'lucide-react
 
 type Issuance = {
     title: string;
-
     issued_at: string; // YYYY-MM-DD
-    href: string; // /issuances/file.pdf (public/issuances)
+    href: string; // /downloadables/file.pdf
 };
 
-const ISSUANCES: Issuance[] = [
-    {
-        title: 'asean 2025',
-        issued_at: '2026-01-05',
-        href: '/downloadables/asean2025.pdf',
-    },
-    {
-        title: 'CHED Memo',
-        issued_at: '2026-01-03',
-        href: '/downloadables/ched_memo.pdf',
-    },
-];
+type PageProps = {
+    issuances?: Issuance[];
+};
 
 function formatDate(dateStr: string) {
     const d = new Date(`${dateStr}T00:00:00`);
@@ -165,18 +155,19 @@ function IssuanceTile({ item }: { item: Issuance }) {
     );
 }
 
-export default function Issuances() {
+export default function Issuances(props: PageProps) {
     const [q, setQ] = React.useState('');
+    const issuances = props.issuances ?? [];
 
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
-        if (!query) return ISSUANCES;
+        if (!query) return issuances;
 
-        return ISSUANCES.filter((x) => {
+        return issuances.filter((x) => {
             const hay = `${x.title} ${x.issued_at}`.toLowerCase();
             return hay.includes(query);
         });
-    }, [q]);
+    }, [q, issuances]);
 
     return (
         <>
@@ -220,6 +211,7 @@ export default function Issuances() {
                     <div className="mx-auto mt-8 max-w-6xl">
                         {filtered.length === 0 ? (
                             <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+                                <FileText className="mx-auto h-7 w-7 text-slate-400" />
                                 <p className="text-sm font-medium text-slate-700">No issuances found.</p>
                                 <p className="mt-1 text-sm text-slate-500">Try another keyword.</p>
                             </div>
