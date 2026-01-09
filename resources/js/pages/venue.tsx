@@ -145,6 +145,14 @@ function MapEmbed({
                 allowFullScreen
                 onLoad={() => setLoaded(true)}
             />
+            <div
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-3 h-16 w-52 rounded-lg bg-white/90 shadow-sm dark:bg-slate-900/90"
+            />
+            <div
+                aria-hidden
+                className="pointer-events-none absolute right-3 top-3 h-12 w-12 rounded-lg bg-white/90 shadow-sm dark:bg-slate-900/90"
+            />
         </div>
     );
 }

@@ -174,13 +174,21 @@ function MapPreview({
     }
 
     return (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
             <iframe
                 title="Venue map preview"
                 src={embedUrl}
                 className="h-[320px] w-full pointer-events-none"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
+            />
+            <div
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-3 h-16 w-52 rounded-lg bg-white/90 shadow-sm dark:bg-slate-900/90"
+            />
+            <div
+                aria-hidden
+                className="pointer-events-none absolute right-3 top-3 h-12 w-12 rounded-lg bg-white/90 shadow-sm dark:bg-slate-900/90"
             />
         </div>
     );
