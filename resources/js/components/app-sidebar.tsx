@@ -13,7 +13,7 @@ import {
 import { dashboard, participant, issuancesManagement, contactDetails, venueManagement, scanner } from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Paperclip, User, Users, Building, NotepadText, Headset, ScanLine, House } from 'lucide-react';
+import { ScrollText, User, Users, Building2, MapPin, ScanLine, House, CalendarDays} from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -38,22 +38,22 @@ export function AppSidebar() {
               {
                   title: 'Venue',
                   href: venueManagement(),
-                  icon: Building,
+                  icon: Building2,
               },
               {
                   title: 'Event',
                   href: '/event-management',
-                  icon: NotepadText,
+                  icon: CalendarDays,
               },
               {
                   title: 'Issuances',
                   href: issuancesManagement(),
-                  icon: Paperclip,
+                  icon: ScrollText,
               },
               {
                   title: 'Contact Details',
                   href: contactDetails(),
-                  icon: Headset,
+                  icon: MapPin,
               },
           ]
         : [

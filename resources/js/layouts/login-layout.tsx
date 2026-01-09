@@ -16,11 +16,11 @@ export default function LoginLayout({ children }: LoginLayoutProps) {
                     loading="lazy"
                     className={cn('h-full w-full object-cover object-center')}
                 />
-                <div className="absolute inset-0 bg-white/35" />
+                <div className="absolute inset-0 bg-white/40" />
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,51,160,0.12),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(252,209,22,0.12),transparent_55%)]" />
             </div>
 
-            <main className="relative z-10 min-h-[100svh]">{children}</main>
+            <main className="relative z-10 min-h-[100svh] w-full overflow-x-hidden">{children}</main>
         </div>
     );
 }
