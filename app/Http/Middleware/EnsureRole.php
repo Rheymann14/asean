@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
+
+class EnsureRole
+{
+    /**
+     * Handle an incoming request.
+     */
+    public function handle(Request $request, Closure $next, string $role): Response
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            abort(403);
+        }
+
+        $user->loadMissing('userType');
+        $roleName = Str::upper((string) ($user->userType->name ?? ''));
+        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
+        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
+
+        if ($role === 'ched' && ! $isChed) {
+            abort(403);
+        }
+
+        if ($role === 'participant' && $isChed) {
+            abort(403);
+        }
+
+        return $next($request);
+    }
+}
