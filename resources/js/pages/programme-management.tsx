@@ -43,25 +43,26 @@ import {
     Trash2,
     BadgeCheck,
     CalendarDays,
-    MapPin,
     ImageUp,
+    FileText,
     CheckCircle2,
     XCircle,
 } from 'lucide-react';
 
 type ProgrammeRow = {
     id: number;
-    tag: string; // small label like "Plenary & Panels"
-    title: string; // big title like "Track Discussions"
+    tag: string;
+    title: string;
     description: string;
 
     starts_at: string | null; // ISO string
     ends_at: string | null; // ISO string
     location: string;
 
-    image_url: string | null; // public image path OR storage url
-    is_active: boolean;
+    image_url: string | null; // server-provided
+    pdf_url: string | null; // server-provided (for "View more")
 
+    is_active: boolean;
     updated_at?: string | null;
 };
 
@@ -71,7 +72,6 @@ type PageProps = {
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Programme Management', href: '/programme-management' }];
 
-// ✅ Update these endpoints to match your Laravel routes.
 const ENDPOINTS = {
     programmes: {
         store: '/programmes',
@@ -80,11 +80,10 @@ const ENDPOINTS = {
     },
 };
 
-// ✅ Accent color requested (#00359c) — apply to all primary buttons
 const PRIMARY_BTN =
     'bg-[#00359c] text-white hover:bg-[#00359c]/90 focus-visible:ring-[#00359c]/30 dark:bg-[#00359c] dark:hover:bg-[#00359c]/90';
 
-// -------------------- DEV SAMPLE DATA (matches your public screenshot) --------------------
+// -------------------- DEV SAMPLE DATA --------------------
 const DEV_SAMPLE_PROGRAMMES: ProgrammeRow[] = [
     {
         id: 1,
@@ -95,7 +94,8 @@ const DEV_SAMPLE_PROGRAMMES: ProgrammeRow[] = [
         starts_at: '2026-03-02T09:00:00+08:00',
         ends_at: '2026-03-02T17:00:00+08:00',
         location: 'Conference Hall B',
-        image_url: '/event/event1.jpg', // change if you have your own
+        image_url: '/event/event1.jpg',
+        pdf_url: '/docs/programme/track-discussions.pdf',
         is_active: true,
         updated_at: '2026-01-05T08:00:00+08:00',
     },
@@ -108,7 +108,8 @@ const DEV_SAMPLE_PROGRAMMES: ProgrammeRow[] = [
         starts_at: '2026-03-03T09:00:00+08:00',
         ends_at: '2026-03-03T16:30:00+08:00',
         location: 'Workshop Rooms',
-        image_url: '/event/event2.jpg', // change if you have your own
+        image_url: '/event/event2.jpg',
+        pdf_url: '/docs/programme/facilitated-workshops.pdf',
         is_active: true,
         updated_at: '2026-01-05T09:15:00+08:00',
     },
@@ -121,7 +122,8 @@ const DEV_SAMPLE_PROGRAMMES: ProgrammeRow[] = [
         starts_at: '2026-03-04T09:00:00+08:00',
         ends_at: '2026-03-04T12:00:00+08:00',
         location: 'Main Auditorium',
-        image_url: '/event/event3.jpg', // change if you have your own
+        image_url: '/event/event3.jpg',
+        pdf_url: null,
         is_active: true,
         updated_at: '2026-01-06T10:05:00+08:00',
     },
@@ -135,9 +137,7 @@ function formatDatePill(starts_at?: string | null, ends_at?: string | null) {
     if (Number.isNaN(s.getTime())) return '—';
 
     const d = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).format(s);
-
-    const time = (dt: Date) =>
-        new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' }).format(dt).replace(':00', ':00');
+    const time = (dt: Date) => new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' }).format(dt);
 
     if (!e || Number.isNaN(e.getTime())) return `${d} · ${time(s)}`;
     return `${d} · ${time(s)}–${time(e)}`;
@@ -152,7 +152,6 @@ function daysToGo(starts_at?: string | null) {
     const diff = s.getTime() - now.getTime();
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
 
-    // match your public style: "53 days to go"
     if (days < 0) return 'Ended';
     if (days === 0) return 'Today';
     if (days === 1) return '1 day to go';
@@ -172,13 +171,18 @@ function formatDateTimeSafe(value?: string | null) {
     }).format(d);
 }
 
-// datetime-local wants "YYYY-MM-DDTHH:mm"
 function toLocalInputValue(iso: string | null | undefined) {
     if (!iso) return '';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '';
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function basename(u: string) {
+    const s = u.split('?')[0].split('#')[0];
+    const parts = s.split('/').filter(Boolean);
+    return parts[parts.length - 1] ?? u;
 }
 
 function StatusBadge({ active }: { active: boolean }) {
@@ -222,86 +226,6 @@ function EmptyState({
     );
 }
 
-function ProgrammeCardPreview({
-    tag,
-    title,
-    description,
-    starts_at,
-    ends_at,
-    location,
-    is_active,
-    image_url,
-}: Partial<ProgrammeRow>) {
-    const dateLabel = formatDatePill(starts_at ?? null, ends_at ?? null);
-    const d2g = daysToGo(starts_at ?? null);
-
-    return (
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-35px_rgba(2,6,23,0.25)] dark:border-slate-800 dark:bg-slate-950">
-            {/* pills row */}
-            <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[12px] font-medium text-[#00359c] dark:border-blue-900/40 dark:bg-blue-950/30">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {dateLabel}
-                </span>
-
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[12px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                    <MapPin className="h-3.5 w-3.5 text-slate-500" />
-                    {location || 'Location'}
-                </span>
-
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[12px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                    <span className="inline-block size-2 rounded-full bg-slate-300" />
-                    {d2g ?? '—'}
-                </span>
-
-                <span className="ml-auto">
-                    <StatusBadge active={!!is_active} />
-                </span>
-            </div>
-
-            {/* content */}
-            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_220px]">
-                <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{tag || 'Tag'}</div>
-                    <div className="mt-2 text-2xl font-semibold leading-tight text-slate-900 dark:text-slate-100">
-                        {title || 'Programme title'}
-                    </div>
-                    <div className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                        {description || 'Programme description will appear here.'}
-                    </div>
-
-                    <div className="mt-5">
-                        <div className={cn('inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold', PRIMARY_BTN)}>
-                            View more
-                            <span className="ml-3 inline-block">→</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex justify-end">
-                    <div className="w-full max-w-[240px] rounded-3xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                        <div className="aspect-square overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-900">
-                            {image_url ? (
-                                <img
-                                    src={image_url}
-                                    alt="Programme"
-                                    className="h-full w-full object-cover"
-                                    loading="lazy"
-                                    draggable={false}
-                                />
-                            ) : (
-                                <div className="grid h-full w-full place-items-center text-sm text-slate-500">
-                                    No image
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 export default function ProgrammeManagement(props: PageProps) {
     const serverProgrammes: ProgrammeRow[] = props.programmes ?? [];
 
@@ -318,14 +242,8 @@ export default function ProgrammeManagement(props: PageProps) {
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
         return programmes.filter((p) => {
-            const matchesQuery =
-                !query ||
-                `${p.title} ${p.tag} ${p.location} ${p.description}`.toLowerCase().includes(query);
-
-            const matchesStatus =
-                statusFilter === 'all' ||
-                (statusFilter === 'open' ? p.is_active : !p.is_active);
-
+            const matchesQuery = !query || `${p.title} ${p.tag} ${p.location} ${p.description}`.toLowerCase().includes(query);
+            const matchesStatus = statusFilter === 'all' || (statusFilter === 'open' ? p.is_active : !p.is_active);
             return matchesQuery && matchesStatus;
         });
     }, [programmes, q, statusFilter]);
@@ -338,8 +256,16 @@ export default function ProgrammeManagement(props: PageProps) {
     const [deleteOpen, setDeleteOpen] = React.useState(false);
     const [deleteTarget, setDeleteTarget] = React.useState<ProgrammeRow | null>(null);
 
-    // image preview (if you later add uploads)
+    // ✅ existing file urls (server) when editing
+    const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
+    const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null);
+
+    // image preview
     const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+
+    // pdf label
+    const [pdfLabel, setPdfLabel] = React.useState<string>('');
+
     React.useEffect(() => {
         return () => {
             if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
@@ -353,8 +279,8 @@ export default function ProgrammeManagement(props: PageProps) {
         starts_at: string; // datetime-local
         ends_at: string; // datetime-local
         location: string;
-        image_url: string; // for now: URL/path
-        image: File | null; // optional upload if you wire backend
+        image: File | null;
+        pdf: File | null;
         is_active: boolean;
     }>({
         tag: '',
@@ -363,8 +289,8 @@ export default function ProgrammeManagement(props: PageProps) {
         starts_at: '',
         ends_at: '',
         location: '',
-        image_url: '',
         image: null,
+        pdf: null,
         is_active: true,
     });
 
@@ -379,12 +305,22 @@ export default function ProgrammeManagement(props: PageProps) {
         setEditing(null);
         form.reset();
         form.clearErrors();
+
+        setCurrentImageUrl(null);
+        setCurrentPdfUrl(null);
+
         resetImagePreview(null);
+        setPdfLabel('');
+
         setDialogOpen(true);
     }
 
     function openEdit(item: ProgrammeRow) {
         setEditing(item);
+
+        setCurrentImageUrl(item.image_url ?? null);
+        setCurrentPdfUrl(item.pdf_url ?? null);
+
         form.setData({
             tag: item.tag ?? '',
             title: item.title ?? '',
@@ -392,12 +328,17 @@ export default function ProgrammeManagement(props: PageProps) {
             starts_at: toLocalInputValue(item.starts_at),
             ends_at: toLocalInputValue(item.ends_at),
             location: item.location ?? '',
-            image_url: item.image_url ?? '',
             image: null,
+            pdf: null,
             is_active: !!item.is_active,
         });
+
         form.clearErrors();
+
+        // show existing as "preview" until new upload
         resetImagePreview(item.image_url ?? null);
+        setPdfLabel(item.pdf_url ? basename(item.pdf_url) : '');
+
         setDialogOpen(true);
     }
 
@@ -406,17 +347,28 @@ export default function ProgrammeManagement(props: PageProps) {
         form.setData('image', file);
 
         if (!file) {
-            resetImagePreview(form.data.image_url || null);
+            resetImagePreview(currentImageUrl);
             return;
         }
 
         resetImagePreview(URL.createObjectURL(file));
     }
 
+    function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0] ?? null;
+        form.setData('pdf', file);
+
+        if (!file) {
+            setPdfLabel(currentPdfUrl ? basename(currentPdfUrl) : '');
+            return;
+        }
+
+        setPdfLabel(file.name);
+    }
+
     function submit(e: React.FormEvent) {
         e.preventDefault();
 
-        // transform payload
         form.transform((data) => {
             const payload: any = {
                 tag: data.tag.trim(),
@@ -425,19 +377,18 @@ export default function ProgrammeManagement(props: PageProps) {
                 location: data.location.trim(),
                 starts_at: data.starts_at ? new Date(data.starts_at).toISOString() : null,
                 ends_at: data.ends_at ? new Date(data.ends_at).toISOString() : null,
-                image_url: data.image_url.trim() || null,
                 is_active: !!data.is_active,
             };
 
-            // if you wire backend image upload later:
+            // only send if selected (so editing won't overwrite existing files)
             if (data.image) payload.image = data.image;
+            if (data.pdf) payload.pdf = data.pdf;
 
             return payload;
         });
 
         const options = {
             preserveScroll: true,
-            // if you use image upload, keep this on:
             forceFormData: true,
             onSuccess: () => {
                 setDialogOpen(false);
@@ -474,7 +425,8 @@ export default function ProgrammeManagement(props: PageProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Programme Management" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            {/* ✅ removed overflow-x-auto here */}
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* header */}
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
@@ -483,9 +435,7 @@ export default function ProgrammeManagement(props: PageProps) {
                             Programme Management
                         </h1>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Manage programme cards shown on the public Programme page.
-                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Manage programme cards shown on the public Programme page.</p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
@@ -534,13 +484,15 @@ export default function ProgrammeManagement(props: PageProps) {
                                 subtitle="Try adjusting your search/filter, or add a new programme item."
                             />
                         ) : (
-                            <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
-                                <Table>
+                            // ✅ scrollbar only in table area
+                            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+                                <Table className="min-w-[1280px]">
                                     <TableHeader>
                                         <TableRow className="bg-slate-50 dark:bg-slate-900/40">
-                                            <TableHead className="min-w-[320px]">Programme</TableHead>
+                                            <TableHead className="min-w-[360px]">Programme</TableHead>
                                             <TableHead className="min-w-[260px]">Schedule</TableHead>
                                             <TableHead className="min-w-[220px]">Location</TableHead>
+                                            <TableHead className="min-w-[220px]">View more (PDF)</TableHead>
                                             <TableHead className="w-[140px]">Status</TableHead>
                                             <TableHead className="w-[180px]">Updated</TableHead>
                                             <TableHead className="w-[120px] text-right">Action</TableHead>
@@ -567,9 +519,7 @@ export default function ProgrammeManagement(props: PageProps) {
                                                         </div>
 
                                                         <div className="min-w-0">
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                                                {p.tag}
-                                                            </div>
+                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">{p.tag}</div>
                                                             <div className="truncate">{p.title}</div>
                                                         </div>
                                                     </div>
@@ -582,6 +532,17 @@ export default function ProgrammeManagement(props: PageProps) {
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">{p.location}</TableCell>
 
+                                                <TableCell className="text-slate-700 dark:text-slate-300">
+                                                    {p.pdf_url ? (
+                                                        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                                                            <FileText className="h-4 w-4 text-[#00359c]" />
+                                                            <span className="max-w-[260px] truncate">{basename(p.pdf_url)}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-slate-500 dark:text-slate-400">—</span>
+                                                    )}
+                                                </TableCell>
+
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
                                                         <StatusBadge active={p.is_active} />
@@ -589,9 +550,7 @@ export default function ProgrammeManagement(props: PageProps) {
                                                     </div>
                                                 </TableCell>
 
-                                                <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    {formatDateTimeSafe(p.updated_at)}
-                                                </TableCell>
+                                                <TableCell className="text-slate-700 dark:text-slate-300">{formatDateTimeSafe(p.updated_at)}</TableCell>
 
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
@@ -612,10 +571,7 @@ export default function ProgrammeManagement(props: PageProps) {
                                                                 {p.is_active ? 'Set Closed' : 'Set Open'}
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                className="text-red-600 focus:text-red-600"
-                                                                onClick={() => requestDelete(p)}
-                                                            >
+                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => requestDelete(p)}>
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 Delete
                                                             </DropdownMenuItem>
@@ -632,196 +588,133 @@ export default function ProgrammeManagement(props: PageProps) {
                 </div>
             </div>
 
-            {/* Add/Edit Dialog */}
+            {/* Add/Edit Dialog (NO live preview, NO URL inputs) */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent
-                    className={cn(
-                        // ✅ smaller width
-                        'w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-[960px]',
-                        // ✅ limit height + prevent whole dialog from overflowing
-                        'max-h-[85vh] overflow-hidden p-0',
-                    )}
-                >
+                <DialogContent className={cn('w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-[760px]', 'max-h-[85vh] overflow-hidden p-0')}>
                     <form onSubmit={submit} className="flex max-h-[85vh] flex-col">
-                        {/* header */}
                         <div className="px-6 pt-6">
                             <DialogHeader>
                                 <DialogTitle>{editing ? 'Edit Programme' : 'Add Programme'}</DialogTitle>
-                                <DialogDescription>
-                                    This item will render as a card on the public Programme page (like your screenshot).
-                                </DialogDescription>
+                                <DialogDescription>Upload image + PDF for “View more” on the public page.</DialogDescription>
                             </DialogHeader>
                         </div>
 
-                        {/* ✅ scrollable body */}
                         <div className="flex-1 overflow-y-auto px-6 pb-6">
-                            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_420px]">
-                                {/* LEFT FORM */}
-                                <div className="space-y-4">
-                                    <div className="grid gap-3 sm:grid-cols-2">
-                                        <div className="space-y-1.5 sm:col-span-2">
-                                            <div className="text-sm font-medium">Tag (small header)</div>
-                                            <Input
-                                                value={form.data.tag}
-                                                onChange={(e) => form.setData('tag', e.target.value)}
-                                                placeholder="e.g. Plenary & Panels"
-                                            />
-                                            {form.errors.tag ? <div className="text-xs text-red-600">{form.errors.tag}</div> : null}
-                                        </div>
+                            <div className="mt-4 grid gap-4">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Tag (small header)</div>
+                                        <Input value={form.data.tag} onChange={(e) => form.setData('tag', e.target.value)} placeholder="e.g. Plenary & Panels" />
+                                        {form.errors.tag ? <div className="text-xs text-red-600">{form.errors.tag}</div> : null}
+                                    </div>
 
-                                        <div className="space-y-1.5 sm:col-span-2">
-                                            <div className="text-sm font-medium">Title (big text)</div>
-                                            <Input
-                                                value={form.data.title}
-                                                onChange={(e) => form.setData('title', e.target.value)}
-                                                placeholder="e.g. Track Discussions"
-                                            />
-                                            {form.errors.title ? <div className="text-xs text-red-600">{form.errors.title}</div> : null}
-                                        </div>
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Title (big text)</div>
+                                        <Input value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} placeholder="e.g. Track Discussions" />
+                                        {form.errors.title ? <div className="text-xs text-red-600">{form.errors.title}</div> : null}
+                                    </div>
 
-                                        <div className="space-y-1.5 sm:col-span-2">
-                                            <div className="text-sm font-medium">Description</div>
-                                            <Textarea
-                                                value={form.data.description}
-                                                onChange={(e) => form.setData('description', e.target.value)}
-                                                placeholder="Short description shown on the card"
-                                                className="min-h-[96px]" // ✅ slightly shorter
-                                            />
-                                            {form.errors.description ? <div className="text-xs text-red-600">{form.errors.description}</div> : null}
-                                        </div>
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Description</div>
+                                        <Textarea
+                                            value={form.data.description}
+                                            onChange={(e) => form.setData('description', e.target.value)}
+                                            placeholder="Short description shown on the card"
+                                            className="min-h-[96px]"
+                                        />
+                                        {form.errors.description ? <div className="text-xs text-red-600">{form.errors.description}</div> : null}
+                                    </div>
 
-                                        <div className="space-y-1.5">
-                                            <div className="text-sm font-medium">Starts at</div>
-                                            <Input
-                                                type="datetime-local"
-                                                value={form.data.starts_at}
-                                                onChange={(e) => form.setData('starts_at', e.target.value)}
-                                            />
-                                            {form.errors.starts_at ? <div className="text-xs text-red-600">{form.errors.starts_at}</div> : null}
-                                        </div>
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Starts at</div>
+                                        <Input type="datetime-local" value={form.data.starts_at} onChange={(e) => form.setData('starts_at', e.target.value)} />
+                                        {form.errors.starts_at ? <div className="text-xs text-red-600">{form.errors.starts_at}</div> : null}
+                                    </div>
 
-                                        <div className="space-y-1.5">
-                                            <div className="text-sm font-medium">Ends at</div>
-                                            <Input
-                                                type="datetime-local"
-                                                value={form.data.ends_at}
-                                                onChange={(e) => form.setData('ends_at', e.target.value)}
-                                            />
-                                            {form.errors.ends_at ? <div className="text-xs text-red-600">{form.errors.ends_at}</div> : null}
-                                        </div>
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Ends at</div>
+                                        <Input type="datetime-local" value={form.data.ends_at} onChange={(e) => form.setData('ends_at', e.target.value)} />
+                                        {form.errors.ends_at ? <div className="text-xs text-red-600">{form.errors.ends_at}</div> : null}
+                                    </div>
 
-                                        <div className="space-y-1.5 sm:col-span-2">
-                                            <div className="text-sm font-medium">Location</div>
-                                            <Input
-                                                value={form.data.location}
-                                                onChange={(e) => form.setData('location', e.target.value)}
-                                                placeholder="e.g. Conference Hall B"
-                                            />
-                                            {form.errors.location ? <div className="text-xs text-red-600">{form.errors.location}</div> : null}
-                                        </div>
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Location</div>
+                                        <Input value={form.data.location} onChange={(e) => form.setData('location', e.target.value)} placeholder="e.g. Conference Hall B" />
+                                        {form.errors.location ? <div className="text-xs text-red-600">{form.errors.location}</div> : null}
+                                    </div>
 
-                                        <div className="space-y-1.5 sm:col-span-2">
-                                            <div className="flex items-center justify-between">
-                                                <div className="text-sm font-medium">Image</div>
-                                                <div className="text-xs text-slate-600 dark:text-slate-400">Use image_url OR upload</div>
+                                    {/* IMAGE (upload only) */}
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Image</div>
+
+                                        <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+                                            <div className="space-y-2">
+                                                <Input type="file" accept="image/*" onChange={handleImageUpload} />
+                                                {(form.errors as any).image ? <div className="text-xs text-red-600">{(form.errors as any).image}</div> : null}
+
+                                                {currentImageUrl && !form.data.image ? (
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                        Current: <span className="font-semibold">{basename(currentImageUrl)}</span>
+                                                    </div>
+                                                ) : null}
                                             </div>
 
-                                            <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
-                                                <div className="space-y-2">
-                                                    <Input
-                                                        value={form.data.image_url}
-                                                        onChange={(e) => {
-                                                            form.setData('image_url', e.target.value);
-                                                            if (!form.data.image) resetImagePreview(e.target.value || null);
-                                                        }}
-                                                        placeholder="e.g. /event/event1.jpg"
-                                                    />
-                                                    <Input type="file" accept="image/*" onChange={handleImageUpload} />
-                                                    {(form.errors as any).image ? (
-                                                        <div className="text-xs text-red-600">{(form.errors as any).image}</div>
-                                                    ) : null}
+                                            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                <div className="aspect-square bg-slate-100 dark:bg-slate-900">
+                                                    {imagePreview ? (
+                                                        <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" draggable={false} />
+                                                    ) : (
+                                                        <div className="grid h-full place-items-center text-xs text-slate-500">No image</div>
+                                                    )}
                                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                    <div className="aspect-square bg-slate-100 dark:bg-slate-900">
-                                                        {imagePreview ? (
-                                                            <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" draggable={false} />
-                                                        ) : (
-                                                            <div className="grid h-full place-items-center text-xs text-slate-500">No image</div>
-                                                        )}
+                                    {/* PDF (upload only) */}
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">PDF (View more)</div>
+
+                                        <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
+                                            <div className="space-y-2">
+                                                <Input type="file" accept="application/pdf" onChange={handlePdfUpload} />
+                                                {(form.errors as any).pdf ? <div className="text-xs text-red-600">{(form.errors as any).pdf}</div> : null}
+
+                                                {currentPdfUrl && !form.data.pdf ? (
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                        Current: <span className="font-semibold">{basename(currentPdfUrl)}</span>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+
+                                            <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">Selected</div>
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <div className="grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                                        <FileText className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            {pdfLabel || 'No PDF selected'}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">Opens when users click “View more”.</div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                            <div className="space-y-0.5">
-                                                <div className="text-sm font-medium">Open</div>
-                                                <div className="text-xs text-slate-600 dark:text-slate-400">
-                                                    Closed items won’t appear as “Open” on public.
-                                                </div>
-                                            </div>
-                                            <Switch checked={form.data.is_active} onCheckedChange={(v) => form.setData('is_active', !!v)} />
+                                    <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                        <div className="space-y-0.5">
+                                            <div className="text-sm font-medium">Open</div>
+                                            <div className="text-xs text-slate-600 dark:text-slate-400">Closed items won’t appear as “Open” on public.</div>
                                         </div>
+                                        <Switch checked={form.data.is_active} onCheckedChange={(v) => form.setData('is_active', !!v)} />
                                     </div>
                                 </div>
-
-                                {/* RIGHT PREVIEW */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Live Preview</div>
-
-                                        {/* ✅ green badge */}
-                                        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[12px] font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-300">
-                                            <span className="inline-block size-2 rounded-full bg-emerald-500" />
-                                            LIVE PREVIEW (display only)
-                                        </span>
-                                    </div>
-
-                                    <div className="text-xs text-emerald-700 dark:text-emerald-300">
-                                        This is a preview only — buttons here won’t work. Save changes to apply.
-                                    </div>
-
-                                    {/* ✅ green broken/dashed border preview wrapper */}
-                                    <div className="relative rounded-3xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/10">
-                                        {/* subtle watermark */}
-                                        <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
-                                            <div className="select-none rotate-[-14deg] text-5xl font-extrabold tracking-widest text-emerald-600/10 dark:text-emerald-300/10">
-                                                PREVIEW
-                                            </div>
-                                        </div>
-
-                                        {/* ✅ make preview non-interactive */}
-                                        <div className="pointer-events-none select-none relative">
-                                            <ProgrammeCardPreview
-                                                tag={form.data.tag}
-                                                title={form.data.title}
-                                                description={form.data.description}
-                                                starts_at={form.data.starts_at ? new Date(form.data.starts_at).toISOString() : null}
-                                                ends_at={form.data.ends_at ? new Date(form.data.ends_at).toISOString() : null}
-                                                location={form.data.location}
-                                                is_active={form.data.is_active}
-                                                image_url={imagePreview || form.data.image_url || null}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-200">
-                                        <div className="font-semibold">Public page will show</div>
-                                        <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-600 dark:text-slate-300">
-                                            <li>Date/time pill</li>
-                                            <li>Location pill</li>
-                                            <li>Days-to-go pill</li>
-                                            <li>Open/Closed badge</li>
-                                            <li>Image on the right</li>
-                                        </ul>
-                                    </div>
-                                </div>
-
                             </div>
                         </div>
 
-                        {/* ✅ sticky footer */}
                         <div className="sticky bottom-0 z-10 border-t border-slate-200 bg-white/85 px-6 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
                             <DialogFooter className="gap-2 sm:gap-0">
                                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={form.processing}>
@@ -835,7 +728,6 @@ export default function ProgrammeManagement(props: PageProps) {
                     </form>
                 </DialogContent>
             </Dialog>
-
 
             {/* Delete Confirm */}
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
