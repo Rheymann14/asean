@@ -140,7 +140,7 @@ function MapEmbed({
             <iframe
                 title="Venue location map"
                 src={embedUrl}
-                className="h-full w-full"
+                className="h-full w-full pointer-events-none"
                 loading="lazy"
                 allowFullScreen
                 onLoad={() => setLoaded(true)}
