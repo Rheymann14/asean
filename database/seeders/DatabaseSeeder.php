@@ -18,13 +18,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call(ParticipantSeeder::class);
 
-        User::firstOrCreate(
-            ['email' => 'test@example.com'],
-            [
-                'name' => 'Test User',
-                'password' => 'password',
-                'email_verified_at' => now(),
-            ]
-        );
+  
     }
 }
