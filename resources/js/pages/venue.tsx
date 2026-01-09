@@ -255,9 +255,54 @@ export default function Venue({ venues = [] }: PageProps) {
                     {/* ✅ Event Tabs */}
                     <div className="mx-auto mt-10 max-w-6xl">
                         {eventVenues.length === 0 ? (
-                            <Card className="rounded-2xl border-dashed border-slate-200/70 bg-white/70 p-8 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
-                                <p className="text-base font-semibold text-slate-900 dark:text-slate-100">No venues yet</p>
-                                <p className="mt-2">Please check back soon for venue updates.</p>
+                            <Card
+                                className="
+        relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-8 text-center
+        shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/55
+        dark:border-white/10 dark:bg-slate-900/35
+    "
+                            >
+                                {/* soft glow / gradient */}
+                                <div
+                                    aria-hidden
+                                    className="
+            pointer-events-none absolute inset-0
+            bg-[radial-gradient(60%_60%_at_50%_0%,rgba(59,130,246,0.12),transparent_60%)]
+            dark:bg-[radial-gradient(60%_60%_at_50%_0%,rgba(56,189,248,0.10),transparent_60%)]
+        "
+                                />
+                                <div
+                                    aria-hidden
+                                    className="
+            pointer-events-none absolute -top-10 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full
+            bg-slate-200/40 blur-2xl dark:bg-white/10
+        "
+                                />
+
+                                <div className="relative mx-auto flex max-w-sm flex-col items-center">
+                                    <div
+                                        className="
+                mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl
+                border border-slate-200/70 bg-white/70 text-slate-700
+                shadow-sm backdrop-blur
+                dark:border-white/10 dark:bg-white/5 dark:text-slate-200
+            "
+                                    >
+                                        <MapPin className="h-5 w-5" />
+                                    </div>
+
+                                    <p className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                                        No venues yet
+                                    </p>
+
+                                    <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                                        Please check back soon for venue updates.
+                                    </p>
+
+                                    <div className="mt-5 h-px w-24 bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-white/10" />
+
+                               
+                                </div>
                             </Card>
                         ) : (
                             <Tabs defaultValue={eventVenues[0]?.id ?? ''} className="w-full">
@@ -388,14 +433,14 @@ export default function Venue({ venues = [] }: PageProps) {
                                             </span>
                                         </div>
                                     </a>
-                                ))}                           
+                                ))}
 
                             </div>
 
-                                <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-[#FCD116]" />
-                                    This will redirect to the Department of Tourism (DOT) website.
-                                </p>
+                            <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#FCD116]" />
+                                This will redirect to the Department of Tourism (DOT) website.
+                            </p>
                         </div>
                     </div>
                 </section>
