@@ -1184,13 +1184,6 @@ export default function ParticipantPage(props: PageProps) {
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                <div className="space-y-0.5">
-                                    <div className="text-sm font-medium">Active</div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400">Inactive countries will be hidden from participant forms.</div>
-                                </div>
-                                <Switch checked={countryForm.data.is_active} onCheckedChange={(v) => countryForm.setData('is_active', !!v)} />
-                            </div>
                         </div>
 
                         <DialogFooter className="gap-2 sm:gap-0">
