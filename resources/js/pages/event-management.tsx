@@ -365,6 +365,8 @@ export default function EventManagement(props: PageProps) {
     function submit(e: React.FormEvent) {
         e.preventDefault();
 
+        const hasUploads = Boolean(form.data.image || form.data.pdf);
+
         form.transform((data) => {
             const payload: any = {
                 title: data.title.trim(),
@@ -377,13 +379,14 @@ export default function EventManagement(props: PageProps) {
             // only send if selected (so editing won't overwrite existing files)
             if (data.image) payload.image = data.image;
             if (data.pdf) payload.pdf = data.pdf;
+            if (editing) payload._method = 'patch';
 
             return payload;
         });
 
         const options = {
             preserveScroll: true,
-            forceFormData: true,
+            forceFormData: hasUploads,
             onSuccess: () => {
                 setDialogOpen(false);
                 setEditing(null);
@@ -392,7 +395,7 @@ export default function EventManagement(props: PageProps) {
             onError: (errors: Record<string, string | string[]>) => showToastError(errors),
         } as const;
 
-        if (editing) form.patch(ENDPOINTS.programmes.update(editing.id), options);
+        if (editing) form.post(ENDPOINTS.programmes.update(editing.id), options);
         else form.post(ENDPOINTS.programmes.store, options);
     }
 
@@ -598,16 +601,16 @@ export default function EventManagement(props: PageProps) {
 
                                                         <DropdownMenuContent align="end" className="w-52">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => openEdit(p)}>
+                                                            <DropdownMenuItem onSelect={() => openEdit(p)}>
                                                                 <Pencil className="mr-2 h-4 w-4" />
                                                                 Edit
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => toggleActive(p)}>
+                                                            <DropdownMenuItem onSelect={() => toggleActive(p)}>
                                                                 <BadgeCheck className="mr-2 h-4 w-4" />
                                                                 {p.is_active ? 'Set Inactive' : 'Set Active'}
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => requestDelete(p)}>
+                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onSelect={() => requestDelete(p)}>
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 Delete
                                                             </DropdownMenuItem>
