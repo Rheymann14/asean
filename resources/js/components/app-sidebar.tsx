@@ -10,7 +10,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, participant, issuancesManagement, contactDetails, venueManagement, programmeManagement, scanner } from '@/routes';
+import { dashboard, participant, issuancesManagement, contactDetails, venueManagement, scanner } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { Paperclip, House, User, CalendarFold, Building, NotepadText, Headset, ScanLine } from 'lucide-react';
@@ -35,7 +35,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Event',
-        href: programmeManagement(),
+        href: '/event-management',
         icon: NotepadText,
     },
     {
