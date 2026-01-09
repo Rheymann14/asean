@@ -62,7 +62,7 @@ class FortifyServiceProvider extends ServiceProvider
                         $roleName = Str::upper((string) ($user->userType->name ?? ''));
                         $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
 
-                        if ($roleName === 'CHED' || $roleSlug === 'CHED') {
+                        if (in_array('CHED', [$roleName, $roleSlug], true)) {
                             return redirect('/dashboard');
                         }
                     }
