@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -214,7 +213,6 @@ function makeDevSampleVenues(events: EventRow[]): VenueRow[] {
     const aId = byTitle('Workshop A') ?? events[1]?.id ?? null;
     const bId = byTitle('Workshop B') ?? events[2]?.id ?? null;
 
-    // NOTE: iframe can use `...&output=embed` (works for demo + shorter than pb=...)
     return [
         {
             id: 1,
@@ -233,8 +231,7 @@ function makeDevSampleVenues(events: EventRow[]): VenueRow[] {
             event_id: aId,
             name: 'UP Diliman – Convention Hall (Sample)',
             address: 'University of the Philippines Diliman, Quezon City, Metro Manila',
-            google_maps_url:
-                'https://www.google.com/maps/search/?api=1&query=UP%20Diliman%20Convention%20Hall%20Quezon%20City',
+            google_maps_url: 'https://www.google.com/maps/search/?api=1&query=UP%20Diliman%20Convention%20Hall%20Quezon%20City',
             embed_url: 'https://www.google.com/maps?q=UP%20Diliman%20Convention%20Hall%20Quezon%20City&output=embed',
             is_active: true,
             updated_at: '2026-01-06T10:20:00+08:00',
@@ -244,10 +241,9 @@ function makeDevSampleVenues(events: EventRow[]): VenueRow[] {
             event_id: bId,
             name: 'CHED – Training Room (Sample)',
             address: 'CHED Complex, Diliman, Quezon City, Metro Manila',
-            google_maps_url:
-                'https://www.google.com/maps/search/?api=1&query=CHED%20Diliman%20Quezon%20City',
+            google_maps_url: 'https://www.google.com/maps/search/?api=1&query=CHED%20Diliman%20Quezon%20City',
             embed_url: 'https://www.google.com/maps?q=CHED%20Diliman%20Quezon%20City&output=embed',
-            is_active: true, // sample inactive
+            is_active: true,
             updated_at: '2026-01-04T15:45:00+08:00',
         },
     ];
@@ -268,7 +264,6 @@ export default function VenueManagement(props: PageProps) {
         return makeDevSampleVenues(events);
     }, [serverVenues, events]);
 
-
     const eventById = React.useMemo(() => new Map(events.map((e) => [e.id, e])), [events]);
 
     const resolvedVenues = React.useMemo(() => {
@@ -285,15 +280,9 @@ export default function VenueManagement(props: PageProps) {
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
         return resolvedVenues.filter((v) => {
-            const matchesQuery =
-                !query ||
-                `${v.name} ${v.address} ${v.event?.title ?? ''}`.toLowerCase().includes(query);
-
+            const matchesQuery = !query || `${v.name} ${v.address} ${v.event?.title ?? ''}`.toLowerCase().includes(query);
             const matchesEvent = eventFilter === 'all' || String(v.event_id ?? '') === eventFilter;
-
-            const matchesStatus =
-                statusFilter === 'all' || (statusFilter === 'active' ? v.is_active : !v.is_active);
-
+            const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? v.is_active : !v.is_active);
             return matchesQuery && matchesEvent && matchesStatus;
         });
     }, [resolvedVenues, q, eventFilter, statusFilter]);
@@ -325,6 +314,7 @@ export default function VenueManagement(props: PageProps) {
     function openAdd() {
         setEditing(null);
         form.reset();
+        form.setData('is_active', true);
         form.clearErrors();
         setDialogOpen(true);
     }
@@ -368,11 +358,7 @@ export default function VenueManagement(props: PageProps) {
     }
 
     function toggleActive(item: VenueRow) {
-        router.patch(
-            ENDPOINTS.venues.update(item.id),
-            { is_active: !item.is_active },
-            { preserveScroll: true },
-        );
+        router.patch(ENDPOINTS.venues.update(item.id), { is_active: !item.is_active }, { preserveScroll: true });
     }
 
     function requestDelete(item: VenueRow) {
@@ -458,8 +444,9 @@ export default function VenueManagement(props: PageProps) {
                     <Separator className="my-4" />
 
                     <div className="text-sm text-slate-600 dark:text-slate-400">
-                        Showing <span className="font-semibold text-slate-900 dark:text-slate-100">{filtered.length}</span>{' '}
-                        item{filtered.length === 1 ? '' : 's'}
+                        Showing{' '}
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{filtered.length}</span> item
+                        {filtered.length === 1 ? '' : 's'}
                     </div>
 
                     <div className="mt-4">
@@ -468,7 +455,6 @@ export default function VenueManagement(props: PageProps) {
                                 icon={<Building2 className="h-5 w-5" />}
                                 title="No venues found"
                                 subtitle="Try adjusting your search/filters, or add a new venue."
-
                             />
                         ) : (
                             <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -524,11 +510,9 @@ export default function VenueManagement(props: PageProps) {
                                                     <div className="line-clamp-2">{v.address}</div>
                                                 </TableCell>
 
+                                                {/* ✅ SWITCH REMOVED FROM TABLE */}
                                                 <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <StatusBadge active={v.is_active} />
-                                                        <Switch checked={v.is_active} onCheckedChange={() => toggleActive(v)} />
-                                                    </div>
+                                                    <StatusBadge active={v.is_active} />
                                                 </TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
@@ -653,17 +637,25 @@ export default function VenueManagement(props: PageProps) {
                                         {form.errors.embed_url ? <div className="text-xs text-red-600">{form.errors.embed_url}</div> : null}
                                     </div>
 
-                                    <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                        <div className="space-y-0.5">
-                                            <div className="text-sm font-medium">Active</div>
-                                            <div className="text-xs text-slate-600 dark:text-slate-400">
-                                                Inactive venues won’t show on public pages.
-                                            </div>
+                                    {/* ✅ SWITCH REMOVED FROM EDIT DIALOG (replaced with Select) */}
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Status</div>
+                                        <Select
+                                            value={form.data.is_active ? 'active' : 'inactive'}
+                                            onValueChange={(v) => form.setData('is_active', v === 'active')}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="active">Active</SelectItem>
+                                                <SelectItem value="inactive">Inactive</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                                            Inactive venues won’t show on public pages.
                                         </div>
-                                        <Switch
-                                            checked={form.data.is_active}
-                                            onCheckedChange={(v) => form.setData('is_active', !!v)}
-                                        />
                                     </div>
                                 </div>
                             </div>
