@@ -8,6 +8,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
+use App\Models\Country;
+use App\Models\UserType;
+
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -22,6 +25,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'country_id',
+        'user_type_id',
+        'is_active',
     ];
 
     /**
@@ -47,6 +53,17 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class);
+    }
+
+    public function userType()
+    {
+        return $this->belongsTo(UserType::class);
     }
 }
