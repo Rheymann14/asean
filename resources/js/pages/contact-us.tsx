@@ -4,7 +4,27 @@ import { Head } from '@inertiajs/react';
 import { Card } from '@/components/ui/card';
 import { Mail, Phone, MapPin } from 'lucide-react';
 
-export default function ContactUs() {
+type ContactCardKey = 'email' | 'phone' | 'office';
+
+type ContactDetail = {
+    key: ContactCardKey;
+    title: string;
+    value: string;
+};
+
+type PageProps = {
+    items?: ContactDetail[];
+};
+
+function iconFor(key: ContactCardKey) {
+    if (key === 'email') return <Mail className="h-5 w-5 text-[#1e3c73]" />;
+    if (key === 'phone') return <Phone className="h-5 w-5 text-[#1e3c73]" />;
+    return <MapPin className="h-5 w-5 text-[#1e3c73]" />;
+}
+
+export default function ContactUs(props: PageProps) {
+    const items = props.items ?? [];
+
     return (
         <>
             <Head title="Contact Us" />
@@ -71,72 +91,29 @@ export default function ContactUs() {
 
                         {/* Contact Cards (NOT clickable) */}
                         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {/* Email */}
-                            <Card className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-6 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:border-[#1e3c73]/20 hover:bg-white/80 hover:shadow-md">
-                                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                                    <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-[#0033A0]/10 blur-2xl" />
-                                </div>
-
-                                <div className="relative flex items-start gap-4">
-                                    <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 shadow-sm transition group-hover:border-[#1e3c73]/20 group-hover:bg-white">
-                                        <Mail className="h-5 w-5 text-[#1e3c73]" />
+                            {items.map((item) => (
+                                <Card
+                                    key={item.key}
+                                    className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-6 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:border-[#1e3c73]/20 hover:bg-white/80 hover:shadow-md"
+                                >
+                                    <div aria-hidden className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
+                                        <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-[#0033A0]/10 blur-2xl" />
                                     </div>
 
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-slate-900">Email</p>
-                                        <p className="mt-1 truncate text-sm font-medium text-slate-700 group-hover:text-slate-900">
-                                            info@ched.gov.ph
-                                        </p>
+                                    <div className="relative flex items-start gap-4">
+                                        <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 shadow-sm transition group-hover:border-[#1e3c73]/20 group-hover:bg-white">
+                                            {iconFor(item.key)}
+                                        </div>
 
-
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                                            <p className="mt-1 whitespace-pre-line text-sm font-medium text-slate-700 group-hover:text-slate-900">
+                                                {item.value}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                            </Card>
-
-                            {/* Phone */}
-                            <Card className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-6 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:border-[#1e3c73]/20 hover:bg-white/80 hover:shadow-md">
-                                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                                    <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-[#0033A0]/10 blur-2xl" />
-                                </div>
-
-                                <div className="relative flex items-start gap-4">
-                                    <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 shadow-sm transition group-hover:border-[#1e3c73]/20 group-hover:bg-white">
-                                        <Phone className="h-5 w-5 text-[#1e3c73]" />
-                                    </div>
-
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-slate-900">Phone</p>
-                                        <p className="mt-1 text-sm font-medium text-slate-700 group-hover:text-slate-900">
-                                            (02) 8441-1260
-                                        </p>
-
-
-                                    </div>
-                                </div>
-                            </Card>
-
-                            {/* Office */}
-                            <Card className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-6 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:border-[#1e3c73]/20 hover:bg-white/80 hover:shadow-md sm:col-span-2 lg:col-span-1">
-                                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                                    <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-[#0033A0]/10 blur-2xl" />
-                                </div>
-
-                                <div className="relative flex items-start gap-4">
-                                    <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 shadow-sm transition group-hover:border-[#1e3c73]/20 group-hover:bg-white">
-                                        <MapPin className="h-5 w-5 text-[#1e3c73]" />
-                                    </div>
-
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-slate-900">Office</p>
-                                        <p className="mt-1 text-sm text-slate-700 group-hover:text-slate-900">
-                                            Higher Education Development Center Building, C.P. Garcia Ave, Diliman, Quezon City,
-                                            Philippines
-                                        </p>
-
-
-                                    </div>
-                                </div>
-                            </Card>
+                                </Card>
+                            ))}
                         </div>
                         
                             {/* ✅ BIG + centered logo (break out of container) */}
