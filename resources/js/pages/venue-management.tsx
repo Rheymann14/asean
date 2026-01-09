@@ -178,7 +178,7 @@ function MapPreview({
             <iframe
                 title="Venue map preview"
                 src={embedUrl}
-                className="h-[320px] w-full"
+                className="h-[320px] w-full pointer-events-none"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
             />
