@@ -17,7 +17,7 @@ export default function AppSidebarLayout({
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 {children}
             </AppContent>
-            <Toaster />
+            <Toaster richColors position="top-right" closeButton duration={4000} />
         </AppShell>
     );
 }
