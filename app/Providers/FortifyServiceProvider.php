@@ -59,9 +59,10 @@ class FortifyServiceProvider extends ServiceProvider
 
                     if ($user) {
                         $user->loadMissing('userType');
-                        $role = Str::lower((string) ($user->userType->slug ?? $user->userType->name ?? ''));
+                        $roleName = Str::upper((string) ($user->userType->name ?? ''));
+                        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
 
-                        if ($role === 'ched') {
+                        if ($roleName === 'CHED' || $roleSlug === 'CHED') {
                             return redirect('/dashboard');
                         }
                     }
