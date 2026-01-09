@@ -92,9 +92,7 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                         <span className="relative z-10">Participant Registration</span>
                     </span>
                 </h1>
-                <p className="text-sm text-slate-500">
-                    Join the ASEAN Philippines 2026 initiative with a quick registration.
-                </p>
+
             </div>
 
             <Form
@@ -117,7 +115,7 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                 )}
                             >
 
-                                
+
                                 <div className="grid gap-5">
                                     <div className="grid gap-2">
                                         <Label htmlFor="country_id">Country</Label>
@@ -248,8 +246,8 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                             autoComplete="tel"
                                             name="contact_number"
                                             inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            placeholder="e.g. 639123456789"
+                                           
+                                            placeholder="e.g. 09123456789"
                                             className={inputClass}
                                             onInput={(event) => {
                                                 event.currentTarget.value = event.currentTarget.value.replace(
@@ -397,15 +395,16 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                         {processing && <Spinner />}
                                         Register
                                     </Button>
+                                    <div className="mt-8 text-center text-sm text-muted-foreground">
+                                        Already have an account?{' '}
+                                        <TextLink href={login()} tabIndex={9}>
+                                            Log in
+                                        </TextLink>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="mt-8 text-center text-sm text-muted-foreground">
-                                Already have an account?{' '}
-                                <TextLink href={login()} tabIndex={9}>
-                                    Log in
-                                </TextLink>
-                            </div>
+
                         </>
                     );
                 }}
