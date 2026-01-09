@@ -5,9 +5,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CalendarClock, MapPin, Timer, CircleCheck, CircleX } from 'lucide-react';
 
-import useEmblaCarousel from 'embla-carousel-react';
-import AutoScroll from 'embla-carousel-auto-scroll';
-
 type ProgrammeRow = {
     id: number;
     tag: string;
@@ -59,20 +56,21 @@ function resolvePdfUrl(pdfUrl?: string | null) {
     return `/downloadables/${pdfUrl}`;
 }
 
+function useNowTs(intervalMs = 60_000) {
+    const [nowTs, setNowTs] = React.useState(() => Date.now());
+    React.useEffect(() => {
+        const t = window.setInterval(() => setNowTs(Date.now()), intervalMs);
+        return () => window.clearInterval(t);
+    }, [intervalMs]);
+    return nowTs;
+}
+
 function formatEventWindow(startsAt: string, endsAt?: string) {
     const start = new Date(startsAt);
     const end = endsAt ? new Date(endsAt) : null;
 
-    const dateFmt = new Intl.DateTimeFormat('en-PH', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-    });
-
-    const timeFmt = new Intl.DateTimeFormat('en-PH', {
-        hour: 'numeric',
-        minute: '2-digit',
-    });
+    const dateFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
+    const timeFmt = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' });
 
     const date = dateFmt.format(start);
     const startTime = timeFmt.format(start);
@@ -97,17 +95,29 @@ function daysUntil(startsAt: string, nowTs: number) {
     return Math.ceil(diff / 86_400_000);
 }
 
-function getEventStatus(startsAt: string, endsAt: string | undefined, nowTs: number) {
-    const startTs = new Date(startsAt).getTime();
-    const endTs = endsAt ? new Date(endsAt).getTime() : null;
+type EventPhase = 'ongoing' | 'upcoming' | 'closed';
+
+function getEventPhase(startsAt: string, endsAt: string | undefined, nowTs: number): EventPhase {
+    const start = new Date(startsAt);
+    const startTs = start.getTime();
+    const end = endsAt ? new Date(endsAt) : null;
+    const endTs = end ? end.getTime() : null;
 
     if (endTs !== null) {
-        if (nowTs < startTs) return 'open';
-        if (nowTs >= startTs && nowTs <= endTs) return 'open';
+        if (nowTs < startTs) return 'upcoming';
+        if (nowTs <= endTs) return 'ongoing';
         return 'closed';
     }
 
-    return nowTs <= startTs ? 'open' : 'closed';
+    if (nowTs < startTs) return 'upcoming';
+
+    const now = new Date(nowTs);
+    const sameDay =
+        now.getFullYear() === start.getFullYear() &&
+        now.getMonth() === start.getMonth() &&
+        now.getDate() === start.getDate();
+
+    return sameDay ? 'ongoing' : 'closed';
 }
 
 function BadgePill({
@@ -131,7 +141,7 @@ function BadgePill({
     return (
         <span
             className={cn(
-                'inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-medium ring-1 backdrop-blur',
+                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium ring-1 backdrop-blur',
                 toneClass,
             )}
         >
@@ -141,236 +151,236 @@ function BadgePill({
     );
 }
 
-function LightFlexHoverCards({ items }: { items: FlexHoverItem[] }) {
-    const [active, setActive] = React.useState<number | null>(null);
-    const [nowTs, setNowTs] = React.useState(() => Date.now());
-
-    React.useEffect(() => {
-        const t = window.setInterval(() => setNowTs(Date.now()), 60_000);
-        return () => window.clearInterval(t);
-    }, []);
-
-    // ✅ compact height so nothing gets cut
-    const CARD_H = 'h-[360px] sm:h-[380px] lg:h-[400px]';
-    const RIGHT_IMG_H = 'h-[140px] sm:h-[155px] lg:h-[165px]';
-
-    const autoScroll = React.useMemo(
-        () =>
-            AutoScroll({
-                playOnInit: true,
-                speed: 1.15,
-                stopOnInteraction: false,
-                stopOnMouseEnter: true,
-            }),
-        [],
+function SectionTitle({ title, count }: { title: string; count?: number }) {
+    return (
+        <div className="mt-7 flex items-center justify-between gap-4">
+            <div className="text-sm font-semibold tracking-tight text-slate-900 sm:text-base">{title}</div>
+            {typeof count === 'number' ? (
+                <div className="text-[11px] text-slate-500">
+                    {count} item{count === 1 ? '' : 's'}
+                </div>
+            ) : null}
+        </div>
     );
+}
 
-    const [emblaRef, emblaApi] = useEmblaCarousel(
-        {
-            loop: true,
-            align: 'start',
-            dragFree: true,
-            containScroll: 'trimSnaps',
-        },
-        [autoScroll],
-    );
-
-    React.useEffect(() => {
-        if (!emblaApi) return;
-        emblaApi.reInit();
-    }, [emblaApi, active]);
-
-    const onMouseLeave = React.useCallback(() => {
-        setActive(null);
-        autoScroll.play?.();
-        emblaApi?.reInit();
-    }, [autoScroll, emblaApi]);
+/** ✅ Compact “expanded” ongoing: still featured, but not tall/wide */
+function FeaturedOngoingCompact({ item, nowTs }: { item: FlexHoverItem; nowTs: number }) {
+    const d = daysUntil(item.startsAt, nowTs);
 
     return (
-        <div className="mt-8">
-            <div className="relative" onMouseLeave={onMouseLeave}>
-                {/* ✅ removed next/prev buttons + edge fade boxes */}
-                <div ref={emblaRef} className="overflow-hidden">
-                    <div className="flex gap-5">
-                        {items.map((item, i) => {
-                            const isActive = active === i;
-                            const isCollapsed = active !== null && !isActive;
+        <div
+            className={cn(
+                'relative mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white/70 backdrop-blur',
+                'shadow-[0_16px_44px_-44px_rgba(2,6,23,0.30)]',
+            )}
+        >
+            <div className={cn('absolute inset-0', item.tint)} />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/55 via-white/20 to-white/75" />
+            <div aria-hidden className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/5" />
 
-                            const slideBasis =
-                                active === null
-                                    ? 'md:basis-1/3'
-                                    : isActive
-                                      ? 'md:basis-[60%]'
-                                      : 'md:basis-[20%]';
+            <div className="relative p-4 sm:p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                    <BadgePill tone="success" icon={<CircleCheck className="h-3.5 w-3.5" />}>
+                        Ongoing Today
+                    </BadgePill>
+                    <BadgePill tone="info" icon={<CalendarClock className="h-3.5 w-3.5" />}>
+                        {formatEventWindow(item.startsAt, item.endsAt)}
+                    </BadgePill>
+                    <BadgePill icon={<MapPin className="h-3.5 w-3.5" />}>{item.venue}</BadgePill>
+                    <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>{d === 0 ? 'Today' : `${d}d`}</BadgePill>
+                </div>
 
-                            const d = daysUntil(item.startsAt, nowTs);
-                            const status = getEventStatus(item.startsAt, item.endsAt, nowTs);
+                <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_220px] sm:items-start">
+                    <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 sm:text-base line-clamp-1">{item.title}</div>
+                        <div className="mt-0.5 text-sm font-medium text-slate-800 line-clamp-1">{item.subtitle}</div>
+                        <p className="mt-1.5 text-sm leading-relaxed text-slate-600 line-clamp-2">{item.body}</p>
+                    </div>
 
-                            return (
-                                <div
-                                    key={`${item.title}-${item.startsAt}`}
-                                    className={cn(
-                                        'shrink-0 grow-0',
-                                        'basis-[88%] sm:basis-[72%]',
-                                        slideBasis,
-                                        'transition-[flex-basis] duration-700 ease-[cubic-bezier(.2,.8,.2,1)]',
-                                    )}
-                                >
-                                    <div
-                                        onMouseEnter={() => {
-                                            setActive(i);
-                                            autoScroll.stop?.();
-                                            emblaApi?.scrollTo(i);
-                                        }}
-                                        className={cn(
-                                            'group relative overflow-hidden rounded-3xl border border-slate-200 bg-white',
-                                            CARD_H,
-                                            'shadow-[0_18px_55px_-45px_rgba(2,6,23,0.22)]',
-                                            'transition-[transform,box-shadow] duration-500 ease-out',
-                                            'hover:-translate-y-0.5 hover:shadow-[0_26px_80px_-58px_rgba(2,6,23,0.30)]',
-                                            'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-                                        )}
-                                    >
-                                        <div className={cn('absolute inset-0', item.tint)} />
-                                        <div className="absolute inset-0 bg-gradient-to-b from-white/55 via-white/25 to-white/70" />
-                                        <div
-                                            aria-hidden
-                                            className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-black/5"
-                                        />
-
-                                        {/* COLLAPSED */}
-                                        <div
-                                            className={cn(
-                                                'absolute inset-0',
-                                                isCollapsed ? 'opacity-100' : 'opacity-0',
-                                                'transition-opacity duration-500',
-                                            )}
-                                        >
-                                            <img
-                                                src={item.image}
-                                                alt={item.title}
-                                                className="h-full w-full object-cover"
-                                                loading="lazy"
-                                                draggable={false}
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/5 to-white/70" />
-
-                                            <div className="absolute left-1/2 top-5 -translate-x-1/2">
-                                                <div className="[writing-mode:vertical-rl] rotate-180 text-sm font-semibold tracking-wide text-slate-900/90">
-                                                    {item.title}
-                                                </div>
-                                            </div>
-
-                                            <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
-                                                <BadgePill tone="info" icon={<CalendarClock className="h-3.5 w-3.5" />}>
-                                                    {formatEventWindow(item.startsAt, item.endsAt)}
-                                                </BadgePill>
-                                                <BadgePill icon={<MapPin className="h-3.5 w-3.5" />}>{item.venue}</BadgePill>
-                                                <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>
-                                                    {d === 0 ? 'Today / Started' : `${d} day${d > 1 ? 's' : ''} to go`}
-                                                </BadgePill>
-                                                <BadgePill
-                                                    tone={status === 'open' ? 'success' : 'danger'}
-                                                    icon={
-                                                        status === 'open' ? (
-                                                            <CircleCheck className="h-3.5 w-3.5" />
-                                                        ) : (
-                                                            <CircleX className="h-3.5 w-3.5" />
-                                                        )
-                                                    }
-                                                >
-                                                    {status === 'open' ? 'Open' : 'Closed'}
-                                                </BadgePill>
-                                            </div>
-                                        </div>
-
-                                        {/* EXPANDED / DEFAULT */}
-                                        <div
-                                            className={cn(
-                                                'relative h-full p-5 md:p-6',
-                                                'flex flex-col',
-                                                active === null ? 'opacity-100' : isActive ? 'opacity-100' : 'opacity-0',
-                                                'transition-opacity duration-300',
-                                            )}
-                                        >
-                                            <div className="flex flex-wrap gap-2">
-                                                <BadgePill tone="info" icon={<CalendarClock className="h-3.5 w-3.5" />}>
-                                                    {formatEventWindow(item.startsAt, item.endsAt)}
-                                                </BadgePill>
-                                                <BadgePill icon={<MapPin className="h-3.5 w-3.5" />}>{item.venue}</BadgePill>
-                                                <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>
-                                                    {d === 0 ? 'Today / Started' : `${d} day${d > 1 ? 's' : ''} to go`}
-                                                </BadgePill>
-                                                <BadgePill
-                                                    tone={status === 'open' ? 'success' : 'danger'}
-                                                    icon={
-                                                        status === 'open' ? (
-                                                            <CircleCheck className="h-3.5 w-3.5" />
-                                                        ) : (
-                                                            <CircleX className="h-3.5 w-3.5" />
-                                                        )
-                                                    }
-                                                >
-                                                    {status === 'open' ? 'Open' : 'Closed'}
-                                                </BadgePill>
-                                            </div>
-
-                                            <div className="mt-3 text-sm font-semibold text-slate-900">{item.title}</div>
-
-                                            <div className="mt-3 grid flex-1 grid-cols-[1fr_1.05fr] gap-6">
-                                                {/* left */}
-                                                <div className="min-w-0">
-                                                    <p className="text-lg font-semibold leading-snug text-slate-900 md:text-xl">
-                                                        {item.subtitle}
-                                                    </p>
-
-                                                    <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.body}</p>
-                                                </div>
-
-                                                {/* right */}
-                                                <div className="flex flex-col">
-                                                    <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-[0_14px_40px_-30px_rgba(2,6,23,0.20)]">
-                                                        <div className="p-3">
-                                                            <div className="relative overflow-hidden rounded-xl ring-1 ring-slate-200">
-                                                                <img
-                                                                    src={item.image}
-                                                                    alt={item.title}
-                                                                    className={cn('w-full object-cover', RIGHT_IMG_H)}
-                                                                    loading="lazy"
-                                                                    draggable={false}
-                                                                />
-                                                                <span className="absolute left-2 top-2 h-3 w-3 border-l-2 border-t-2 border-[#0033A0]/40" />
-                                                                <span className="absolute right-2 top-2 h-3 w-3 border-r-2 border-t-2 border-[#0033A0]/40" />
-                                                                <span className="absolute left-2 bottom-2 h-3 w-3 border-b-2 border-l-2 border-[#0033A0]/40" />
-                                                                <span className="absolute right-2 bottom-2 h-3 w-3 border-b-2 border-r-2 border-[#0033A0]/40" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* ✅ keep CTA INSIDE (no translate) so it won’t be cropped */}
-                                                    {item.cta ? (
-                                                        <div className="mt-3 flex justify-end">
-                                                            <Button
-                                                                asChild
-                                                                className="h-10 rounded-2xl bg-[#0033A0] text-white shadow hover:bg-[#0033A0]/95"
-                                                            >
-                                                                <a href={item.cta.href}>
-                                                                    {item.cta.label}
-                                                                    <ArrowRight className="ml-2 h-4 w-4" />
-                                                                </a>
-                                                            </Button>
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                    <div className="flex flex-col">
+                        <div className="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200 shadow-[0_12px_28px_-28px_rgba(2,6,23,0.25)]">
+                            <div className="p-2.5">
+                                <div className="relative overflow-hidden rounded-lg ring-1 ring-slate-200">
+                                    <img
+                                        src={item.image}
+                                        alt={item.title}
+                                        className="h-[108px] w-full object-cover"
+                                        loading="lazy"
+                                        draggable={false}
+                                    />
                                 </div>
-                            );
-                        })}
+                            </div>
+                        </div>
+
+                        {item.cta ? (
+                            <div className="mt-2 flex justify-end">
+                                <Button asChild className="h-9 rounded-xl bg-[#0033A0] px-3 text-white shadow hover:bg-[#0033A0]/95">
+                                    <a href={item.cta.href} target="_blank" rel="noreferrer">
+                                        {item.cta.label}
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </a>
+                                </Button>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+/** ✅ Compact grid tile: good for up to 20 events, responsive, not too wide */
+function EventTile({
+    item,
+    phase,
+    nowTs,
+}: {
+    item: FlexHoverItem;
+    phase: EventPhase;
+    nowTs: number;
+}) {
+    const d = daysUntil(item.startsAt, nowTs);
+    const isClosed = phase === 'closed';
+
+    return (
+        <div
+            className={cn(
+                'relative overflow-hidden rounded-2xl border border-slate-200 bg-white/70 backdrop-blur',
+                'shadow-[0_14px_36px_-44px_rgba(2,6,23,0.22)]',
+                isClosed && 'bg-slate-50/70',
+            )}
+        >
+            <div className={cn('absolute inset-0', item.tint, isClosed && 'opacity-30')} />
+            <div className={cn('absolute inset-0 bg-gradient-to-b from-white/55 via-white/20 to-white/70', isClosed && 'opacity-70')} />
+            <div aria-hidden className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/5" />
+
+            <div className={cn('relative p-3.5', isClosed && 'opacity-85')}>
+                {/* image (small) */}
+                <div className="relative overflow-hidden rounded-xl ring-1 ring-slate-200">
+                    <img
+                        src={item.image}
+                        alt={item.title}
+                        className={cn('h-28 w-full object-cover', isClosed && 'grayscale')}
+                        loading="lazy"
+                        draggable={false}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/25" />
+                </div>
+
+                {/* pills */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                    <BadgePill tone="info" icon={<CalendarClock className="h-3.5 w-3.5" />}>
+                        {formatEventWindow(item.startsAt, item.endsAt)}
+                    </BadgePill>
+                    {isClosed ? (
+                        <BadgePill tone="danger" icon={<CircleX className="h-3.5 w-3.5" />}>
+                            Closed
+                        </BadgePill>
+                    ) : (
+                        <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>{d === 0 ? 'Today' : `${d}d`}</BadgePill>
+                    )}
+                </div>
+
+                <div className={cn('mt-2 text-sm font-semibold text-slate-900 line-clamp-1', isClosed && 'text-slate-700')}>
+                    {item.title}
+                </div>
+                <div className={cn('mt-0.5 text-sm font-medium text-slate-800 line-clamp-1', isClosed && 'text-slate-600')}>
+                    {item.subtitle}
+                </div>
+
+                <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-600">
+                    <MapPin className="h-3.5 w-3.5 text-slate-500" />
+                    <span className="line-clamp-1">{item.venue}</span>
+                </div>
+
+                <p className={cn('mt-2 text-sm leading-relaxed text-slate-600 line-clamp-2', isClosed && 'text-slate-500')}>
+                    {item.body}
+                </p>
+
+                {item.cta ? (
+                    <div className="mt-3 flex justify-end">
+                        <Button
+                            asChild
+                            variant={isClosed ? 'outline' : 'default'}
+                            className={cn(
+                                'h-8 rounded-xl px-3',
+                                isClosed
+                                    ? 'border-slate-300 bg-white/60 text-slate-700 hover:bg-white'
+                                    : 'bg-[#0033A0] text-white shadow hover:bg-[#0033A0]/95',
+                            )}
+                        >
+                            <a href={item.cta.href} target="_blank" rel="noreferrer">
+                                View
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                            </a>
+                        </Button>
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    );
+}
+
+function ProgrammeGroups({ items }: { items: FlexHoverItem[] }) {
+    const nowTs = useNowTs(60_000);
+
+    const enriched = React.useMemo(() => {
+        return items
+            .map((it) => ({
+                ...it,
+                _startTs: new Date(it.startsAt).getTime(),
+                _endOrStartTs: new Date(it.endsAt ?? it.startsAt).getTime(),
+                _phase: getEventPhase(it.startsAt, it.endsAt, nowTs),
+            }))
+            .sort((a, b) => a._startTs - b._startTs);
+    }, [items, nowTs]);
+
+    const ongoing = enriched.filter((x) => x._phase === 'ongoing').sort((a, b) => a._startTs - b._startTs);
+    const upcoming = enriched.filter((x) => x._phase === 'upcoming').sort((a, b) => a._startTs - b._startTs);
+    const closed = enriched.filter((x) => x._phase === 'closed').sort((a, b) => b._endOrStartTs - a._endOrStartTs);
+
+    const featured = ongoing[0];
+
+    return (
+        <div className="mt-2">
+            {/* ONGOING (compact featured) */}
+            <SectionTitle title="Ongoing Today" count={ongoing.length} />
+            {featured ? (
+                <FeaturedOngoingCompact item={featured} nowTs={nowTs} />
+            ) : (
+                <div className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white/70 p-5 text-center text-sm text-slate-600 backdrop-blur">
+                    No ongoing event today.
+                </div>
+            )}
+
+            {/* UPCOMING (grid, mobile friendly) */}
+            <SectionTitle title="Upcoming Events" count={upcoming.length} />
+            {upcoming.length ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {upcoming.map((it) => (
+                        <EventTile key={`${it.title}-${it.startsAt}`} item={it} phase="upcoming" nowTs={nowTs} />
+                    ))}
+                </div>
+            ) : (
+                <div className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white/70 p-5 text-center text-sm text-slate-600 backdrop-blur">
+                    No upcoming events.
+                </div>
+            )}
+
+            {/* CLOSED (grid + grayed) */}
+            <SectionTitle title="Closed Events" count={closed.length} />
+            {closed.length ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {closed.map((it) => (
+                        <EventTile key={`${it.title}-${it.startsAt}`} item={it} phase="closed" nowTs={nowTs} />
+                    ))}
+                </div>
+            ) : (
+                <div className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white/70 p-5 text-center text-sm text-slate-600 backdrop-blur">
+                    No closed events yet.
+                </div>
+            )}
         </div>
     );
 }
@@ -400,21 +410,23 @@ export default function Programme({ programmes = [] }: PageProps) {
             <Head title="Programme" />
 
             <PublicLayout navActive="/event">
-                <section className="relative isolate mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+                {/* ✅ narrower container for better “not too wide” feel */}
+                <section className="relative isolate mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
                     <div
                         aria-hidden
                         className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 via-white to-slate-50"
                     />
                     <div
                         aria-hidden
-                        className="pointer-events-none absolute -left-24 -top-24 -z-10 h-72 w-72 rounded-full bg-[#0033A0]/10 blur-3xl"
+                        className="pointer-events-none absolute -left-24 -top-24 -z-10 h-64 w-64 rounded-full bg-[#0033A0]/10 blur-3xl"
                     />
                     <div
                         aria-hidden
-                        className="pointer-events-none absolute -right-24 top-24 -z-10 h-72 w-72 rounded-full bg-[#FCD116]/15 blur-3xl"
+                        className="pointer-events-none absolute -right-24 top-24 -z-10 h-64 w-64 rounded-full bg-[#FCD116]/15 blur-3xl"
                     />
 
-                    <div className="mx-auto max-w-5xl text-center">
+                    {/* ✅ header stays centered but not overly tall */}
+                    <div className="mx-auto max-w-3xl text-center">
                         <h2 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
                             <span className="relative inline-block">
                                 <span className="relative z-10 text-[#0033A0]">Programme</span>
@@ -422,20 +434,23 @@ export default function Programme({ programmes = [] }: PageProps) {
                             </span>
                         </h2>
 
-                        <div className="mx-auto mt-6 flex items-center justify-center gap-3">
-                            <span className="h-px w-12 bg-slate-200" />
+                        <div className="mx-auto mt-5 flex items-center justify-center gap-3">
+                            <span className="h-px w-10 bg-slate-200" />
                             <span className="h-2 w-2 rounded-full bg-[#FCD116] shadow-[0_0_0_6px_rgba(252,209,22,0.12)]" />
-                            <span className="h-px w-12 bg-slate-200" />
+                            <span className="h-px w-10 bg-slate-200" />
                         </div>
                     </div>
 
-                    {items.length ? (
-                        <LightFlexHoverCards items={items} />
-                    ) : (
-                        <div className="mx-auto mt-12 max-w-3xl rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-600">
-                            No programmes are available yet.
-                        </div>
-                    )}
+                    {/* ✅ list area slightly narrower than the section (better reading width) */}
+                    <div className="mx-auto max-w-5xl">
+                        {items.length ? (
+                            <ProgrammeGroups items={items} />
+                        ) : (
+                            <div className="mt-10 rounded-2xl border border-dashed border-slate-200 bg-white/70 p-8 text-center text-slate-600 backdrop-blur">
+                                No programmes are available yet.
+                            </div>
+                        )}
+                    </div>
                 </section>
             </PublicLayout>
         </>
