@@ -676,6 +676,7 @@ export default function ParticipantPage(props: PageProps) {
         country_id: string; // Select uses string
         user_type_id: string; // Select uses string
         is_active: boolean;
+        password: string;
     }>({
         full_name: '',
         email: '',
@@ -683,6 +684,7 @@ export default function ParticipantPage(props: PageProps) {
         country_id: '',
         user_type_id: '',
         is_active: true,
+        password: 'aseanph2026',
     });
 
     const countryForm = useForm<{
@@ -865,6 +867,7 @@ export default function ParticipantPage(props: PageProps) {
             country_id: data.country_id ? Number(data.country_id) : null,
             user_type_id: data.user_type_id ? Number(data.user_type_id) : null,
             is_active: data.is_active,
+            ...(editingParticipant ? {} : { password: data.password }),
         }));
 
         if (editingParticipant) {
