@@ -83,15 +83,18 @@ class ScannerController extends Controller
             ]);
         }
 
-        $alreadyCheckedIn = ParticipantAttendance::query()
+        $attendance = ParticipantAttendance::query()
             ->where('user_id', $participant->id)
             ->where('programme_id', $event->id)
-            ->exists();
+            ->first();
+        $alreadyCheckedIn = (bool) $attendance;
 
-        ParticipantAttendance::updateOrCreate(
-            ['user_id' => $participant->id, 'programme_id' => $event->id],
-            ['status' => 'scanned', 'scanned_at' => now()],
-        );
+        if (! $attendance) {
+            $attendance = ParticipantAttendance::updateOrCreate(
+                ['user_id' => $participant->id, 'programme_id' => $event->id],
+                ['status' => 'scanned', 'scanned_at' => now()],
+            );
+        }
 
         $participant->loadMissing(['country', 'userType', 'joinedProgrammes']);
 
@@ -122,6 +125,7 @@ class ScannerController extends Controller
                 'title' => $event->title,
             ],
             'already_checked_in' => $alreadyCheckedIn,
+            'scanned_at' => $attendance?->scanned_at?->toISOString(),
         ]);
     }
 

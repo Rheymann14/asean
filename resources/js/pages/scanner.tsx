@@ -64,6 +64,7 @@ type ScanResponse = {
     registered_events?: Array<{ id: number; title: string; starts_at?: string | null }>;
     checked_in_event?: { id: number; title: string } | null;
     already_checked_in?: boolean;
+    scanned_at?: string | null;
 };
 
 type PageProps = {
@@ -93,6 +94,19 @@ function fmtDate(dateStr?: string | null) {
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return null;
     return new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).format(d);
+}
+
+function fmtDateTime(dateStr?: string | null) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return null;
+    return new Intl.DateTimeFormat('en-PH', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    }).format(d);
 }
 
 function resolveEventPhase(event: EventRow, now: number) {
@@ -657,6 +671,11 @@ export default function Scanner(props: PageProps) {
                                             {result.ok ? 'Verified' : 'Not Allowed'}
                                         </div>
                                         <div className="mt-0.5 text-xs text-slate-700 dark:text-slate-300">{result.message}</div>
+                                        {result.already_checked_in && result.scanned_at ? (
+                                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                                Scanned at: {fmtDateTime(result.scanned_at)}
+                                            </div>
+                                        ) : null}
                                     </div>
                                 </div>
 
