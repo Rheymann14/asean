@@ -7,6 +7,8 @@ use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ParticipantController extends Controller
@@ -136,6 +138,7 @@ class ParticipantController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
+        $wasActive = (bool) $participant->is_active;
         $updates = [];
 
         if (array_key_exists('full_name', $validated)) {
@@ -163,6 +166,11 @@ class ParticipantController extends Controller
         }
 
         $participant->update($updates);
+
+        if ($wasActive && array_key_exists('is_active', $updates) && ! $updates['is_active']) {
+            DB::table('sessions')->where('user_id', $participant->id)->delete();
+            $participant->forceFill(['remember_token' => Str::random(60)])->save();
+        }
 
         return back();
     }
