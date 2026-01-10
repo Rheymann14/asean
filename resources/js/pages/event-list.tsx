@@ -4,9 +4,11 @@ import { Head, router } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarDays, MapPin, Users2 } from 'lucide-react';
+import { CalendarDays, Check, ChevronsUpDown, MapPin, Users2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FALLBACK_IMAGE = '/img/asean_banner_logo.png';
@@ -197,7 +199,7 @@ function Section({
                     </div>
                 </Card>
             ) : (
-                <div className="grid gap-3">
+                <div className="grid gap-3 md:grid-cols-2">
                     {events.map((event) => {
                         const isSelected = selectedIds.includes(event.id);
                         const isClosed = event.phase === 'closed';
@@ -262,6 +264,7 @@ function Section({
                                                 type="button"
                                                 disabled={isClosed || isSelected}
                                                 onClick={() => onJoin(event.id)}
+                                                className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
                                             >
                                                 {isClosed ? 'Closed' : isSelected ? 'Selected' : 'Join Event'}
                                             </Button>
@@ -281,6 +284,7 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
     const nowTs = useNowTs();
     const [selectedIds, setSelectedIds] = React.useState<number[]>(() => joined_programme_ids);
     const [quickJoinId, setQuickJoinId] = React.useState<string>('');
+    const [quickJoinOpen, setQuickJoinOpen] = React.useState(false);
     const [clearDialogOpen, setClearDialogOpen] = React.useState(false);
 
     const normalized = React.useMemo(() => normalizeProgrammes(programmes, nowTs), [programmes, nowTs]);
@@ -350,6 +354,11 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
         [normalized],
     );
 
+    const quickJoinSelection = React.useMemo(
+        () => quickJoinOptions.find((event) => String(event.id) === quickJoinId) ?? null,
+        [quickJoinOptions, quickJoinId],
+    );
+
     const handleQuickJoin = React.useCallback(() => {
         const id = Number(quickJoinId);
         if (!Number.isNaN(id)) {
@@ -392,22 +401,77 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                 </div>
                             </div>
                             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                                <select
-                                    value={quickJoinId}
-                                    onChange={(event) => setQuickJoinId(event.target.value)}
-                                    className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:w-64"
+                                <Popover open={quickJoinOpen} onOpenChange={setQuickJoinOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="h-9 w-full justify-between text-left font-normal text-slate-700 dark:text-slate-200 sm:w-64"
+                                        >
+                                            <span className="inline-flex items-center gap-2 truncate">
+                                                {quickJoinSelection ? (
+                                                    <>
+                                                        <span className="truncate">{quickJoinSelection.title}</span>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn(
+                                                                'text-[10px] uppercase tracking-wide',
+                                                                phaseBadgeClass(quickJoinSelection.phase),
+                                                            )}
+                                                        >
+                                                            {phaseLabel(quickJoinSelection.phase)}
+                                                        </Badge>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-slate-500 dark:text-slate-400">
+                                                        Quick join an event
+                                                    </span>
+                                                )}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-60" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[320px] p-0" align="end">
+                                        <Command>
+                                            <CommandInput placeholder="Search events..." />
+                                            <CommandEmpty>No event found.</CommandEmpty>
+                                            <CommandGroup>
+                                                {quickJoinOptions.map((event) => (
+                                                    <CommandItem
+                                                        key={event.id}
+                                                        value={event.title}
+                                                        onSelect={() => {
+                                                            setQuickJoinId(String(event.id));
+                                                            setQuickJoinOpen(false);
+                                                        }}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <span className="inline-flex size-4 items-center justify-center">
+                                                            {quickJoinId === String(event.id) ? (
+                                                                <Check className="h-4 w-4" />
+                                                            ) : null}
+                                                        </span>
+                                                        <span className="flex-1 truncate">{event.title}</span>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                                        >
+                                                            {phaseLabel(event.phase)}
+                                                        </Badge>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                <Button
+                                    type="button"
+                                    onClick={handleQuickJoin}
+                                    disabled={!quickJoinId}
+                                    className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
                                 >
-                                    <option value="">Quick join an event</option>
-                                    {quickJoinOptions.map((event) => (
-                                        <option key={event.id} value={event.id}>
-                                            {event.title}
-                                        </option>
-                                    ))}
-                                </select>
-                                <Button type="button" onClick={handleQuickJoin} disabled={!quickJoinId}>
                                     Join
                                 </Button>
-                                <Button type="button" variant="outline" onClick={() => setClearDialogOpen(true)}>
+                                <Button type="button" variant="destructive" onClick={() => setClearDialogOpen(true)}>
                                     Clear all
                                 </Button>
                             </div>
@@ -431,7 +495,7 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                             <Button
                                                 type="button"
                                                 variant="ghost"
-                                                className="h-6 px-2 text-[10px]"
+                                                className="h-6 px-2 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
                                                 onClick={() => handleLeave(event.id)}
                                             >
                                                 Remove
