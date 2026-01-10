@@ -83,6 +83,10 @@ type ProgrammeRow = {
     starts_at: string | null;
     ends_at: string | null;
     location: string | null;
+    venue?: {
+        name: string;
+        address?: string | null;
+    } | null;
     image_url: string | null;
     is_active: boolean;
 };
@@ -830,6 +834,10 @@ export default function ParticipantPage(props: PageProps) {
                     const endsAt = programme.ends_at ?? undefined;
                     const isActive = programme.is_active ?? true;
                     const phase = isActive ? getEventPhase(startsAt, endsAt, nowTs) : 'closed';
+                    const venueName = programme.venue?.name?.trim() ?? '';
+                    const venueAddress = programme.venue?.address?.trim() ?? '';
+                    const venueLabel =
+                        venueName && venueAddress ? `${venueName} • ${venueAddress}` : venueName || venueAddress || '';
 
                     return {
                         id: programme.id,
@@ -838,7 +846,7 @@ export default function ParticipantPage(props: PageProps) {
                         description: programme.description,
                         startsAt,
                         endsAt,
-                        location: programme.location ?? '',
+                        location: venueLabel || (programme.location ?? ''),
                         imageUrl: resolveProgrammeImage(programme.image_url),
                         phase,
                         isActive,
@@ -1765,7 +1773,7 @@ export default function ParticipantPage(props: PageProps) {
                     if (!open) setProgrammeParticipant(null);
                 }}
             >
-                <DialogContent className="sm:max-w-[960px]">
+                <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-[900px]">
                     <DialogHeader>
                         <DialogTitle>Participant joined events</DialogTitle>
                         <DialogDescription>Review and update the events this participant has joined.</DialogDescription>
@@ -1865,7 +1873,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
                                                                     <MapPin className="h-3.5 w-3.5 shrink-0" />
-                                                                    <span>{event.location || 'Location to be announced'}</span>
+                                                                    <span>{event.location?.trim() || 'Location to be announced'}</span>
                                                                 </div>
                                                             </div>
                                                         </div>

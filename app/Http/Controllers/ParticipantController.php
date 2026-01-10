@@ -67,19 +67,30 @@ class ParticipantController extends Controller
             });
 
         $programmes = Programme::query()
+            ->with(['venues' => fn ($query) => $query->where('is_active', true)->orderBy('id')])
             ->orderBy('starts_at')
             ->get()
-            ->map(fn (Programme $programme) => [
-                'id' => $programme->id,
-                'tag' => $programme->tag,
-                'title' => $programme->title,
-                'description' => $programme->description,
-                'starts_at' => $programme->starts_at?->toISOString(),
-                'ends_at' => $programme->ends_at?->toISOString(),
-                'location' => $programme->location,
-                'image_url' => $programme->image_url,
-                'is_active' => $programme->is_active,
-            ]);
+            ->map(function (Programme $programme) {
+                $venue = $programme->venues->first();
+
+                return [
+                    'id' => $programme->id,
+                    'tag' => $programme->tag,
+                    'title' => $programme->title,
+                    'description' => $programme->description,
+                    'starts_at' => $programme->starts_at?->toISOString(),
+                    'ends_at' => $programme->ends_at?->toISOString(),
+                    'location' => $programme->location,
+                    'venue' => $venue
+                        ? [
+                            'name' => $venue->name,
+                            'address' => $venue->address,
+                        ]
+                        : null,
+                    'image_url' => $programme->image_url,
+                    'is_active' => $programme->is_active,
+                ];
+            });
 
         return Inertia::render('participant', [
             'countries' => $countries,
