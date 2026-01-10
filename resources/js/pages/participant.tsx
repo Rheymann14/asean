@@ -1787,22 +1787,23 @@ export default function ParticipantPage(props: PageProps) {
                                     subtitle="Create events first so you can assign participants."
                                 />
                             ) : (
-                                <div className="grid gap-3">
+                                <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                     {normalizedProgrammes.map((event) => {
                                         const joinedIds = programmeParticipant.joined_programme_ids ?? [];
                                         const isJoined = joinedIds.includes(event.id);
 
                                         return (
                                             <Card key={event.id} className="border-slate-200/70 dark:border-slate-800">
-                                                <div className="flex flex-col gap-3 p-4 md:flex-row md:items-start md:justify-between">
+                                                <div className="flex h-full flex-col gap-3 p-3">
                                                     <div className="space-y-2">
-                                                        <div className="flex flex-wrap items-center gap-2">
+                                                        <div className="flex flex-wrap items-center gap-1.5">
                                                             {event.tag ? (
-                                                                <Badge className="border-transparent bg-slate-900/80 text-white">
+                                                                <Badge className="border-transparent bg-slate-900/80 text-[10px] text-white">
                                                                     {event.tag}
                                                                 </Badge>
                                                             ) : null}
-                                                            <Badge className={cn('border', phaseBadgeClass(event.phase))}>
+                                                            <Badge className={cn('border text-[10px]', phaseBadgeClass(event.phase))}>
                                                                 {phaseLabel(event.phase)}
                                                             </Badge>
                                                         </div>
@@ -1814,18 +1815,18 @@ export default function ParticipantPage(props: PageProps) {
                                                                 {event.description}
                                                             </div>
                                                         </div>
-                                                        <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                                                        <div className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
                                                             <div className="flex items-center gap-2">
-                                                                <CalendarDays className="h-3.5 w-3.5" />
+                                                                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                                                                 <span>{formatEventWindow(event.startsAt, event.endsAt)}</span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                <MapPin className="h-3.5 w-3.5" />
+                                                                <MapPin className="h-3.5 w-3.5 shrink-0" />
                                                                 <span>{event.location || 'Location to be announced'}</span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-row items-center gap-2 md:flex-col md:items-end">
+                                                    <div className="mt-auto flex items-center justify-between gap-2">
                                                         <Badge
                                                             className={cn(
                                                                 'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
@@ -1841,7 +1842,7 @@ export default function ParticipantPage(props: PageProps) {
                                                             size="sm"
                                                             variant={isJoined ? 'outline' : 'default'}
                                                             className={cn(
-                                                                'rounded-xl',
+                                                                'h-8 rounded-xl px-3 text-[11px]',
                                                                 isJoined
                                                                     ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10'
                                                                     : PRIMARY_BTN,
@@ -1855,6 +1856,7 @@ export default function ParticipantPage(props: PageProps) {
                                             </Card>
                                         );
                                     })}
+                                    </div>
                                 </div>
                             )}
                         </div>
