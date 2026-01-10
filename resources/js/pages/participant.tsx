@@ -54,6 +54,7 @@ import {
     BadgeCheck,
     ImageUp,
     QrCode as QrCodeIcon,
+    Printer,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -255,6 +256,20 @@ function getFlagSrc(country?: Country | null) {
     return `/asean/${code}.png`;
 }
 
+function isChedUserType(userType?: UserType | null) {
+    const t = String(userType?.slug ?? userType?.name ?? '')
+        .toLowerCase()
+        .trim();
+
+    // covers "ched", "ched staff", etc.
+    return t === 'ched' || t.startsWith('ched ');
+}
+
+function isChedParticipant(p: ParticipantRow) {
+    return isChedUserType(p.user_type);
+}
+
+
 function ParticipantIdPrintCard({
     participant,
     qrDataUrl,
@@ -265,58 +280,111 @@ function ParticipantIdPrintCard({
     orientation: PrintOrientation;
 }) {
     const isLandscape = orientation === 'landscape';
-    const qrSize = isLandscape ? 108 : 180;
+
+    /**
+     * ✅ STANDARD PVC PRINT SIZES
+     * Landscape (credit card): 3.37in W × 2.125in H
+     * Portrait (big ID):       3.46in W × 5.51in H
+     */
+    const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
+
+    const printSize = isLandscape
+        ? 'print:w-[3.37in] print:h-[2.125in]'
+        : 'print:w-[3.46in] print:h-[5.51in]';
+
+    // same tuning as dashboard
     const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
+    const qrSize = isLandscape ? 108 : 180;
+
     const pad = isLandscape ? 'p-3' : 'p-5';
     const headerLogo = isLandscape ? 'h-8 w-8' : 'h-10 w-10';
-    const aspect = isLandscape ? 'aspect-[3.37/2.25]' : 'aspect-[3.46/5.51]';
-    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.25in]' : 'print:w-[3.46in] print:h-[5.51in]';
+
     const flagSrc = getFlagSrc(participant.country);
-    const participantName = participant.full_name;
-    const nameSize = participantName.length > 28 ? (isLandscape ? 'text-[12px] leading-4' : 'text-lg leading-6') : '';
+    const name = participant.full_name || '—';
+    const displayId = participant.display_id ?? '—';
+
+    const rawName = (name ?? '').trim();
+
+    /**
+     * ✅ Landscape: keep typical names on ONE LINE (no surname dropping)
+     * - If name is very long, allow 2 lines but smaller font
+     */
+    const nameClass = (() => {
+        const len = rawName.length;
+
+        if (isLandscape) {
+            const oneLine = len <= 24; // “Rheymann Cuartocruz” stays single line
+
+            const size =
+                len > 40 ? 'text-[11px] leading-[14px]' :
+                    len > 32 ? 'text-[12px] leading-[15px]' :
+                        'text-[13px] leading-[16px]'; // slightly smaller than text-sm
+
+            return cn(
+                size,
+                oneLine ? 'whitespace-nowrap truncate' : 'break-words line-clamp-2'
+            );
+        }
+
+        // Portrait: big ID can safely use 2 lines
+        const size =
+            len > 44 ? 'text-[16px] leading-[21px]' :
+                len > 36 ? 'text-[18px] leading-[23px]' :
+                    'text-xl leading-7';
+
+        return cn(size, 'break-words line-clamp-2');
+    })();
+
+
 
     return (
         <div
             className={cn(
-                'relative w-full max-w-[520px] mx-auto overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm print:break-inside-avoid',
+                'id-print-card relative mx-auto w-full max-w-[520px] overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
+                'box-border',
                 aspect,
                 'print:max-w-none',
                 printSize,
             )}
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >
+
+            {/* Background */}
             <div aria-hidden className="absolute inset-0">
                 <img
                     src="/img/bg.png"
                     alt=""
-                    className={cn(
-                        'absolute inset-0 h-full w-full object-cover',
-                        isLandscape ? 'opacity-60 dark:opacity-45' : 'opacity-70 dark:opacity-45',
-                    )}
+                    className={cn('absolute inset-0 h-full w-full object-cover', isLandscape ? 'opacity-45 dark:opacity-35' : 'opacity-50 dark:opacity-35')}
                     draggable={false}
-                    loading="lazy"
+                    loading="eager"
+                    decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
                 <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
             </div>
 
             <div className={cn('relative flex h-full flex-col', pad)}>
+                {/* Header */}
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2.5">
                         <img
-                            src="/img/asean_logo.png"
+                            src="/img/asean_logo.svg"
                             alt="ASEAN"
-                            className={cn('object-contain drop-shadow-sm', headerLogo)}
+                            className={cn('object-contain', headerLogo, 'print:drop-shadow-none')}
                             draggable={false}
-                            loading="lazy"
+                            loading="eager"
+                            decoding="async"
                         />
+
                         <img
-                            src="/img/bagong_pilipinas.png"
-                            alt="ASEAN"
-                            className={cn('object-contain drop-shadow-sm', headerLogo)}
+                            src="/img/bagong_pilipinas.svg"
+                            alt="Bagong Pilipinas"
+                            className={cn('object-contain', headerLogo, 'print:drop-shadow-none')}
                             draggable={false}
-                            loading="lazy"
+                            loading="eager"
+                            decoding="async"
                         />
+
 
                         <div className="min-w-0">
                             <div
@@ -327,33 +395,38 @@ function ParticipantIdPrintCard({
                             >
                                 ASEAN Philippines 2026
                             </div>
-                            <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">Participant Identification</div>
+                            <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
+                                Participant Identification
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-4')} />
 
+                {/* Body */}
                 <div
                     className={cn(
                         'flex-1',
                         isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-4',
                     )}
                 >
+                    {/* LEFT INFO */}
                     <div className="min-w-0">
                         <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Participant
                         </div>
+
                         <div
                             className={cn(
-                                'mt-0.5 font-semibold tracking-tight text-slate-900 dark:text-slate-100 break-words line-clamp-2',
-                                isLandscape ? 'text-sm leading-4' : 'text-xl leading-7',
-                                nameSize,
+                                'mt-0.5 font-semibold tracking-tight text-slate-900 dark:text-slate-100',
+                                nameClass
                             )}
-                            title={participantName}
+                            title={rawName}
                         >
-                            {participantName}
+                            {rawName || '—'}
                         </div>
+
 
                         <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-3')}>
                             <div
@@ -377,12 +450,7 @@ function ParticipantIdPrintCard({
                             </div>
 
                             <div className="min-w-0">
-                                <div
-                                    className={cn(
-                                        'truncate font-semibold text-slate-900 dark:text-slate-100',
-                                        isLandscape ? 'text-[12px]' : 'text-sm',
-                                    )}
-                                >
+                                <div className={cn('truncate font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[12px]' : 'text-sm')}>
                                     {participant.country?.name ?? '—'}
                                 </div>
                                 {participant.country?.code ? (
@@ -397,14 +465,14 @@ function ParticipantIdPrintCard({
                             <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                 Participant ID
                             </div>
+
                             <div
                                 className={cn(
-                                    'mt-1 inline-flex max-w-full rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono font-semibold text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
+                                    'mt-1 inline-flex max-w-full whitespace-normal break-words rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono font-semibold text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
                                     isLandscape ? 'text-[10px] leading-4' : 'text-sm leading-5',
-                                    'whitespace-normal break-words',
                                 )}
                             >
-                                {participant.display_id ?? '—'}
+                                {displayId}
                             </div>
                         </div>
 
@@ -413,6 +481,7 @@ function ParticipantIdPrintCard({
                         </div>
                     </div>
 
+                    {/* RIGHT QR */}
                     <div
                         className={cn(
                             'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
@@ -420,12 +489,7 @@ function ParticipantIdPrintCard({
                             isLandscape ? 'p-2.5' : 'p-4',
                         )}
                     >
-                        <div
-                            className={cn(
-                                'inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200',
-                                isLandscape ? 'mb-1 text-[10px]' : 'mb-2 text-xs',
-                            )}
-                        >
+                        <div className={cn('inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200', isLandscape ? 'mb-1 text-[10px]' : 'mb-2 text-xs')}>
                             <QrCodeIcon className={cn(isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
                             QR Code
                         </div>
@@ -449,33 +513,21 @@ function ParticipantIdPrintCard({
                         )}
 
                         <div className="mt-2 w-full text-center">
-                            <div
-                                className={cn(
-                                    'font-semibold text-slate-900 dark:text-slate-100',
-                                    isLandscape ? 'text-[10px] leading-3.5' : 'text-xs',
-                                )}
-                            >
-                                <span
-                                    className="line-clamp-2"
-                                    title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participantName}`}
-                                >
+                            <div className={cn('font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[10px] leading-3.5' : 'text-xs')}>
+                                <span className="line-clamp-2" title={`${participant.country?.code?.toUpperCase() ?? ''} • ${name}`}>
                                     {participant.country?.code?.toUpperCase() ?? ''}
                                     {participant.country?.code ? ' • ' : ''}
-                                    {participantName}
+                                    {name}
                                 </span>
                             </div>
-                            <div
-                                className={cn(
-                                    'mt-1 font-mono text-slate-500 dark:text-slate-400 break-words',
-                                    isLandscape ? 'text-[10px] leading-3.5' : 'text-[11px] leading-4',
-                                )}
-                            >
-                                {participant.display_id ?? '—'}
+                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', isLandscape ? 'text-[10px] leading-3.5' : 'text-[11px] leading-4')}>
+                                {displayId}
                             </div>
                         </div>
                     </div>
                 </div>
 
+                {/* Footer */}
                 <div className={cn('flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-2' : 'mt-4')}>
                     <span>Keep this ID for event entry</span>
                     <span className="font-medium">ASEAN PH 2026</span>
@@ -484,6 +536,8 @@ function ParticipantIdPrintCard({
         </div>
     );
 }
+
+
 
 
 
@@ -666,6 +720,23 @@ export default function ParticipantPage(props: PageProps) {
         }));
     }, [participants, countryById, userTypeById]);
 
+    React.useEffect(() => {
+        // If CHED records were selected before, auto-remove them
+        const chedIds = resolvedParticipants.filter(isChedParticipant).map((p) => p.id);
+        if (chedIds.length === 0) return;
+
+        setSelectedParticipantIds((prev) => {
+            let changed = false;
+            const next = new Set(prev);
+            for (const id of chedIds) {
+                if (next.delete(id)) changed = true;
+            }
+            return changed ? next : prev;
+        });
+    }, [resolvedParticipants]);
+
+
+
     const filteredParticipants = React.useMemo(() => {
         const q = participantQuery.trim().toLowerCase();
         return resolvedParticipants.filter((p) => {
@@ -698,16 +769,32 @@ export default function ParticipantPage(props: PageProps) {
         return userTypes.filter((u) => (!q ? true : u.name.toLowerCase().includes(q) || (u.slug ?? '').toLowerCase().includes(q)));
     }, [userTypes, userTypeQuery]);
 
-    const selectedParticipants = React.useMemo(
-        () => resolvedParticipants.filter((p) => selectedParticipantIds.has(p.id)),
-        [resolvedParticipants, selectedParticipantIds],
+    const participantById = React.useMemo(() => new Map(resolvedParticipants.map((p) => [p.id, p])), [resolvedParticipants]);
+
+    const selectableVisibleParticipants = React.useMemo(
+        () => filteredParticipants.filter((p) => !isChedParticipant(p)),
+        [filteredParticipants],
     );
 
-    const allVisibleSelected = filteredParticipants.length > 0 && filteredParticipants.every((p) => selectedParticipantIds.has(p.id));
+    const selectedParticipantsPrintable = React.useMemo(() => {
+        const out: ParticipantRow[] = [];
+        selectedParticipantIds.forEach((id) => {
+            const p = participantById.get(id);
+            if (p && !isChedParticipant(p)) out.push(p);
+        });
+        return out;
+    }, [selectedParticipantIds, participantById]);
+
+    const allVisibleSelected =
+        selectableVisibleParticipants.length > 0 &&
+        selectableVisibleParticipants.every((p) => selectedParticipantIds.has(p.id));
+
 
     React.useEffect(() => {
         let active = true;
-        const pending = filteredParticipants.filter((p) => p.qr_payload && !qrCacheRef.current[p.id]);
+        const pending = filteredParticipants.filter(
+            (p) => !isChedParticipant(p) && p.qr_payload && !qrCacheRef.current[p.id],
+        );
 
         if (pending.length === 0) return undefined;
 
@@ -995,23 +1082,27 @@ export default function ParticipantPage(props: PageProps) {
     function toggleSelectAll(checked: boolean) {
         setSelectedParticipantIds((prev) => {
             const next = new Set(prev);
+
             if (checked) {
-                filteredParticipants.forEach((p) => next.add(p.id));
+                selectableVisibleParticipants.forEach((p) => next.add(p.id));
             } else {
-                filteredParticipants.forEach((p) => next.delete(p.id));
+                selectableVisibleParticipants.forEach((p) => next.delete(p.id));
             }
+
             return next;
         });
     }
 
+
     function requestPrintIds(orientation: PrintOrientation) {
-        if (selectedParticipants.length === 0) {
-            toast.error('Select at least one participant to print.');
+        if (selectedParticipantsPrintable.length === 0) {
+            toast.error('Select at least one NON-CHED participant to print.');
             return;
         }
         setPrintOrientation(orientation);
         window.setTimeout(() => window.print(), 80);
     }
+
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -1128,28 +1219,46 @@ export default function ParticipantPage(props: PageProps) {
 
                                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300">
                                     <div>
-                                        {selectedParticipantIds.size} selected for ID printing
+                                        {selectedParticipantsPrintable.length} selected for ID printing
+
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         <Button
                                             type="button"
-                                            variant="outline"
                                             size="sm"
                                             onClick={() => requestPrintIds('portrait')}
-                                            disabled={selectedParticipantIds.size === 0}
+                                            disabled={selectedParticipantsPrintable.length === 0}
+                                            className={cn(
+                                                'rounded-xl',
+                                                'bg-sky-600 text-white hover:bg-sky-700',
+                                                'focus-visible:ring-sky-600/30',
+                                                'disabled:bg-sky-600/40 disabled:text-white/70 disabled:hover:bg-sky-600/40',
+                                            )}
                                         >
+                                            <Printer className="mr-2 h-4 w-4" />
+
                                             Print IDs (Portrait)
                                         </Button>
+
                                         <Button
                                             type="button"
-                                            variant="outline"
                                             size="sm"
                                             onClick={() => requestPrintIds('landscape')}
-                                            disabled={selectedParticipantIds.size === 0}
+                                            disabled={selectedParticipantsPrintable.length === 0}
+
+                                            className={cn(
+                                                'rounded-xl',
+                                                'bg-emerald-600 text-white hover:bg-emerald-700',
+                                                'focus-visible:ring-emerald-600/30',
+                                                'disabled:bg-emerald-600/40 disabled:text-white/70 disabled:hover:bg-emerald-600/40',
+                                            )}
                                         >
+                                            <Printer className="mr-2 h-4 w-4" />
+
                                             Print IDs (Landscape)
                                         </Button>
                                     </div>
+
                                 </div>
                             </CardHeader>
 
@@ -1187,79 +1296,109 @@ export default function ParticipantPage(props: PageProps) {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {filteredParticipants.map((p) => (
-                                                    <TableRow key={p.id}>
-                                                        <TableCell className="text-slate-700 dark:text-slate-300">
-                                                            {p.country ? (
-                                                                <div className="flex items-center gap-2">
-                                                                    <FlagThumb country={p.country} size={18} />
-                                                                    <span className="truncate">{p.country.name}</span>
-                                                                </div>
-                                                            ) : (
-                                                                '—'
+                                                {filteredParticipants.map((p) => {
+                                                    const isChed = isChedParticipant(p);
+
+                                                    return (
+                                                        <TableRow
+                                                            key={p.id}
+                                                            className={cn(
+                                                                'transition-colors',
+                                                                isChed
+                                                                    ? 'bg-blue-50/70 hover:bg-blue-50 dark:bg-blue-950/30 dark:hover:bg-blue-950/40'
+                                                                    : 'hover:bg-slate-50 dark:hover:bg-slate-900/40',
                                                             )}
-                                                        </TableCell>
-                                                        <TableCell className="font-medium text-slate-900 dark:text-slate-100">{p.full_name}</TableCell>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-3">
-                                                                <Checkbox
-                                                                    checked={selectedParticipantIds.has(p.id)}
-                                                                    onCheckedChange={(checked) => toggleParticipantSelect(p.id, !!checked)}
-                                                                    aria-label={`Select ${p.full_name}`}
-                                                                />
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="grid size-12 place-items-center overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                                        {qrDataUrls[p.id] ? (
-                                                                            <img src={qrDataUrls[p.id]} alt="Participant QR" className="h-full w-full object-cover" />
-                                                                        ) : (
-                                                                            <span className="text-[9px] font-semibold text-slate-500">QR</span>
-                                                                        )}
+                                                        >
+
+                                                            <TableCell className="text-slate-700 dark:text-slate-300">
+                                                                {p.country ? (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <FlagThumb country={p.country} size={18} />
+                                                                        <span className="truncate">{p.country.name}</span>
                                                                     </div>
+                                                                ) : (
+                                                                    '—'
+                                                                )}
+                                                            </TableCell>
+
+                                                            <TableCell
+                                                                className={cn(
+                                                                    'font-medium text-slate-900 dark:text-slate-100',
+                                                                    isChed && 'text-blue-900 dark:text-blue-100',
+                                                                )}
+                                                            >
+                                                                {p.full_name}
+                                                            </TableCell>
+
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-3">
+                                                                    <Checkbox
+                                                                        checked={!isChed && selectedParticipantIds.has(p.id)}
+                                                                        disabled={isChed}
+                                                                        onCheckedChange={(checked) => {
+                                                                            if (isChed) return;
+                                                                            toggleParticipantSelect(p.id, !!checked);
+                                                                        }}
+                                                                        aria-label={isChed ? 'CHED user type excluded from printing' : `Select ${p.full_name}`}
+                                                                    />
+
                                                                     <div>
-                                                                        <div className="text-xs text-slate-500">Participant ID</div>
-                                                                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{p.display_id ?? '—'}</div>
+                                                                        <div className="text-xs text-slate-500">
+                                                                            {isChed ? '(N/A - CHED)' : 'Participant ID'}
+                                                                        </div>
+
+                                                                        <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                                                                            {isChed ? '' : (p.display_id ?? '—')}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-slate-700 dark:text-slate-300">{p.email}</TableCell>
-                                                        <TableCell className="text-slate-700 dark:text-slate-300">{p.contact_number ?? '—'}</TableCell>
-                                                        <TableCell className="text-slate-700 dark:text-slate-300">{p.user_type?.name ?? '—'}</TableCell>
-                                                        <TableCell>
-                                                            <StatusBadge active={p.is_active} />
-                                                        </TableCell>
-                                                        <TableCell className="text-slate-700 dark:text-slate-300">{formatDateSafe(p.created_at)}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="rounded-full">
-                                                                        <MoreHorizontal className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end" className="w-44">
-                                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                    <DropdownMenuItem onClick={() => openEditParticipant(p)}>
-                                                                        <Pencil className="mr-2 h-4 w-4" />
-                                                                        Edit
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem onClick={() => toggleParticipantActive(p)}>
-                                                                        <BadgeCheck className="mr-2 h-4 w-4" />
-                                                                        {p.is_active ? 'Set Inactive' : 'Set Active'}
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        className="text-red-600 focus:text-red-600"
-                                                                        onClick={() => requestDelete('participant', p.id, p.full_name)}
-                                                                    >
-                                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                                        Delete
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
+                                                            </TableCell>
+
+                                                            <TableCell className="text-slate-700 dark:text-slate-300">{p.email}</TableCell>
+                                                            <TableCell className="text-slate-700 dark:text-slate-300">{p.contact_number ?? '—'}</TableCell>
+                                                            <TableCell className="text-slate-700 dark:text-slate-300">{p.user_type?.name ?? '—'}</TableCell>
+
+                                                            <TableCell>
+                                                                <StatusBadge active={p.is_active} />
+                                                            </TableCell>
+
+                                                            <TableCell className="text-slate-700 dark:text-slate-300">
+                                                                {formatDateSafe(p.created_at)}
+                                                            </TableCell>
+
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="rounded-full">
+                                                                            <MoreHorizontal className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end" className="w-44">
+                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                        <DropdownMenuItem onClick={() => openEditParticipant(p)}>
+                                                                            <Pencil className="mr-2 h-4 w-4" />
+                                                                            Edit
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => toggleParticipantActive(p)}>
+                                                                            <BadgeCheck className="mr-2 h-4 w-4" />
+                                                                            {p.is_active ? 'Set Inactive' : 'Set Active'}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem
+                                                                            className="text-red-600 focus:text-red-600"
+                                                                            onClick={() => requestDelete('participant', p.id, p.full_name)}
+                                                                        >
+                                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                                            Delete
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
                                             </TableBody>
+
                                         </Table>
                                     </div>
                                 )}
@@ -1664,46 +1803,97 @@ export default function ParticipantPage(props: PageProps) {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* PRINT ONLY */}
             <div className="hidden print:block">
-                <style>{`
+                {(() => {
+                    // ✅ Force A4 with mm (more reliable than "A4 portrait/landscape")
+                    const pageSize = printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm';
+
+                    // ✅ Fixed columns (predictable layout)
+                    const gridCols = printOrientation === 'landscape'
+                        ? 'repeat(3, 3.37in)'  // credit-card landscape
+                        : 'repeat(2, 3.46in)'; // big portrait (2 across on A4 portrait)
+
+                    // ✅ Safe spacing so 2 rows of portrait won’t overflow
+                    const gap = '0.12in';
+                    const padding = '0.25in';
+
+                    return (
+                        <>
+                            <style>{`
                     @media print {
-                        @page { size: A4 ${printOrientation}; margin: 0.2in; }
-                        body * { visibility: hidden; }
-                        #participant-print, #participant-print * { visibility: visible; }
-                        #participant-print { position: absolute; inset: 0; }
+                        @page { size: ${pageSize}; margin: 0; }
+
+                        html, body {
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            height: auto !important;
+                        }
+
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+
+                        /* ✅ HIDE EVERYTHING (sidebar, header, etc.) */
+                        body * {
+                            visibility: hidden !important;
+                        }
+
+                        /* ✅ SHOW ONLY PRINT AREA */
+                        #participant-print,
+                        #participant-print * {
+                            visibility: visible !important;
+                        }
+
+                        /* ✅ Pin print content to page */
+                        #participant-print {
+                            position: fixed;
+                            inset: 0;
+                            background: white;
+                            padding: ${padding};
+                        }
+
+                        /* ✅ NEVER CUT CARDS */
+                        .id-print-card {
+                            break-inside: avoid;
+                            page-break-inside: avoid;
+                        }
+
+                        /* ✅ avoid shadows causing “slight oversize” -> cropping */
+                        .id-print-card {
+                            box-shadow: none !important;
+                        }
                     }
                 `}</style>
-                <div
-                    id="participant-print"
-                    className="min-h-screen bg-white p-4"
-                    style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-                >
-                    <div
-                        className={cn(
-                            'grid auto-rows-max grid-flow-row-dense',
-                            printOrientation === 'landscape' ? 'grid-cols-3' : 'grid-cols-2',
-                        )}
-                        style={{
-                            gridTemplateColumns:
-                                printOrientation === 'landscape'
-                                    ? 'repeat(auto-fit, 3.37in)'
-                                    : 'repeat(auto-fit, 3.46in)',
-                            gap: '0.12in',
-                            alignContent: 'start',
-                            justifyContent: 'start',
-                        }}
-                    >
-                        {selectedParticipants.map((participant) => (
-                            <ParticipantIdPrintCard
-                                key={participant.id}
-                                participant={participant}
-                                qrDataUrl={qrDataUrls[participant.id]}
-                                orientation={printOrientation}
-                            />
-                        ))}
-                    </div>
-                </div>
+
+                            <div id="participant-print">
+                                <div
+                                    className="grid"
+                                    style={{
+                                        gridTemplateColumns: gridCols,
+                                        gap,
+                                        alignContent: 'start',
+                                        justifyContent: 'start',
+                                    }}
+                                >
+                                    {selectedParticipantsPrintable.map((p) => (
+                                        <ParticipantIdPrintCard
+                                            key={p.id}
+                                            participant={p}
+                                            qrDataUrl={qrDataUrls[p.id]}
+                                            orientation={printOrientation}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    );
+                })()}
             </div>
+
+
+
         </AppLayout>
     );
 }

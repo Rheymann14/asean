@@ -599,7 +599,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="space-y-1">
                                             <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                                                ID Preview
+                                                Virtual ID
                                             </CardTitle>
 
                                         </div>
