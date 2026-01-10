@@ -1049,6 +1049,16 @@ export default function ParticipantPage(props: PageProps) {
         setProgrammeDialogOpen(true);
     }
 
+    function updateProgrammeSelection(programmeId: number, isJoined: boolean) {
+        setProgrammeParticipant((prev) => {
+            if (!prev) return prev;
+            const current = new Set(prev.joined_programme_ids ?? []);
+            if (isJoined) current.add(programmeId);
+            else current.delete(programmeId);
+            return { ...prev, joined_programme_ids: Array.from(current) };
+        });
+    }
+
     function toggleProgrammeJoin(participant: ParticipantRow, programmeId: number, isJoined: boolean) {
         const endpoint = isJoined
             ? ENDPOINTS.participantProgrammes.leave(participant.id, programmeId)
@@ -1058,6 +1068,7 @@ export default function ParticipantPage(props: PageProps) {
             router.delete(endpoint, {
                 preserveScroll: true,
                 onSuccess: () => {
+                    updateProgrammeSelection(programmeId, false);
                     toast.success('Event removed from participant.');
                 },
                 onError: () => toast.error('Unable to update participant events.'),
@@ -1071,6 +1082,7 @@ export default function ParticipantPage(props: PageProps) {
             {
                 preserveScroll: true,
                 onSuccess: () => {
+                    updateProgrammeSelection(programmeId, true);
                     toast.success('Event added to participant.');
                 },
                 onError: () => toast.error('Unable to update participant events.'),
@@ -1792,6 +1804,8 @@ export default function ParticipantPage(props: PageProps) {
                                     {normalizedProgrammes.map((event) => {
                                         const joinedIds = programmeParticipant.joined_programme_ids ?? [];
                                         const isJoined = joinedIds.includes(event.id);
+                                        const isClosed = event.phase === 'closed';
+                                        const isAddDisabled = isClosed && !isJoined;
 
                                         return (
                                             <Card key={event.id} className="border-slate-200/70 dark:border-slate-800">
@@ -1847,6 +1861,8 @@ export default function ParticipantPage(props: PageProps) {
                                                                     ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10'
                                                                     : PRIMARY_BTN,
                                                             )}
+                                                            disabled={isAddDisabled}
+                                                            title={isAddDisabled ? 'Closed events cannot be added.' : undefined}
                                                             onClick={() => toggleProgrammeJoin(programmeParticipant, event.id, isJoined)}
                                                         >
                                                             {isJoined ? 'Remove' : 'Add to list'}
