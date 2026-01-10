@@ -55,6 +55,8 @@ import {
     ImageUp,
     QrCode as QrCodeIcon,
     Printer,
+    CalendarDays,
+    MapPin,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -73,6 +75,18 @@ type UserType = {
     is_active: boolean;
 };
 
+type ProgrammeRow = {
+    id: number;
+    tag: string | null;
+    title: string;
+    description: string;
+    starts_at: string | null;
+    ends_at: string | null;
+    location: string | null;
+    image_url: string | null;
+    is_active: boolean;
+};
+
 type ParticipantRow = {
     id: number;
     display_id?: string | null;
@@ -84,6 +98,7 @@ type ParticipantRow = {
     user_type_id: number | null;
     is_active: boolean;
     created_at?: string | null;
+    joined_programme_ids?: number[];
 
     // optional expanded props if your backend includes them
     country?: Country | null;
@@ -94,6 +109,7 @@ type PageProps = {
     countries?: Country[];
     userTypes?: UserType[];
     participants?: ParticipantRow[];
+    programmes?: ProgrammeRow[];
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -116,6 +132,10 @@ const ENDPOINTS = {
         update: (id: number) => `/participants/${id}`,
         destroy: (id: number) => `/participants/${id}`,
     },
+    participantProgrammes: {
+        join: (participantId: number, programmeId: number) => `/participants/${participantId}/programmes/${programmeId}`,
+        leave: (participantId: number, programmeId: number) => `/participants/${participantId}/programmes/${programmeId}`,
+    },
     countries: {
         store: '/participants/countries',
         update: (id: number) => `/participants/countries/${id}`,
@@ -137,6 +157,95 @@ function formatDateSafe(value?: string | null) {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return '—';
     return new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }).format(d);
+}
+
+const FALLBACK_EVENT_IMAGE = '/img/asean_banner_logo.png';
+
+type EventPhase = 'ongoing' | 'upcoming' | 'closed';
+
+function resolveProgrammeImage(imageUrl?: string | null) {
+    if (!imageUrl) return FALLBACK_EVENT_IMAGE;
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
+    return `/event-images/${imageUrl}`;
+}
+
+function useNowTs(intervalMs = 60_000) {
+    const [nowTs, setNowTs] = React.useState(() => Date.now());
+    React.useEffect(() => {
+        const t = window.setInterval(() => setNowTs(Date.now()), intervalMs);
+        return () => window.clearInterval(t);
+    }, [intervalMs]);
+    return nowTs;
+}
+
+function formatEventWindow(startsAt: string, endsAt?: string) {
+    const start = new Date(startsAt);
+    const end = endsAt ? new Date(endsAt) : null;
+
+    const dateFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
+    const timeFmt = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' });
+
+    const date = dateFmt.format(start);
+    const startTime = timeFmt.format(start);
+
+    if (!end) return `${date} • ${startTime}`;
+
+    const sameDay =
+        start.getFullYear() === end.getFullYear() &&
+        start.getMonth() === end.getMonth() &&
+        start.getDate() === end.getDate();
+
+    const endTime = timeFmt.format(end);
+    if (sameDay) return `${date} • ${startTime}–${endTime}`;
+
+    return `${dateFmt.format(start)} ${startTime} → ${dateFmt.format(end)} ${timeFmt.format(end)}`;
+}
+
+function getEventPhase(startsAt: string, endsAt: string | undefined, nowTs: number): EventPhase {
+    const start = new Date(startsAt);
+    const startTs = start.getTime();
+    const end = endsAt ? new Date(endsAt) : null;
+    const endTs = end ? end.getTime() : null;
+
+    if (endTs !== null) {
+        if (nowTs < startTs) return 'upcoming';
+        if (nowTs <= endTs) return 'ongoing';
+        return 'closed';
+    }
+
+    if (nowTs < startTs) return 'upcoming';
+
+    const now = new Date(nowTs);
+    const sameDay =
+        now.getFullYear() === start.getFullYear() &&
+        now.getMonth() === start.getMonth() &&
+        now.getDate() === start.getDate();
+
+    return sameDay ? 'ongoing' : 'closed';
+}
+
+function phaseBadgeClass(phase: EventPhase) {
+    switch (phase) {
+        case 'ongoing':
+            return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200';
+        case 'upcoming':
+            return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200';
+        case 'closed':
+        default:
+            return 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300';
+    }
+}
+
+function phaseLabel(phase: EventPhase) {
+    switch (phase) {
+        case 'ongoing':
+            return 'Ongoing';
+        case 'upcoming':
+            return 'Upcoming';
+        case 'closed':
+        default:
+            return 'Closed';
+    }
 }
 
 function StatusBadge({ active }: { active: boolean }) {
@@ -620,6 +729,7 @@ export default function ParticipantPage(props: PageProps) {
     const userTypes: UserType[] = props.userTypes ?? [];
 
     const participants: ParticipantRow[] = props.participants ?? [];
+    const programmes: ProgrammeRow[] = props.programmes ?? [];
 
 
     // ---------------------------------------
@@ -643,6 +753,8 @@ export default function ParticipantPage(props: PageProps) {
     const [participantDialogOpen, setParticipantDialogOpen] = React.useState(false);
     const [countryDialogOpen, setCountryDialogOpen] = React.useState(false);
     const [userTypeDialogOpen, setUserTypeDialogOpen] = React.useState(false);
+    const [programmeDialogOpen, setProgrammeDialogOpen] = React.useState(false);
+    const [programmeParticipant, setProgrammeParticipant] = React.useState<ParticipantRow | null>(null);
 
     // delete confirm
     const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -721,6 +833,34 @@ export default function ParticipantPage(props: PageProps) {
             user_type: p.user_type ?? (p.user_type_id ? userTypeById.get(p.user_type_id) ?? null : null),
         }));
     }, [participants, countryById, userTypeById]);
+
+    const nowTs = useNowTs();
+
+    const normalizedProgrammes = React.useMemo(
+        () =>
+            programmes
+                .map((programme) => {
+                    const startsAt = programme.starts_at ?? programme.ends_at ?? new Date(nowTs).toISOString();
+                    const endsAt = programme.ends_at ?? undefined;
+                    const isActive = programme.is_active ?? true;
+                    const phase = isActive ? getEventPhase(startsAt, endsAt, nowTs) : 'closed';
+
+                    return {
+                        id: programme.id,
+                        tag: programme.tag ?? '',
+                        title: programme.title,
+                        description: programme.description,
+                        startsAt,
+                        endsAt,
+                        location: programme.location ?? '',
+                        imageUrl: resolveProgrammeImage(programme.image_url),
+                        phase,
+                        isActive,
+                    };
+                })
+                .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()),
+        [programmes, nowTs],
+    );
 
     React.useEffect(() => {
         // If CHED records were selected before, auto-remove them
@@ -900,6 +1040,40 @@ export default function ParticipantPage(props: PageProps) {
                 preserveScroll: true,
                 onSuccess: () => toast.success(`Participant ${p.is_active ? 'deactivated' : 'activated'}.`),
                 onError: () => toast.error('Unable to update participant status.'),
+            },
+        );
+    }
+
+    function openProgrammeManager(p: ParticipantRow) {
+        setProgrammeParticipant(p);
+        setProgrammeDialogOpen(true);
+    }
+
+    function toggleProgrammeJoin(participant: ParticipantRow, programmeId: number, isJoined: boolean) {
+        const endpoint = isJoined
+            ? ENDPOINTS.participantProgrammes.leave(participant.id, programmeId)
+            : ENDPOINTS.participantProgrammes.join(participant.id, programmeId);
+
+        if (isJoined) {
+            router.delete(endpoint, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Event removed from participant.');
+                },
+                onError: () => toast.error('Unable to update participant events.'),
+            });
+            return;
+        }
+
+        router.post(
+            endpoint,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Event added to participant.');
+                },
+                onError: () => toast.error('Unable to update participant events.'),
             },
         );
     }
@@ -1382,6 +1556,12 @@ export default function ParticipantPage(props: PageProps) {
                                                                             <Pencil className="mr-2 h-4 w-4" />
                                                                             Edit
                                                                         </DropdownMenuItem>
+                                                                        {!isChed ? (
+                                                                            <DropdownMenuItem onClick={() => openProgrammeManager(p)}>
+                                                                                <CalendarDays className="mr-2 h-4 w-4" />
+                                                                                Joined events
+                                                                            </DropdownMenuItem>
+                                                                        ) : null}
                                                                         <DropdownMenuItem onClick={() => toggleParticipantActive(p)}>
                                                                             <BadgeCheck className="mr-2 h-4 w-4" />
                                                                             {p.is_active ? 'Set Inactive' : 'Set Active'}
@@ -1566,6 +1746,138 @@ export default function ParticipantPage(props: PageProps) {
                     </TabsContent>
                 </Tabs>
             </div>
+
+            {/* -------------------- Participant Events Dialog -------------------- */}
+            <Dialog
+                open={programmeDialogOpen}
+                onOpenChange={(open) => {
+                    setProgrammeDialogOpen(open);
+                    if (!open) setProgrammeParticipant(null);
+                }}
+            >
+                <DialogContent className="sm:max-w-[960px]">
+                    <DialogHeader>
+                        <DialogTitle>Participant joined events</DialogTitle>
+                        <DialogDescription>Review and update the events this participant has joined.</DialogDescription>
+                    </DialogHeader>
+
+                    {programmeParticipant ? (
+                        <div className="space-y-5">
+                            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/40">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{programmeParticipant.full_name}</div>
+                                        <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                                            {programmeParticipant.email} • {programmeParticipant.user_type?.name ?? '—'}
+                                        </div>
+                                    </div>
+                                    <Badge className="rounded-full bg-slate-900/5 text-slate-700 dark:bg-white/10 dark:text-slate-200">
+                                        {(programmeParticipant.joined_programme_ids ?? []).length} joined
+                                    </Badge>
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    Use the buttons below to add or remove events from this participant.
+                                </div>
+                            </div>
+
+                            {normalizedProgrammes.length === 0 ? (
+                                <EmptyState
+                                    icon={<CalendarDays className="h-5 w-5" />}
+                                    title="No events yet"
+                                    subtitle="Create events first so you can assign participants."
+                                />
+                            ) : (
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    {normalizedProgrammes.map((event) => {
+                                        const joinedIds = programmeParticipant.joined_programme_ids ?? [];
+                                        const isJoined = joinedIds.includes(event.id);
+
+                                        return (
+                                            <Card key={event.id} className="overflow-hidden border-slate-200/70 dark:border-slate-800">
+                                                <div className="flex h-full flex-col">
+                                                    <div className="relative">
+                                                        <img
+                                                            src={event.imageUrl}
+                                                            alt={event.title}
+                                                            className="h-36 w-full object-cover"
+                                                            loading="lazy"
+                                                        />
+                                                        <div className="absolute left-3 top-3 flex gap-2">
+                                                            {event.tag ? (
+                                                                <Badge className="border-transparent bg-slate-900/70 text-white">
+                                                                    {event.tag}
+                                                                </Badge>
+                                                            ) : null}
+                                                            <Badge className={cn('border', phaseBadgeClass(event.phase))}>
+                                                                {phaseLabel(event.phase)}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-1 flex-col gap-3 p-4">
+                                                        <div>
+                                                            <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                                {event.title}
+                                                            </div>
+                                                            <div className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                {event.description}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                                                            <div className="flex items-center gap-2">
+                                                                <CalendarDays className="h-3.5 w-3.5" />
+                                                                <span>{formatEventWindow(event.startsAt, event.endsAt)}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <MapPin className="h-3.5 w-3.5" />
+                                                                <span>{event.location || 'Location to be announced'}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-auto flex items-center justify-between gap-2">
+                                                            <Badge
+                                                                className={cn(
+                                                                    'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
+                                                                    isJoined
+                                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                                )}
+                                                            >
+                                                                {isJoined ? 'Joined' : 'Not joined'}
+                                                            </Badge>
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant={isJoined ? 'outline' : 'default'}
+                                                                className={cn(
+                                                                    'rounded-xl',
+                                                                    isJoined
+                                                                        ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10'
+                                                                        : PRIMARY_BTN,
+                                                                )}
+                                                                onClick={() => toggleProgrammeJoin(programmeParticipant, event.id, isJoined)}
+                                                            >
+                                                                {isJoined ? 'Remove' : 'Add to list'}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ) : null}
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setProgrammeDialogOpen(false)}>
+                            Done
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* -------------------- Participant Dialog -------------------- */}
             <Dialog open={participantDialogOpen} onOpenChange={setParticipantDialogOpen}>
