@@ -1305,12 +1305,18 @@ export default function ParticipantPage(props: PageProps) {
         <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Participant" />
 
-            <div className="space-y-6">
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <div className="text-sm text-slate-500">Admin</div>
-                            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Participant Management</h1>
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+                <div className="space-y-2">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+
+
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                                <Users className="h-5 w-5 text-[#00359c]" />
+                                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                                    Participant Management
+                                </h1>
+                            </div>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
                                 Manage participants, ASEAN countries, and user types.
                             </p>
@@ -1335,7 +1341,10 @@ export default function ParticipantPage(props: PageProps) {
                             )}
                         </div>
                     </div>
+
+                    <Separator className="bg-slate-200/70 dark:bg-slate-800" />
                 </div>
+
 
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
                     <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
