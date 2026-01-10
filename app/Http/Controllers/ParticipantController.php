@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Country;
+use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class ParticipantController extends Controller
             'is_active' => $type->is_active,
         ]);
 
-        $participants = User::with(['country', 'userType'])
+        $participants = User::with(['country', 'userType', 'joinedProgrammes'])
             ->orderBy('name')
             ->get()
             ->map(function (User $user) {
@@ -42,6 +43,9 @@ class ParticipantController extends Controller
                     'user_type_id' => $user->user_type_id,
                     'is_active' => $user->is_active,
                     'created_at' => $user->created_at?->toISOString(),
+                    'joined_programme_ids' => $user->joinedProgrammes
+                        ? $user->joinedProgrammes->pluck('id')->values()->all()
+                        : [],
                     'country' => $user->country
                         ? [
                             'id' => $user->country->id,
@@ -62,10 +66,26 @@ class ParticipantController extends Controller
                 ];
             });
 
+        $programmes = Programme::query()
+            ->orderBy('starts_at')
+            ->get()
+            ->map(fn (Programme $programme) => [
+                'id' => $programme->id,
+                'tag' => $programme->tag,
+                'title' => $programme->title,
+                'description' => $programme->description,
+                'starts_at' => $programme->starts_at?->toISOString(),
+                'ends_at' => $programme->ends_at?->toISOString(),
+                'location' => $programme->location,
+                'image_url' => $programme->image_url,
+                'is_active' => $programme->is_active,
+            ]);
+
         return Inertia::render('participant', [
             'countries' => $countries,
             'userTypes' => $userTypes,
             'participants' => $participants,
+            'programmes' => $programmes,
         ]);
     }
 
@@ -139,6 +159,20 @@ class ParticipantController extends Controller
     public function destroy(User $participant)
     {
         $participant->delete();
+
+        return back();
+    }
+
+    public function joinProgramme(Request $request, User $participant, Programme $programme)
+    {
+        $participant->joinedProgrammes()->syncWithoutDetaching([$programme->id]);
+
+        return back();
+    }
+
+    public function leaveProgramme(Request $request, User $participant, Programme $programme)
+    {
+        $participant->joinedProgrammes()->detach($programme->id);
 
         return back();
     }
