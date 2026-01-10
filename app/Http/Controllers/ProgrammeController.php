@@ -65,6 +65,30 @@ class ProgrammeController extends Controller
         ]);
     }
 
+    public function participantIndex()
+    {
+        $programmes = Programme::query()
+            ->latest('starts_at')
+            ->get()
+            ->map(fn (Programme $programme) => [
+                'id' => $programme->id,
+                'tag' => $programme->tag,
+                'title' => $programme->title,
+                'description' => $programme->description,
+                'starts_at' => $programme->starts_at?->toISOString(),
+                'ends_at' => $programme->ends_at?->toISOString(),
+                'location' => $programme->location,
+                'image_url' => $programme->image_url,
+                'pdf_url' => $programme->pdf_url,
+                'is_active' => $programme->is_active,
+                'updated_at' => $programme->updated_at?->toISOString(),
+            ]);
+
+        return Inertia::render('event-list', [
+            'programmes' => $programmes,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
