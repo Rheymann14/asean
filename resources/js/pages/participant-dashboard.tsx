@@ -448,7 +448,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                         </div>
 
                                         <div className="text-sm text-slate-600 dark:text-slate-300">
-                                            Check your details to make sure they're correct.
+                                            ID card for attendance verification
                                         </div>
                                     </div>
 
@@ -486,7 +486,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                     <div>
                                         <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Profile Details</div>
                                         <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                            These details appear on your ID.
+                                            Check your details to make sure they're correct.
                                         </div>
                                     </div>
 
@@ -621,7 +621,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 </TabsList>
                                             </Tabs>
 
-                                            <Badge
+                                            {/* <Badge
                                                 variant="secondary"
                                                 role="button"
                                                 tabIndex={0}
@@ -633,7 +633,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                             >
                                                 <QrCodeIcon className="mr-1 h-4 w-4" />
                                                 Preview
-                                            </Badge>
+                                            </Badge> */}
 
                                         </div>
 

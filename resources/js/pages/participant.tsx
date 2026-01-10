@@ -1305,22 +1305,22 @@ export default function ParticipantPage(props: PageProps) {
         <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Participant" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+               <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="space-y-2">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+         
 
-
-                        <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                                <Users className="h-5 w-5 text-[#00359c]" />
-                                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                                    Participant Management
-                                </h1>
-                            </div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Manage participants, ASEAN countries, and user types.
-                            </p>
-                        </div>
+                            <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-[#00359c]" />
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                           Participant Management
+                        </h1>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                        Manage participants, ASEAN countries, and user types.
+                    </p>
+                </div>
 
                         <div className="flex flex-wrap gap-2">
                             {activeTab === 'participants' ? (

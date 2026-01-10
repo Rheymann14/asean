@@ -112,7 +112,7 @@ function MapEmbed({
             <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
                 <div className="space-y-2">
                     <p className="font-semibold text-slate-900 dark:text-slate-100">Map preview unavailable</p>
-                    <p>Add an embed URL to show the map here.</p>
+                    <p>No pinned map location.</p>
                     {googleMapsLink ? (
                         <Button asChild className="mt-2 h-9 rounded-2xl bg-[#0033A0] text-white hover:opacity-95">
                             <a href={googleMapsLink} target="_blank" rel="noopener noreferrer">
