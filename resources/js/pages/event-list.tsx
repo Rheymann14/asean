@@ -1,6 +1,6 @@
 import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,6 +17,10 @@ type ProgrammeRow = {
     starts_at: string | null;
     ends_at: string | null;
     location: string | null;
+    venue?: {
+        name: string;
+        address?: string | null;
+    } | null;
     image_url: string | null;
     pdf_url: string | null;
     is_active: boolean;
@@ -24,6 +28,7 @@ type ProgrammeRow = {
 
 type PageProps = {
     programmes?: ProgrammeRow[];
+    joined_programme_ids?: number[];
 };
 
 type EventPhase = 'ongoing' | 'upcoming' | 'closed';
@@ -119,6 +124,10 @@ function normalizeProgrammes(programmes: ProgrammeRow[], nowTs: number): EventIt
             const endsAt = programme.ends_at ?? undefined;
             const isActive = programme.is_active ?? true;
             const phase = isActive ? getEventPhase(startsAt, endsAt, nowTs) : 'closed';
+            const venueName = programme.venue?.name?.trim() ?? '';
+            const venueAddress = programme.venue?.address?.trim() ?? '';
+            const venueLabel =
+                venueName && venueAddress ? `${venueName} • ${venueAddress}` : venueName || venueAddress || '';
 
             return {
                 id: programme.id,
@@ -127,7 +136,7 @@ function normalizeProgrammes(programmes: ProgrammeRow[], nowTs: number): EventIt
                 description: programme.description,
                 startsAt,
                 endsAt,
-                location: programme.location ?? '',
+                location: venueLabel || programme.location ?? '',
                 imageUrl: resolveImageUrl(programme.image_url),
                 phase,
             };
@@ -266,9 +275,9 @@ function Section({
     );
 }
 
-export default function EventList({ programmes = [] }: PageProps) {
+export default function EventList({ programmes = [], joined_programme_ids = [] }: PageProps) {
     const nowTs = useNowTs();
-    const [selectedIds, setSelectedIds] = React.useState<number[]>([]);
+    const [selectedIds, setSelectedIds] = React.useState<number[]>(() => joined_programme_ids);
     const [quickJoinId, setQuickJoinId] = React.useState<string>('');
 
     const normalized = React.useMemo(() => normalizeProgrammes(programmes, nowTs), [programmes, nowTs]);
@@ -282,8 +291,22 @@ export default function EventList({ programmes = [] }: PageProps) {
         );
     }, [normalized]);
 
+    React.useEffect(() => {
+        setSelectedIds(joined_programme_ids);
+    }, [joined_programme_ids]);
+
     const handleJoin = React.useCallback((id: number) => {
         setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+        router.post(
+            `/event-list/${id}/join`,
+            {},
+            {
+                preserveScroll: true,
+                onError: () => {
+                    setSelectedIds((prev) => prev.filter((item) => item !== id));
+                },
+            },
+        );
     }, []);
 
     const selectedSummary = React.useMemo<SelectionSummaryItem[]>(
@@ -295,8 +318,9 @@ export default function EventList({ programmes = [] }: PageProps) {
     );
 
     const handleClear = React.useCallback(() => {
-        setSelectedIds([]);
-    }, []);
+        setSelectedIds(joined_programme_ids);
+        setQuickJoinId('');
+    }, [joined_programme_ids]);
 
     const quickJoinOptions = React.useMemo(
         () => normalized.filter((event) => event.phase !== 'closed'),
@@ -306,10 +330,10 @@ export default function EventList({ programmes = [] }: PageProps) {
     const handleQuickJoin = React.useCallback(() => {
         const id = Number(quickJoinId);
         if (!Number.isNaN(id)) {
-            setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+            handleJoin(id);
             setQuickJoinId('');
         }
-    }, [quickJoinId]);
+    }, [quickJoinId, handleJoin]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -348,24 +372,24 @@ export default function EventList({ programmes = [] }: PageProps) {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex-1">
                             {selectedSummary.length ? (
-                                <>
-                                    {selectedSummary.slice(0, 4).map((event) => (
-                                        <Badge
+                                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                    {selectedSummary.map((event) => (
+                                        <div
                                             key={event.id}
-                                            variant="outline"
-                                            className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                            className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                                         >
-                                            {event.title}
-                                        </Badge>
+                                            <span className="truncate font-medium">{event.title}</span>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                            >
+                                                {phaseLabel(event.phase)}
+                                            </Badge>
+                                        </div>
                                     ))}
-                                    {selectedSummary.length > 4 ? (
-                                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                                            +{selectedSummary.length - 4} more
-                                        </Badge>
-                                    ) : null}
-                                </>
+                                </div>
                             ) : (
                                 <span className="text-sm text-slate-500 dark:text-slate-400">
                                     Pick an ongoing or upcoming event below to join.
@@ -394,7 +418,7 @@ export default function EventList({ programmes = [] }: PageProps) {
                                 onClick={handleClear}
                                 disabled={!selectedSummary.length}
                             >
-                                Clear selection
+                                Reset selection
                             </Button>
                         </div>
                     </div>

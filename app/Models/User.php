@@ -9,11 +9,13 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 
 use App\Models\Country;
 use App\Models\UserType;
 use App\Models\Issuance;
+use App\Models\Programme;
 
 class User extends Authenticatable
 {
@@ -96,5 +98,10 @@ class User extends Authenticatable
     public function issuances()
     {
         return $this->hasMany(Issuance::class);
+    }
+
+    public function joinedProgrammes(): BelongsToMany
+    {
+        return $this->belongsToMany(Programme::class, 'participant_programmes')->withTimestamps();
     }
 }

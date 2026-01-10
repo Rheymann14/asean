@@ -36,6 +36,8 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
                 ->name('participant.dashboard');
             Route::get('/event-list', [ProgrammeController::class, 'participantIndex'])
                 ->name('event-list');
+            Route::post('/event-list/{programme}/join', [ProgrammeController::class, 'join'])
+                ->name('event-list.join');
         });
 
     Route::middleware(['verified', 'role:ched'])->group(function () {
