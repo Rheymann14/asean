@@ -27,14 +27,22 @@ Route::get('/event', [ProgrammeController::class, 'publicIndex'])->name('event')
 
 Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issuances');
 
-Route::middleware(['auth'])->group(function () {
-    Route::middleware(['role:participant'])->group(function () {
-        Route::get('participant-dashboard', function () {
-            return Inertia::render('participant-dashboard');
-        })->name('participant-dashboard');
-        Route::get('/participant-dashboard', [ParticipantDashboardController::class, 'show'])
-            ->name('participant.dashboard');
-    });
+    Route::middleware(['auth'])->group(function () {
+        Route::middleware(['role:participant'])->group(function () {
+            Route::get('participant-dashboard', function () {
+                return Inertia::render('participant-dashboard');
+            })->name('participant-dashboard');
+            Route::get('/participant-dashboard', [ParticipantDashboardController::class, 'show'])
+                ->name('participant.dashboard');
+            Route::get('/event-list', [ProgrammeController::class, 'participantIndex'])
+                ->name('event-list');
+            Route::post('/event-list/{programme}/join', [ProgrammeController::class, 'join'])
+                ->name('event-list.join');
+            Route::delete('/event-list/{programme}/leave', [ProgrammeController::class, 'leave'])
+                ->name('event-list.leave');
+            Route::delete('/event-list/clear', [ProgrammeController::class, 'clearSelections'])
+                ->name('event-list.clear');
+        });
 
     Route::middleware(['verified', 'role:ched'])->group(function () {
         Route::get('dashboard', function () {
