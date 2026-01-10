@@ -2177,6 +2177,8 @@ export default function ParticipantPage(props: PageProps) {
                 {(() => {
                     // ✅ Force A4 with mm (more reliable than "A4 portrait/landscape")
                     const pageSize = printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm';
+                    const pageWidth = printOrientation === 'landscape' ? '297mm' : '210mm';
+                    const pageHeight = printOrientation === 'landscape' ? '210mm' : '297mm';
 
                     // ✅ Fixed columns (predictable layout)
                     const gridCols = printOrientation === 'landscape'
@@ -2186,6 +2188,15 @@ export default function ParticipantPage(props: PageProps) {
                     // ✅ Safe spacing so 2 rows of portrait won’t overflow
                     const gap = '0.12in';
                     const padding = '0.25in';
+                    const cardsPerPage = printOrientation === 'landscape' ? 9 : 4;
+                    const pages = Array.from(
+                        { length: Math.ceil(selectedParticipantsPrintable.length / cardsPerPage) },
+                        (_, index) =>
+                            selectedParticipantsPrintable.slice(
+                                index * cardsPerPage,
+                                index * cardsPerPage + cardsPerPage,
+                            ),
+                    );
 
                     return (
                         <>
@@ -2217,10 +2228,9 @@ export default function ParticipantPage(props: PageProps) {
 
                         /* ✅ Pin print content to page */
                         #participant-print {
-                            position: fixed;
-                            inset: 0;
+                            position: static;
+                            inset: auto;
                             background: white;
-                            padding: ${padding};
                         }
 
                         /* ✅ NEVER CUT CARDS */
@@ -2233,28 +2243,52 @@ export default function ParticipantPage(props: PageProps) {
                         .id-print-card {
                             box-shadow: none !important;
                         }
+
+                        .print-page {
+                            break-after: page;
+                            page-break-after: always;
+                            box-sizing: border-box;
+                        }
+
+                        .print-page:last-child {
+                            break-after: auto;
+                            page-break-after: auto;
+                        }
                     }
                 `}</style>
 
                             <div id="participant-print">
-                                <div
-                                    className="grid"
-                                    style={{
-                                        gridTemplateColumns: gridCols,
-                                        gap,
-                                        alignContent: 'start',
-                                        justifyContent: 'start',
-                                    }}
-                                >
-                                    {selectedParticipantsPrintable.map((p) => (
-                                        <ParticipantIdPrintCard
-                                            key={p.id}
-                                            participant={p}
-                                            qrDataUrl={qrDataUrls[p.id]}
-                                            orientation={printOrientation}
-                                        />
-                                    ))}
-                                </div>
+                                {pages.map((page, pageIndex) => (
+                                    <div
+                                        key={`page-${pageIndex}`}
+                                        className="print-page"
+                                        style={{
+                                            padding,
+                                            width: pageWidth,
+                                            height: pageHeight,
+                                            boxSizing: 'border-box',
+                                        }}
+                                    >
+                                        <div
+                                            className="grid"
+                                            style={{
+                                                gridTemplateColumns: gridCols,
+                                                gap,
+                                                alignContent: 'start',
+                                                justifyContent: 'start',
+                                            }}
+                                        >
+                                            {page.map((p) => (
+                                                <ParticipantIdPrintCard
+                                                    key={p.id}
+                                                    participant={p}
+                                                    qrDataUrl={qrDataUrls[p.id]}
+                                                    orientation={printOrientation}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </>
                     );
