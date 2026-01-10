@@ -95,7 +95,7 @@ class ProgrammeController extends Controller
                 ];
             });
 
-        return Inertia::render('event-list/index', [
+        return Inertia::render('event-list', [
             'programmes' => $programmes,
             'joined_programme_ids' => $request->user()
                 ->joinedProgrammes()
