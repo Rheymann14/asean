@@ -136,7 +136,7 @@ function normalizeProgrammes(programmes: ProgrammeRow[], nowTs: number): EventIt
                 description: programme.description,
                 startsAt,
                 endsAt,
-                location: venueLabel || programme.location ?? '',
+                location: venueLabel || (programme.location ?? ''),
                 imageUrl: resolveImageUrl(programme.image_url),
                 phase,
             };
