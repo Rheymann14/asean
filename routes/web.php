@@ -51,6 +51,10 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         Route::get('participant', [ParticipantController::class, 'index'])->name('participant');
 
         Route::resource('participants', ParticipantController::class)->only(['store', 'update', 'destroy']);
+        Route::post('participants/{participant}/programmes/{programme}', [ParticipantController::class, 'joinProgramme'])
+            ->name('participants.programmes.join');
+        Route::delete('participants/{participant}/programmes/{programme}', [ParticipantController::class, 'leaveProgramme'])
+            ->name('participants.programmes.leave');
         Route::resource('participants/countries', CountryController::class)->only(['store', 'update', 'destroy']);
         Route::resource('participants/user-types', UserTypeController::class)->only(['store', 'update', 'destroy']);
 
