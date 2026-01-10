@@ -7,7 +7,16 @@ import { type BreadcrumbItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
 
 import {
     ScanLine,
@@ -22,6 +31,8 @@ import {
     CalendarDays,
     ExternalLink,
     Keyboard,
+    ChevronsUpDown,
+    Check,
 } from 'lucide-react';
 
 import { BrowserQRCodeReader } from '@zxing/browser';
@@ -30,6 +41,9 @@ type EventRow = {
     id: number;
     title: string;
     starts_at?: string | null;
+    ends_at?: string | null;
+    is_active?: boolean;
+    phase?: 'ongoing' | 'upcoming' | 'closed';
 };
 
 type ParticipantInfo = {
@@ -37,6 +51,7 @@ type ParticipantInfo = {
     full_name: string;
     email?: string | null;
     country?: string | null;
+    country_flag_url?: string | null;
     user_type?: string | null;
     is_verified?: boolean;
 };
@@ -52,6 +67,7 @@ type ScanResponse = {
 
 type PageProps = {
     events?: EventRow[];
+    default_event_id?: number | null;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Scanner', href: '/scanner' }];
@@ -73,6 +89,49 @@ function fmtDate(dateStr?: string | null) {
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return null;
     return new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).format(d);
+}
+
+function resolveEventPhase(event: EventRow, now: number) {
+    if (event.phase) return event.phase;
+    if (event.is_active === false) return 'closed';
+
+    const start = event.starts_at ?? event.ends_at;
+    if (!start) return 'ongoing';
+
+    const startDate = new Date(start);
+    if (Number.isNaN(startDate.getTime())) return 'ongoing';
+
+    const nowDate = new Date(now);
+    if (nowDate.getTime() < startDate.getTime()) return 'upcoming';
+
+    const sameDay =
+        nowDate.getFullYear() === startDate.getFullYear() &&
+        nowDate.getMonth() === startDate.getMonth() &&
+        nowDate.getDate() === startDate.getDate();
+
+    return sameDay ? 'ongoing' : 'closed';
+}
+
+function phaseLabel(phase?: EventRow['phase']) {
+    switch (phase) {
+        case 'ongoing':
+            return 'Ongoing';
+        case 'upcoming':
+            return 'Upcoming';
+        default:
+            return 'Closed';
+    }
+}
+
+function phaseBadgeClass(phase?: EventRow['phase']) {
+    switch (phase) {
+        case 'ongoing':
+            return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200';
+        case 'upcoming':
+            return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200';
+        default:
+            return 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300';
+    }
 }
 
 function isNotFoundZXingError(err: unknown) {
@@ -98,8 +157,9 @@ function Pill({ children, tone = 'default' }: { children: React.ReactNode; tone?
 
 export default function Scanner(props: PageProps) {
     const events = props.events ?? [];
-
-    const [selectedEventId, setSelectedEventId] = React.useState<string>('none');
+    const defaultEventId = props.default_event_id ? String(props.default_event_id) : '';
+    const [selectedEventId, setSelectedEventId] = React.useState<string>(defaultEventId);
+    const [eventOpen, setEventOpen] = React.useState(false);
     const [isScanning, setIsScanning] = React.useState(false);
     const [status, setStatus] = React.useState<'idle' | 'scanning' | 'verifying' | 'success' | 'error'>('idle');
 
@@ -113,10 +173,13 @@ export default function Scanner(props: PageProps) {
 
     const [result, setResult] = React.useState<ScanResponse | null>(null);
 
+    const nowTs = Date.now();
+
     const videoRef = React.useRef<HTMLVideoElement | null>(null);
     const readerRef = React.useRef<BrowserQRCodeReader | null>(null);
     const controlsRef = React.useRef<{ stop: () => void } | null>(null);
     const lockRef = React.useRef(false);
+    const isScanningRef = React.useRef(false);
 
     React.useEffect(() => {
         let mounted = true;
@@ -167,7 +230,17 @@ export default function Scanner(props: PageProps) {
         video.srcObject = null;
     }
 
+    function ensureEventSelected() {
+        if (!selectedEventId) {
+            setResult({ ok: false, message: 'Please select an event before scanning.' });
+            setStatus('error');
+            return false;
+        }
+        return true;
+    }
+
     async function startScan() {
+        if (!ensureEventSelected()) return;
         if (!videoRef.current) return;
 
         setCameraError(null);
@@ -175,6 +248,7 @@ export default function Scanner(props: PageProps) {
         setLastCode('');
         setStatus('scanning');
         setIsScanning(true);
+        isScanningRef.current = true;
         lockRef.current = false;
 
         try {
@@ -207,10 +281,11 @@ export default function Scanner(props: PageProps) {
                     }
 
                     // ✅ ignore normal "not found" frames
-                    if (err && !isNotFoundZXingError(err)) {
+                    if (err && !isNotFoundZXingError(err) && isScanningRef.current) {
                         setCameraError('Camera scanning error. Try again.');
                         setStatus('error');
                         setIsScanning(false);
+                        isScanningRef.current = false;
                     }
                 },
             );
@@ -243,18 +318,19 @@ export default function Scanner(props: PageProps) {
         readerRef.current = null;
 
         setIsScanning(false);
+        isScanningRef.current = false;
         setStatus((s) => (s === 'scanning' ? 'idle' : s));
     }
 
     async function verifyCode(code: string) {
+        if (!ensureEventSelected()) return;
         setStatus('verifying');
         setResult(null);
 
         try {
             const csrf = getCsrfToken();
 
-            const payload: any = { code };
-            if (selectedEventId !== 'none') payload.event_id = Number(selectedEventId);
+            const payload: any = { code, event_id: Number(selectedEventId) };
 
             const res = await fetch(ENDPOINTS.scan, {
                 method: 'POST',
@@ -263,6 +339,7 @@ export default function Scanner(props: PageProps) {
                     Accept: 'application/json',
                     'X-CSRF-TOKEN': csrf,
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify(payload),
             });
 
@@ -287,7 +364,14 @@ export default function Scanner(props: PageProps) {
         startScan();
     }
 
-    const selectedEvent = selectedEventId !== 'none' ? events.find((e) => String(e.id) === selectedEventId) : null;
+    const selectedEvent = selectedEventId ? events.find((e) => String(e.id) === selectedEventId) : null;
+    const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, nowTs) : undefined;
+    const filteredEvents = React.useMemo(() => {
+        return events.map((event) => ({
+            ...event,
+            phase: resolveEventPhase(event, nowTs),
+        }));
+    }, [events, nowTs]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -326,20 +410,79 @@ export default function Scanner(props: PageProps) {
                     </div>
 
                     <div className="mt-3 grid gap-2">
-                        <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">Event (optional)</div>
-                        <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                            <SelectTrigger className="h-11 rounded-2xl">
-                                <SelectValue placeholder="Select event (optional)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">No specific event</SelectItem>
-                                {events.map((e) => (
-                                    <SelectItem key={e.id} value={String(e.id)}>
-                                        {e.title}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">Event (required)</div>
+                        <Popover open={eventOpen} onOpenChange={setEventOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={eventOpen}
+                                    className="h-11 w-full justify-between rounded-2xl"
+                                >
+                                    <span className="flex min-w-0 items-center gap-2">
+                                        {selectedEvent ? (
+                                            <>
+                                                <span className="truncate">{selectedEvent.title}</span>
+                                                {selectedEventPhase ? (
+                                                    <span
+                                                        className={cn(
+                                                            'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                                            phaseBadgeClass(selectedEventPhase),
+                                                        )}
+                                                    >
+                                                        {phaseLabel(selectedEventPhase)}
+                                                    </span>
+                                                ) : null}
+                                            </>
+                                        ) : (
+                                            <span className="text-muted-foreground">Select event…</span>
+                                        )}
+                                    </span>
+                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                <Command>
+                                    <CommandInput placeholder="Search event…" />
+                                    <CommandEmpty>No event found.</CommandEmpty>
+                                    <CommandList>
+                                        <CommandGroup>
+                                            {filteredEvents.map((event) => (
+                                                <CommandItem
+                                                    key={event.id}
+                                                    value={event.title}
+                                                    onSelect={() => {
+                                                        setSelectedEventId(String(event.id));
+                                                        setEventOpen(false);
+                                                        setResult(null);
+                                                        setStatus('idle');
+                                                    }}
+                                                    className="gap-2"
+                                                >
+                                                    <span className="truncate">{event.title}</span>
+                                                    {event.phase ? (
+                                                        <span
+                                                            className={cn(
+                                                                'ml-auto inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                                                phaseBadgeClass(event.phase),
+                                                            )}
+                                                        >
+                                                            {phaseLabel(event.phase)}
+                                                        </span>
+                                                    ) : null}
+                                                    <Check
+                                                        className={cn(
+                                                            'ml-2 h-4 w-4',
+                                                            selectedEventId === String(event.id) ? 'opacity-100' : 'opacity-0',
+                                                        )}
+                                                    />
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
 
                         {selectedEvent ? (
                             <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -544,6 +687,15 @@ export default function Scanner(props: PageProps) {
                                                 {result.participant.country || result.participant.user_type ? (
                                                     <div className="flex items-center gap-2">
                                                         <MapPin className="h-4 w-4" />
+                                                        {result.participant.country_flag_url ? (
+                                                            <img
+                                                                src={result.participant.country_flag_url}
+                                                                alt=""
+                                                                className="h-4 w-4 rounded-sm object-cover"
+                                                                loading="lazy"
+                                                                draggable={false}
+                                                            />
+                                                        ) : null}
                                                         <span className="truncate">
                                                             {result.participant.country ?? '—'}
                                                             {result.participant.user_type ? ` • ${result.participant.user_type}` : ''}
@@ -612,7 +764,7 @@ export default function Scanner(props: PageProps) {
                             ) : null}
                         </div>
                     ) : (
-                        <div className="text-center text-xs text-slate-500">Tip: Select an event (optional) then scan participant QR.</div>
+                        <div className="text-center text-xs text-slate-500">Tip: Select an event then scan participant QR.</div>
                     )}
                 </div>
             </div>
