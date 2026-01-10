@@ -63,6 +63,7 @@ type ScanResponse = {
     participant?: ParticipantInfo | null;
     registered_events?: Array<{ id: number; title: string; starts_at?: string | null }>;
     checked_in_event?: { id: number; title: string } | null;
+    already_checked_in?: boolean;
 };
 
 type PageProps = {
@@ -656,17 +657,18 @@ export default function Scanner(props: PageProps) {
                                             {result.ok ? 'Verified' : 'Not Allowed'}
                                         </div>
                                         <div className="mt-0.5 text-xs text-slate-700 dark:text-slate-300">{result.message}</div>
-                                        {lastCode ? (
-                                            <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                                Code: <span className="font-mono">{lastCode}</span>
-                                            </div>
-                                        ) : null}
                                     </div>
                                 </div>
 
-                                <Button onClick={scanAgain} variant="secondary" className="rounded-2xl">
-                                    Scan Again
-                                </Button>
+                                {result.already_checked_in ? (
+                                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                        Already checked in
+                                    </span>
+                                ) : (
+                                    <Button onClick={scanAgain} variant="secondary" className="rounded-2xl">
+                                        Scan Again
+                                    </Button>
+                                )}
                             </div>
 
                             {result.participant ? (
@@ -707,12 +709,12 @@ export default function Scanner(props: PageProps) {
                                                     </div>
                                                 ) : null}
 
-                                                <div className="flex items-center gap-2">
-                                                    <ShieldCheck className="h-4 w-4" />
-                                                    <Pill tone={result.participant.is_verified ? 'success' : 'danger'}>
-                                                        {result.participant.is_verified ? 'Verified Participant' : 'Not Verified'}
-                                                    </Pill>
-                                                </div>
+                                                {result.participant.is_verified ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <ShieldCheck className="h-4 w-4" />
+                                                        <Pill tone="success">Verified Participant</Pill>
+                                                    </div>
+                                                ) : null}
                                             </div>
                                         </div>
 
