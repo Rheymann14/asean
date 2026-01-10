@@ -38,6 +38,10 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
                 ->name('event-list');
             Route::post('/event-list/{programme}/join', [ProgrammeController::class, 'join'])
                 ->name('event-list.join');
+            Route::delete('/event-list/{programme}/leave', [ProgrammeController::class, 'leave'])
+                ->name('event-list.leave');
+            Route::delete('/event-list/clear', [ProgrammeController::class, 'clearSelections'])
+                ->name('event-list.clear');
         });
 
     Route::middleware(['verified', 'role:ched'])->group(function () {

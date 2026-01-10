@@ -126,6 +126,20 @@ class ProgrammeController extends Controller
         return back();
     }
 
+    public function leave(Request $request, Programme $programme)
+    {
+        $request->user()->joinedProgrammes()->detach($programme->id);
+
+        return back();
+    }
+
+    public function clearSelections(Request $request)
+    {
+        $request->user()->joinedProgrammes()->detach();
+
+        return back();
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

@@ -4,6 +4,7 @@ import { Head, router } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { CalendarDays, MapPin, Users2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -280,6 +281,7 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
     const nowTs = useNowTs();
     const [selectedIds, setSelectedIds] = React.useState<number[]>(() => joined_programme_ids);
     const [quickJoinId, setQuickJoinId] = React.useState<string>('');
+    const [clearDialogOpen, setClearDialogOpen] = React.useState(false);
 
     const normalized = React.useMemo(() => normalizeProgrammes(programmes, nowTs), [programmes, nowTs]);
     const grouped = React.useMemo(() => {
@@ -312,6 +314,18 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
         );
     }, []);
 
+    const handleLeave = React.useCallback((id: number) => {
+        setSelectedIds((prev) => prev.filter((item) => item !== id));
+        router.delete(`/event-list/${id}/leave`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Event removed.'),
+            onError: () => {
+                toast.error('Unable to remove this event.');
+                setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+            },
+        });
+    }, []);
+
     const selectedSummary = React.useMemo<SelectionSummaryItem[]>(
         () =>
             normalized
@@ -320,11 +334,16 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
         [normalized, selectedIds],
     );
 
-    const handleResetSelection = React.useCallback(() => {
-        setSelectedIds(joined_programme_ids);
-        setQuickJoinId('');
-        toast.success('Selection reset.');
-    }, [joined_programme_ids]);
+    const handleClearAll = React.useCallback(() => {
+        router.delete('/event-list/clear', {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedIds([]);
+                toast.success('All selections cleared.');
+            },
+            onError: () => toast.error('Unable to clear selections.'),
+        });
+    }, []);
 
     const quickJoinOptions = React.useMemo(
         () => normalized.filter((event) => event.phase !== 'closed'),
@@ -388,13 +407,8 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                 <Button type="button" onClick={handleQuickJoin} disabled={!quickJoinId}>
                                     Join
                                 </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleResetSelection}
-                                    disabled={!selectedSummary.length}
-                                >
-                                    Reset selection
+                                <Button type="button" variant="outline" onClick={() => setClearDialogOpen(true)}>
+                                    Clear all
                                 </Button>
                             </div>
                         </div>
@@ -407,12 +421,22 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                         className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                                     >
                                         <span className="truncate font-medium">{event.title}</span>
-                                        <Badge
-                                            variant="outline"
-                                            className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
-                                        >
-                                            {phaseLabel(event.phase)}
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge
+                                                variant="outline"
+                                                className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                            >
+                                                {phaseLabel(event.phase)}
+                                            </Badge>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                className="h-6 px-2 text-[10px]"
+                                                onClick={() => handleLeave(event.id)}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -423,6 +447,32 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                         )}
                     </div>
                 </Card>
+
+                <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Clear all joined events?</DialogTitle>
+                            <DialogDescription>
+                                This will remove all your joined events. You can rejoin ongoing or upcoming events later.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setClearDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    setClearDialogOpen(false);
+                                    handleClearAll();
+                                }}
+                            >
+                                Clear all
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 <Section
                     title="Ongoing events"
