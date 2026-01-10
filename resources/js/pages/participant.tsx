@@ -1765,7 +1765,7 @@ export default function ParticipantPage(props: PageProps) {
                     if (!open) setProgrammeParticipant(null);
                 }}
             >
-                <DialogContent className="sm:max-w-[960px]">
+                <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-[820px]">
                     <DialogHeader>
                         <DialogTitle>Participant joined events</DialogTitle>
                         <DialogDescription>Review and update the events this participant has joined.</DialogDescription>
@@ -1865,7 +1865,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
                                                                     <MapPin className="h-3.5 w-3.5 shrink-0" />
-                                                                    <span>{event.location || 'Location to be announced'}</span>
+                                                                    <span>{event.location?.trim() || 'Location to be announced'}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
