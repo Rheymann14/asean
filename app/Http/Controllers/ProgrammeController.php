@@ -65,6 +65,81 @@ class ProgrammeController extends Controller
         ]);
     }
 
+    public function participantIndex(Request $request)
+    {
+        $programmes = Programme::query()
+            ->with(['venues' => fn ($query) => $query->where('is_active', true)->orderBy('id')])
+            ->latest('starts_at')
+            ->get()
+            ->map(function (Programme $programme) {
+                $venue = $programme->venues->first();
+
+                return [
+                    'id' => $programme->id,
+                    'tag' => $programme->tag,
+                    'title' => $programme->title,
+                    'description' => $programme->description,
+                    'starts_at' => $programme->starts_at?->toISOString(),
+                    'ends_at' => $programme->ends_at?->toISOString(),
+                    'location' => $programme->location,
+                    'venue' => $venue
+                        ? [
+                            'name' => $venue->name,
+                            'address' => $venue->address,
+                        ]
+                        : null,
+                    'image_url' => $programme->image_url,
+                    'pdf_url' => $programme->pdf_url,
+                    'is_active' => $programme->is_active,
+                    'updated_at' => $programme->updated_at?->toISOString(),
+                ];
+            });
+
+        return Inertia::render('event-list', [
+            'programmes' => $programmes,
+            'joined_programme_ids' => $request->user()
+                ->joinedProgrammes()
+                ->pluck('programmes.id'),
+        ]);
+    }
+
+    public function join(Request $request, Programme $programme)
+    {
+        $now = now();
+        $startsAt = $programme->starts_at;
+        $endsAt = $programme->ends_at;
+
+        if (!$programme->is_active) {
+            return back()->withErrors(['event' => 'This event is closed.']);
+        }
+
+        if ($endsAt && $now->greaterThan($endsAt)) {
+            return back()->withErrors(['event' => 'This event is closed.']);
+        }
+
+        if (!$endsAt && $startsAt && $now->greaterThan($startsAt) && !$now->isSameDay($startsAt)) {
+            return back()->withErrors(['event' => 'This event is closed.']);
+        }
+
+        $request->user()->joinedProgrammes()->syncWithoutDetaching([$programme->id]);
+
+        return back();
+    }
+
+    public function leave(Request $request, Programme $programme)
+    {
+        $request->user()->joinedProgrammes()->detach($programme->id);
+
+        return back();
+    }
+
+    public function clearSelections(Request $request)
+    {
+        $request->user()->joinedProgrammes()->detach();
+
+        return back();
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
