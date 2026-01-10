@@ -273,6 +273,7 @@ function ParticipantIdPrintCard({
     const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]';
     const flagSrc = getFlagSrc(participant.country);
     const participantName = participant.full_name;
+    const nameSize = participantName.length > 28 ? (isLandscape ? 'text-[12px] leading-4' : 'text-lg leading-6') : '';
 
     return (
         <div
@@ -346,6 +347,7 @@ function ParticipantIdPrintCard({
                             className={cn(
                                 'mt-0.5 font-semibold tracking-tight text-slate-900 dark:text-slate-100 break-words line-clamp-2',
                                 isLandscape ? 'text-sm leading-4' : 'text-xl leading-7',
+                                nameSize,
                             )}
                             title={participantName}
                         >
@@ -1671,13 +1673,10 @@ export default function ParticipantPage(props: PageProps) {
                     }
                 `}</style>
                 <div id="participant-print" className="min-h-screen bg-white p-4">
-                    <div className="mb-4 text-sm font-semibold text-slate-700">
-                        Participant ID Printout ({printOrientation})
-                    </div>
                     <div
                         className={cn(
-                            'grid gap-4',
-                            printOrientation === 'landscape' ? 'grid-cols-2' : 'grid-cols-1',
+                            'grid gap-4 auto-rows-max grid-flow-row-dense',
+                            printOrientation === 'landscape' ? 'grid-cols-2' : 'grid-cols-2',
                         )}
                     >
                         {selectedParticipants.map((participant) => (
