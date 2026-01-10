@@ -1120,7 +1120,7 @@ export default function ParticipantPage(props: PageProps) {
                         </h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Manage participants, ASEAN countries, and user types (Prime Minister / Staff / CHED).
+                        Manage participants, ASEAN countries, and user types.
                     </p>
                 </div>
 

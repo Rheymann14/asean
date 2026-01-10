@@ -443,7 +443,7 @@ export default function Scanner(props: PageProps) {
 
                         {showManual ? (
                             <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">Enter QR code</div>
+                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">Enter Participant ID</div>
                                 <div className="mt-2 flex gap-2">
                                     <Input
                                         value={manualCode}

@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -19,7 +19,6 @@ import {
     Mail,
     Phone,
     QrCode as QrCodeIcon,
-    ShieldCheck,
     Smartphone,
     Monitor,
     User2,
@@ -66,13 +65,14 @@ function InfoRow({
     right?: React.ReactNode;
 }) {
     return (
-        <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/40">
+        <div className="flex items-start justify-between gap-4 px-4 py-3 sm:px-5">
             <div className="flex min-w-0 items-start gap-3">
-                <div className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-slate-200/70 bg-white text-slate-700 shadow-sm dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
+                <div className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-slate-200/70 bg-white/70 text-slate-700 shadow-sm dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200">
                     {icon}
                 </div>
+
                 <div className="min-w-0">
-                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         {label}
                     </div>
                     <div className="mt-1 break-words text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -80,6 +80,7 @@ function InfoRow({
                     </div>
                 </div>
             </div>
+
             {right ? <div className="flex flex-none items-center gap-2">{right}</div> : null}
         </div>
     );
@@ -100,36 +101,23 @@ function IdCardPreview({
 }) {
     const isLandscape = orientation === 'landscape';
 
-    /**
-     * ✅ Correct physical proportions:
-     * Landscape: 3.37" (W) x 2.125" (H)  => aspect ratio W/H = 3.37/2.125
-     * Portrait:  3.46" (W) x 5.51" (H)   => aspect ratio W/H = 3.46/5.51
-     *
-     * We enforce:
-     * - Screen: responsive via aspect ratio
-     * - Print: exact inches via print:w[...] print:h[...]
-     */
     const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
 
     const printSize = isLandscape
         ? 'print:w-[3.37in] print:h-[2.125in]'
         : 'print:w-[3.46in] print:h-[5.51in]';
 
-    // ✅ Landscape: smaller QR + narrower panel so left has room for long names/country
     const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
     const qrSize = isLandscape ? 108 : 180;
 
-    // ✅ Landscape: tighter padding + smaller header to fit correctly
     const pad = isLandscape ? 'p-3' : 'p-5';
     const headerLogo = isLandscape ? 'h-8 w-8' : 'h-10 w-10';
 
     return (
         <div
             className={cn(
-                // screen sizing
-                'relative w-full max-w-[520px] mx-auto overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
+                'relative mx-auto w-full max-w-[520px] overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
                 aspect,
-                // print sizing (true physical size)
                 'print:max-w-none',
                 printSize
             )}
@@ -141,7 +129,6 @@ function IdCardPreview({
                     alt=""
                     className={cn(
                         'absolute inset-0 h-full w-full object-cover',
-                        // a bit more visible
                         isLandscape ? 'opacity-45 dark:opacity-35' : 'opacity-50 dark:opacity-35'
                     )}
                     draggable={false}
@@ -155,7 +142,6 @@ function IdCardPreview({
                 {/* Header */}
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2.5">
-                        {/* ✅ no logo card */}
                         <img
                             src="/img/asean_logo.png"
                             alt="ASEAN"
@@ -165,7 +151,7 @@ function IdCardPreview({
                         />
                         <img
                             src="/img/bagong_pilipinas.png"
-                            alt="ASEAN"
+                            alt="Bagong Pilipinas"
                             className={cn('object-contain drop-shadow-sm', headerLogo)}
                             draggable={false}
                             loading="lazy"
@@ -183,20 +169,8 @@ function IdCardPreview({
                             <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
                                 Participant Identification
                             </div>
-
                         </div>
                     </div>
-
-                    {/* <Badge
-                        variant="secondary"
-                        className={cn(
-                            'rounded-full border border-slate-200/70 bg-white/70 text-slate-700 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200',
-                            isLandscape ? 'px-2 py-0.5 text-[10px]' : ''
-                        )}
-                    >
-                        <ShieldCheck className={cn('mr-1', isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
-                        Verified
-                    </Badge> */}
                 </div>
 
                 <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-4')} />
@@ -205,9 +179,7 @@ function IdCardPreview({
                 <div
                     className={cn(
                         'flex-1',
-                        isLandscape
-                            ? 'grid grid-cols-[1fr_150px] items-start gap-3'
-                            : 'flex flex-col gap-4'
+                        isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-4'
                     )}
                 >
                     {/* LEFT INFO */}
@@ -216,10 +188,9 @@ function IdCardPreview({
                             Participant
                         </div>
 
-                        {/* ✅ long names: up to 2 lines (landscape uses smaller text) */}
                         <div
                             className={cn(
-                                'mt-0.5 font-semibold tracking-tight text-slate-900 dark:text-slate-100 break-words',
+                                'mt-0.5 break-words font-semibold tracking-tight text-slate-900 dark:text-slate-100',
                                 isLandscape ? 'text-sm leading-4' : 'text-xl leading-7',
                                 'line-clamp-2'
                             )}
@@ -229,7 +200,12 @@ function IdCardPreview({
                         </div>
 
                         <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-3')}>
-                            <div className={cn('overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950', isLandscape ? 'h-9 w-9' : 'h-10 w-10')}>
+                            <div
+                                className={cn(
+                                    'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
+                                    isLandscape ? 'h-9 w-9' : 'h-10 w-10'
+                                )}
+                            >
                                 {flagSrc ? (
                                     <img
                                         src={flagSrc}
@@ -245,7 +221,12 @@ function IdCardPreview({
                             </div>
 
                             <div className="min-w-0">
-                                <div className={cn('truncate font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[12px]' : 'text-sm')}>
+                                <div
+                                    className={cn(
+                                        'truncate font-semibold text-slate-900 dark:text-slate-100',
+                                        isLandscape ? 'text-[12px]' : 'text-sm'
+                                    )}
+                                >
                                     {participant.country?.name ?? '—'}
                                 </div>
                                 {participant.country?.code ? (
@@ -261,13 +242,10 @@ function IdCardPreview({
                                 Participant ID
                             </div>
 
-
-                            {/* ✅ never clipped; wraps nicely if needed */}
                             <div
                                 className={cn(
-                                    'mt-1 inline-flex max-w-full rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono font-semibold text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
-                                    isLandscape ? 'text-[10px] leading-4' : 'text-sm leading-5',
-                                    'whitespace-normal break-words'
+                                    'mt-1 inline-flex max-w-full whitespace-normal break-words rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
+                                    isLandscape ? 'text-[10px] leading-4' : 'text-sm leading-5'
                                 )}
                             >
                                 {participant.display_id}
@@ -279,7 +257,7 @@ function IdCardPreview({
                         </div>
                     </div>
 
-                    {/* RIGHT QR (smaller in landscape) */}
+                    {/* RIGHT QR */}
                     <div
                         className={cn(
                             'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
@@ -287,7 +265,12 @@ function IdCardPreview({
                             isLandscape ? 'p-2.5' : 'p-4'
                         )}
                     >
-                        <div className={cn('inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200', isLandscape ? 'mb-1 text-[10px]' : 'mb-2 text-xs')}>
+                        <div
+                            className={cn(
+                                'mb-2 inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200',
+                                isLandscape ? 'mb-1 text-[10px]' : 'text-xs'
+                            )}
+                        >
                             <QrCodeIcon className={cn(isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
                             QR Code
                         </div>
@@ -312,16 +295,25 @@ function IdCardPreview({
                             </div>
                         )}
 
-                        {/* compact label */}
                         <div className="mt-2 w-full text-center">
-                            <div className={cn('font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[10px] leading-3.5' : 'text-xs')}>
+                            <div
+                                className={cn(
+                                    'font-semibold text-slate-900 dark:text-slate-100',
+                                    isLandscape ? 'text-[10px] leading-3.5' : 'text-xs'
+                                )}
+                            >
                                 <span className="line-clamp-2" title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participant.name}`}>
                                     {participant.country?.code?.toUpperCase() ?? ''}
                                     {participant.country?.code ? ' • ' : ''}
                                     {participant.name}
                                 </span>
                             </div>
-                            <div className={cn('mt-1 font-mono text-slate-500 dark:text-slate-400 break-words', isLandscape ? 'text-[10px] leading-3.5' : 'text-[11px] leading-4')}>
+                            <div
+                                className={cn(
+                                    'mt-1 break-words font-mono text-slate-500 dark:text-slate-400',
+                                    isLandscape ? 'text-[10px] leading-3.5' : 'text-[11px] leading-4'
+                                )}
+                            >
                                 {participant.display_id}
                             </div>
                         </div>
@@ -329,7 +321,7 @@ function IdCardPreview({
                 </div>
 
                 {/* Footer */}
-                <div className={cn('flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-2' : 'mt-4')}>
+                <div className={cn('mt-4 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-2' : 'mt-4')}>
                     <span>Keep this ID for event entry</span>
                     <span className="font-medium">ASEAN PH 2026</span>
                 </div>
@@ -340,8 +332,6 @@ function IdCardPreview({
 
 export default function ParticipantDashboard({ participant }: PageProps) {
     const flagSrc = getFlagSrc(participant.country);
-
-    // ✅ QR encodes only encrypted/opaque payload (never user id)
     const qrValue = participant.qr_payload;
 
     const [orientation, setOrientation] = React.useState<'portrait' | 'landscape'>('portrait');
@@ -415,14 +405,16 @@ export default function ParticipantDashboard({ participant }: PageProps) {
             <div className="relative">
                 <div
                     aria-hidden
-                    className="pointer-events-none absolute inset-x-0 -top-10 -z-10 mx-auto h-72 max-w-6xl rounded-[3rem]
-                    bg-gradient-to-b from-slate-200/60 via-white to-transparent blur-2xl
-                    dark:from-slate-800/50 dark:via-slate-950 dark:to-transparent"
+                    className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-72 w-full rounded-[3rem]
+  bg-gradient-to-b from-slate-200/60 via-white to-transparent blur-2xl
+  dark:from-slate-800/50 dark:via-slate-950 dark:to-transparent"
                 />
 
-                <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-                    {/* Header */}
+
+                <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
+                    {/* ✅ ONE MAIN CARD (less card noise) */}
                     <Card className="overflow-hidden rounded-3xl border-slate-200/70 bg-white/70 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/40">
+                        {/* Soft header background */}
                         <div className="relative">
                             <img
                                 src="/img/bg.png"
@@ -453,18 +445,14 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                             >
                                                 {participant.display_id}
                                             </Badge>
-
                                         </div>
-                                        <CardDescription className="text-slate-600 dark:text-slate-300">
+
+                                        <div className="text-sm text-slate-600 dark:text-slate-300">
                                             Your ID card and QR for event attendance.
-                                        </CardDescription>
+                                        </div>
                                     </div>
 
-
-
                                     <div className="flex flex-wrap items-center gap-2">
-
-
                                         <Button
                                             variant="outline"
                                             className="rounded-xl"
@@ -487,178 +475,167 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                 </div>
                             </CardHeader>
                         </div>
-                    </Card>
 
-                    {/* Content */}
-                    <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
-                        {/* LEFT: Details */}
-                        <div className="space-y-4">
-                            <Card className="rounded-3xl border-slate-200/70 bg-white/70 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/40">
-                                <CardHeader>
-                                    <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                                        Profile Details
-                                    </CardTitle>
-                                    <CardDescription className="text-slate-600 dark:text-slate-300">
-                                        These details appear on your ID.
-                                    </CardDescription>
-                                </CardHeader>
+                        <CardContent className="space-y-6 p-4 sm:p-6">
+                            <div className="grid gap-6 lg:grid-cols-[1fr_520px]">
+                                {/* LEFT: Details (now a single list panel, no mini-cards) */}
+                                <div className="space-y-3">
+                                    <div>
+                                        <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Profile Details</div>
+                                        <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                            These details appear on your ID.
+                                        </div>
+                                    </div>
 
-                                <CardContent className="space-y-3">
-                                    <InfoRow
-                                        icon={<Flag className="h-4 w-4" />}
-                                        label="Country"
-                                        value={
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
-                                                    {flagSrc ? (
-                                                        <img
-                                                            src={flagSrc}
-                                                            alt={participant.country?.name ?? 'Country flag'}
-                                                            className="h-full w-full object-cover"
-                                                            loading="lazy"
-                                                            draggable={false}
-                                                            onError={(e) => {
-                                                                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                                            }}
-                                                        />
-                                                    ) : null}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <div className="truncate">{participant.country?.name ?? '—'}</div>
-                                                    {participant.country?.code ? (
-                                                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                            {participant.country.code.toUpperCase()}
+                                    <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/60 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                        <div className="divide-y divide-slate-200/60 dark:divide-white/10">
+                                            <InfoRow
+                                                icon={<Flag className="h-4 w-4" />}
+                                                label="Country"
+                                                value={
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
+                                                            {flagSrc ? (
+                                                                <img
+                                                                    src={flagSrc}
+                                                                    alt={participant.country?.name ?? 'Country flag'}
+                                                                    className="h-full w-full object-cover"
+                                                                    loading="lazy"
+                                                                    draggable={false}
+                                                                    onError={(e) => {
+                                                                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                                    }}
+                                                                />
+                                                            ) : null}
                                                         </div>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-                                        }
-                                    />
+                                                        <div className="min-w-0">
+                                                            <div className="truncate">{participant.country?.name ?? '—'}</div>
+                                                            {participant.country?.code ? (
+                                                                <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                                    {participant.country.code.toUpperCase()}
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+                                                }
+                                            />
 
-                                    <InfoRow
-                                        icon={<User2 className="h-4 w-4" />}
-                                        label="Name"
-                                        value={participant.name}
-                                        right={
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="rounded-xl"
-                                                onClick={() => copyToClipboard(participant.name, 'Name copied')}
-                                            >
-                                                <Copy className="h-4 w-4" />
-                                            </Button>
-                                        }
-                                    />
-
-                                    <InfoRow
-                                        icon={<Mail className="h-4 w-4" />}
-                                        label="Email"
-                                        value={participant.email}
-                                        right={
-                                            <a href={`mailto:${participant.email}`} className="inline-flex">
-                                                <Button size="sm" variant="ghost" className="rounded-xl">
-                                                    <Mail className="h-4 w-4" />
-                                                </Button>
-                                            </a>
-                                        }
-                                    />
-
-                                    <InfoRow
-                                        icon={<Phone className="h-4 w-4" />}
-                                        label="Contact number"
-                                        value={participant.contact_number ?? '—'}
-                                        right={
-                                            participant.contact_number ? (
-                                                <a href={`tel:${participant.contact_number}`} className="inline-flex">
-                                                    <Button size="sm" variant="ghost" className="rounded-xl">
-                                                        <Phone className="h-4 w-4" />
+                                            <InfoRow
+                                                icon={<User2 className="h-4 w-4" />}
+                                                label="Name"
+                                                value={participant.name}
+                                                right={
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="rounded-xl"
+                                                        onClick={() => copyToClipboard(participant.name, 'Name copied')}
+                                                    >
+                                                        <Copy className="h-4 w-4" />
                                                     </Button>
-                                                </a>
-                                            ) : null
-                                        }
-                                    />
+                                                }
+                                            />
 
-                                    <Separator className="my-2" />
+                                            <InfoRow
+                                                icon={<Mail className="h-4 w-4" />}
+                                                label="Email"
+                                                value={participant.email}
+                                                right={
+                                                    <a href={`mailto:${participant.email}`} className="inline-flex">
+                                                        <Button size="sm" variant="ghost" className="rounded-xl">
+                                                            <Mail className="h-4 w-4" />
+                                                        </Button>
+                                                    </a>
+                                                }
+                                            />
 
-
+                                            <InfoRow
+                                                icon={<Phone className="h-4 w-4" />}
+                                                label="Contact number"
+                                                value={participant.contact_number ?? '—'}
+                                                right={
+                                                    participant.contact_number ? (
+                                                        <a href={`tel:${participant.contact_number}`} className="inline-flex">
+                                                            <Button size="sm" variant="ghost" className="rounded-xl">
+                                                                <Phone className="h-4 w-4" />
+                                                            </Button>
+                                                        </a>
+                                                    ) : null
+                                                }
+                                            />
+                                        </div>
+                                    </div>
 
                                     {!participant.qr_payload ? (
                                         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
                                             QR payload is missing. Please generate it on the server for secure scanning.
                                         </div>
                                     ) : null}
-                                </CardContent>
-                            </Card>
-                        </div>
+                                </div>
 
-                        {/* RIGHT: ID Preview */}
-                        <div className="space-y-4 lg:sticky lg:top-6">
-                            <Card className="rounded-3xl border-slate-200/70 bg-white/70 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/40">
-                                <CardHeader className="space-y-3">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="space-y-1">
-                                            <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                                                Virtual ID
-                                            </CardTitle>
-
+                                {/* RIGHT: Virtual ID (panel, not another full card) */}
+                                <div className="space-y-3 lg:sticky lg:top-6">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Virtual ID</div>
+                                            <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                Switch orientation for preview/printing.
+                                            </div>
                                         </div>
+
                                         <Badge className="rounded-full" variant="secondary">
                                             <QrCodeIcon className="mr-1 h-4 w-4" />
                                             Preview
                                         </Badge>
                                     </div>
 
-                                    <Tabs value={orientation} onValueChange={(v) => setOrientation(v as any)}>
-                                        <TabsList className="w-full rounded-2xl bg-white/70 p-1 dark:bg-slate-950/40">
-                                            <TabsTrigger
-                                                value="portrait"
-                                                className={cn(
-                                                    'w-full rounded-xl transition-all',
-                                                    'text-slate-700 hover:bg-slate-100/70 dark:text-slate-200 dark:hover:bg-slate-900/40',
-                                                    // ✅ ACTIVE = BLUE
-                                                    'data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm',
-                                                    'data-[state=active]:ring-1 data-[state=active]:ring-sky-600/30',
-                                                    'dark:data-[state=active]:bg-sky-500 dark:data-[state=active]:ring-sky-500/30'
-                                                )}
-                                            >
-                                                <Smartphone className="mr-2 h-4 w-4" />
-                                                Portrait
-                                            </TabsTrigger>
+                                    <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-3 backdrop-blur dark:border-white/10 dark:bg-slate-950/30 sm:p-4">
+                                        <Tabs value={orientation} onValueChange={(v) => setOrientation(v as 'portrait' | 'landscape')}>
+                                            <TabsList className="w-full rounded-2xl bg-white/70 p-1 dark:bg-slate-950/40">
+                                                <TabsTrigger
+                                                    value="portrait"
+                                                    className={cn(
+                                                        'w-full rounded-xl transition-all',
+                                                        'text-slate-700 hover:bg-slate-100/70 dark:text-slate-200 dark:hover:bg-slate-900/40',
+                                                        'data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm',
+                                                        'data-[state=active]:ring-1 data-[state=active]:ring-sky-600/30',
+                                                        'dark:data-[state=active]:bg-sky-500 dark:data-[state=active]:ring-sky-500/30'
+                                                    )}
+                                                >
+                                                    <Smartphone className="mr-2 h-4 w-4" />
+                                                    Portrait
+                                                </TabsTrigger>
 
-                                            <TabsTrigger
-                                                value="landscape"
-                                                className={cn(
-                                                    'w-full rounded-xl transition-all',
-                                                    'text-slate-700 hover:bg-slate-100/70 dark:text-slate-200 dark:hover:bg-slate-900/40',
-                                                    // ✅ ACTIVE = GREEN
-                                                    'data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm',
-                                                    'data-[state=active]:ring-1 data-[state=active]:ring-emerald-600/30',
-                                                    'dark:data-[state=active]:bg-emerald-500 dark:data-[state=active]:ring-emerald-500/30'
-                                                )}
-                                            >
-                                                <Monitor className="mr-2 h-4 w-4" />
-                                                Landscape
-                                            </TabsTrigger>
-                                        </TabsList>
-                                    </Tabs>
+                                                <TabsTrigger
+                                                    value="landscape"
+                                                    className={cn(
+                                                        'w-full rounded-xl transition-all',
+                                                        'text-slate-700 hover:bg-slate-100/70 dark:text-slate-200 dark:hover:bg-slate-900/40',
+                                                        'data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm',
+                                                        'data-[state=active]:ring-1 data-[state=active]:ring-emerald-600/30',
+                                                        'dark:data-[state=active]:bg-emerald-500 dark:data-[state=active]:ring-emerald-500/30'
+                                                    )}
+                                                >
+                                                    <Monitor className="mr-2 h-4 w-4" />
+                                                    Landscape
+                                                </TabsTrigger>
+                                            </TabsList>
+                                        </Tabs>
 
-                                </CardHeader>
+                                        <Separator className="my-4 bg-slate-200/70 dark:bg-white/10" />
 
-                                <CardContent className="space-y-4">
-                                    <IdCardPreview
-                                        participant={participant}
-                                        flagSrc={flagSrc}
-                                        qrDataUrl={qrDataUrl}
-                                        loading={qrLoading}
-                                        orientation={orientation}
-                                    />
-
-
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
+                                        <IdCardPreview
+                                            participant={participant}
+                                            flagSrc={flagSrc}
+                                            qrDataUrl={qrDataUrl}
+                                            loading={qrLoading}
+                                            orientation={orientation}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </AppLayout>
