@@ -2177,6 +2177,8 @@ export default function ParticipantPage(props: PageProps) {
                 {(() => {
                     // ✅ Force A4 with mm (more reliable than "A4 portrait/landscape")
                     const pageSize = printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm';
+                    const pageWidth = printOrientation === 'landscape' ? '297mm' : '210mm';
+                    const pageHeight = printOrientation === 'landscape' ? '210mm' : '297mm';
 
                     // ✅ Fixed columns (predictable layout)
                     const gridCols = printOrientation === 'landscape'
@@ -2245,6 +2247,7 @@ export default function ParticipantPage(props: PageProps) {
                         .print-page {
                             break-after: page;
                             page-break-after: always;
+                            box-sizing: border-box;
                         }
 
                         .print-page:last-child {
@@ -2256,7 +2259,16 @@ export default function ParticipantPage(props: PageProps) {
 
                             <div id="participant-print">
                                 {pages.map((page, pageIndex) => (
-                                    <div key={`page-${pageIndex}`} className="print-page" style={{ padding }}>
+                                    <div
+                                        key={`page-${pageIndex}`}
+                                        className="print-page"
+                                        style={{
+                                            padding,
+                                            width: pageWidth,
+                                            height: pageHeight,
+                                            boxSizing: 'border-box',
+                                        }}
+                                    >
                                         <div
                                             className="grid"
                                             style={{
