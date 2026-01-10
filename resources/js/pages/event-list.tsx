@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CalendarDays, MapPin } from 'lucide-react';
+import { CalendarDays, MapPin, Users2 } from 'lucide-react';
 
 const FALLBACK_IMAGE = '/img/asean_banner_logo.png';
 
@@ -37,6 +37,12 @@ type EventItem = {
     endsAt?: string;
     location: string;
     imageUrl: string;
+    phase: EventPhase;
+};
+
+type SelectionSummaryItem = {
+    id: number;
+    title: string;
     phase: EventPhase;
 };
 
@@ -180,24 +186,24 @@ function Section({
                     </div>
                 </Card>
             ) : (
-                <div className="grid gap-4">
+                <div className="grid gap-3">
                     {events.map((event) => {
                         const isSelected = selectedIds.includes(event.id);
                         const isClosed = event.phase === 'closed';
 
                         return (
-                            <Card key={event.id} className="overflow-hidden">
-                                <div className="flex flex-col gap-4 md:flex-row">
-                                    <div className="md:w-60">
+                            <Card key={event.id} className="overflow-hidden border-slate-200/70">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                                    <div className="sm:w-44">
                                         <img
                                             src={event.imageUrl}
                                             alt={event.title}
-                                            className="h-44 w-full object-cover md:h-full"
+                                            className="h-36 w-full object-cover sm:h-full"
                                             loading="lazy"
                                         />
                                     </div>
-                                    <div className="flex flex-1 flex-col gap-3 p-5">
-                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="flex flex-1 flex-col gap-2.5 p-4">
+                                        <div className="flex flex-wrap items-start justify-between gap-2">
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     {event.tag ? (
@@ -212,17 +218,17 @@ function Section({
                                                         {phaseLabel(event.phase)}
                                                     </Badge>
                                                 </div>
-                                                <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                                                <h3 className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
                                                     {event.title}
                                                 </h3>
                                             </div>
                                         </div>
 
-                                        <p className="text-sm text-slate-600 dark:text-slate-300">
+                                        <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">
                                             {event.description || 'No event description available yet.'}
                                         </p>
 
-                                        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-300">
+                                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-300">
                                             <span className="inline-flex items-center gap-2">
                                                 <CalendarDays className="h-4 w-4" />
                                                 {formatEventWindow(event.startsAt, event.endsAt)}
@@ -235,7 +241,7 @@ function Section({
                                             ) : null}
                                         </div>
 
-                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                                             <div className="text-xs text-slate-500 dark:text-slate-400">
                                                 {isClosed
                                                     ? 'Closed events are no longer open for joining.'
@@ -263,6 +269,7 @@ function Section({
 export default function EventList({ programmes = [] }: PageProps) {
     const nowTs = useNowTs();
     const [selectedIds, setSelectedIds] = React.useState<number[]>([]);
+    const [quickJoinId, setQuickJoinId] = React.useState<string>('');
 
     const normalized = React.useMemo(() => normalizeProgrammes(programmes, nowTs), [programmes, nowTs]);
     const grouped = React.useMemo(() => {
@@ -278,6 +285,31 @@ export default function EventList({ programmes = [] }: PageProps) {
     const handleJoin = React.useCallback((id: number) => {
         setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     }, []);
+
+    const selectedSummary = React.useMemo<SelectionSummaryItem[]>(
+        () =>
+            normalized
+                .filter((event) => selectedIds.includes(event.id))
+                .map((event) => ({ id: event.id, title: event.title, phase: event.phase })),
+        [normalized, selectedIds],
+    );
+
+    const handleClear = React.useCallback(() => {
+        setSelectedIds([]);
+    }, []);
+
+    const quickJoinOptions = React.useMemo(
+        () => normalized.filter((event) => event.phase !== 'closed'),
+        [normalized],
+    );
+
+    const handleQuickJoin = React.useCallback(() => {
+        const id = Number(quickJoinId);
+        if (!Number.isNaN(id)) {
+            setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+            setQuickJoinId('');
+        }
+    }, [quickJoinId]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -295,6 +327,78 @@ export default function EventList({ programmes = [] }: PageProps) {
                         upcoming.
                     </p>
                 </div>
+
+                <Card className="border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-start gap-3">
+                            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#00359c]/10 text-[#00359c]">
+                                <Users2 className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    My joined events
+                                </p>
+                                <div className="mt-1 flex items-baseline gap-2">
+                                    <span className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+                                        {selectedSummary.length}
+                                    </span>
+                                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                                        event{selectedSummary.length === 1 ? '' : 's'} selected
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {selectedSummary.length ? (
+                                <>
+                                    {selectedSummary.slice(0, 4).map((event) => (
+                                        <Badge
+                                            key={event.id}
+                                            variant="outline"
+                                            className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                        >
+                                            {event.title}
+                                        </Badge>
+                                    ))}
+                                    {selectedSummary.length > 4 ? (
+                                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                                            +{selectedSummary.length - 4} more
+                                        </Badge>
+                                    ) : null}
+                                </>
+                            ) : (
+                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                    Pick an ongoing or upcoming event below to join.
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                            <select
+                                value={quickJoinId}
+                                onChange={(event) => setQuickJoinId(event.target.value)}
+                                className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:w-64"
+                            >
+                                <option value="">Quick join an event</option>
+                                {quickJoinOptions.map((event) => (
+                                    <option key={event.id} value={event.id}>
+                                        {event.title}
+                                    </option>
+                                ))}
+                            </select>
+                            <Button type="button" onClick={handleQuickJoin} disabled={!quickJoinId}>
+                                Join
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleClear}
+                                disabled={!selectedSummary.length}
+                            >
+                                Clear selection
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
 
                 <Section
                     title="Ongoing events"
