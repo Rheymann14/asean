@@ -340,7 +340,6 @@ function FlagThumb({
     );
 }
 
-
 function FlagCell({ country }: { country: Country }) {
     return (
         <div className="flex items-center gap-3">
@@ -377,7 +376,6 @@ function isChedUserType(userType?: UserType | null) {
 function isChedParticipant(p: ParticipantRow) {
     return isChedUserType(p.user_type);
 }
-
 
 function ParticipantIdPrintCard({
     participant,
@@ -444,8 +442,6 @@ function ParticipantIdPrintCard({
         return cn(size, 'break-words line-clamp-2');
     })();
 
-
-
     return (
         <div
             className={cn(
@@ -457,7 +453,6 @@ function ParticipantIdPrintCard({
             )}
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >
-
             {/* Background */}
             <div aria-hidden className="absolute inset-0">
                 <img
@@ -493,7 +488,6 @@ function ParticipantIdPrintCard({
                             loading="eager"
                             decoding="async"
                         />
-
 
                         <div className="min-w-0">
                             <div
@@ -535,7 +529,6 @@ function ParticipantIdPrintCard({
                         >
                             {rawName || '—'}
                         </div>
-
 
                         <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-3')}>
                             <div
@@ -646,10 +639,6 @@ function ParticipantIdPrintCard({
     );
 }
 
-
-
-
-
 function slugify(input: string) {
     return input
         .toLowerCase()
@@ -722,15 +711,11 @@ function FlagImage({
     );
 }
 
-
 export default function ParticipantPage(props: PageProps) {
     const countries: Country[] = props.countries ?? [];
-
     const userTypes: UserType[] = props.userTypes ?? [];
-
     const participants: ParticipantRow[] = props.participants ?? [];
     const programmes: ProgrammeRow[] = props.programmes ?? [];
-
 
     // ---------------------------------------
     // UI state
@@ -755,6 +740,7 @@ export default function ParticipantPage(props: PageProps) {
     const [userTypeDialogOpen, setUserTypeDialogOpen] = React.useState(false);
     const [programmeDialogOpen, setProgrammeDialogOpen] = React.useState(false);
     const [programmeParticipant, setProgrammeParticipant] = React.useState<ParticipantRow | null>(null);
+    const [programmeQuery, setProgrammeQuery] = React.useState('');
 
     // delete confirm
     const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -862,6 +848,19 @@ export default function ParticipantPage(props: PageProps) {
         [programmes, nowTs],
     );
 
+    const filteredProgrammes = React.useMemo(() => {
+        const q = programmeQuery.trim().toLowerCase();
+        if (!q) return normalizedProgrammes;
+        return normalizedProgrammes.filter((event) => {
+            return (
+                event.title.toLowerCase().includes(q) ||
+                event.description.toLowerCase().includes(q) ||
+                event.tag.toLowerCase().includes(q) ||
+                event.location.toLowerCase().includes(q)
+            );
+        });
+    }, [normalizedProgrammes, programmeQuery]);
+
     React.useEffect(() => {
         // If CHED records were selected before, auto-remove them
         const chedIds = resolvedParticipants.filter(isChedParticipant).map((p) => p.id);
@@ -876,8 +875,6 @@ export default function ParticipantPage(props: PageProps) {
             return changed ? next : prev;
         });
     }, [resolvedParticipants]);
-
-
 
     const filteredParticipants = React.useMemo(() => {
         const q = participantQuery.trim().toLowerCase();
@@ -930,7 +927,6 @@ export default function ParticipantPage(props: PageProps) {
     const allVisibleSelected =
         selectableVisibleParticipants.length > 0 &&
         selectableVisibleParticipants.every((p) => selectedParticipantIds.has(p.id));
-
 
     React.useEffect(() => {
         let active = true;
@@ -1047,6 +1043,7 @@ export default function ParticipantPage(props: PageProps) {
     function openProgrammeManager(p: ParticipantRow) {
         setProgrammeParticipant(p);
         setProgrammeDialogOpen(true);
+        setProgrammeQuery('');
     }
 
     function updateProgrammeSelection(programmeId: number, isJoined: boolean) {
@@ -1202,21 +1199,6 @@ export default function ParticipantPage(props: PageProps) {
         );
     }
 
-    // User types
-    function openAddUserType() {
-        setEditingUserType(null);
-        userTypeForm.reset();
-        userTypeForm.clearErrors();
-        setUserTypeDialogOpen(true);
-    }
-
-    function openEditUserType(u: UserType) {
-        setEditingUserType(u);
-        userTypeForm.setData({ name: u.name ?? '', is_active: !!u.is_active });
-        userTypeForm.clearErrors();
-        setUserTypeDialogOpen(true);
-    }
-
     function submitUserType(e: React.FormEvent) {
         e.preventDefault();
 
@@ -1259,6 +1241,36 @@ export default function ParticipantPage(props: PageProps) {
         );
     }
 
+    function openAddUserType() {
+        setEditingUserType(null);
+        userTypeForm.reset();
+        userTypeForm.clearErrors();
+        setUserTypeDialogOpen(true);
+    }
+
+    function openEditUserType(u: UserType) {
+        setEditingUserType(u);
+        userTypeForm.setData({
+            name: u.name ?? '',
+            is_active: !!u.is_active,
+        });
+        userTypeForm.clearErrors();
+        setUserTypeDialogOpen(true);
+    }
+
+    function requestPrintIds(orientation: PrintOrientation) {
+        if (selectedParticipantsPrintable.length === 0) {
+            toast.error('Select at least one NON-CHED participant to print.');
+            return;
+        }
+
+        setPrintOrientation(orientation);
+
+        setTimeout(() => {
+            window.print();
+        }, 100);
+    }
+
     function toggleParticipantSelect(id: number, checked: boolean) {
         setSelectedParticipantIds((prev) => {
             const next = new Set(prev);
@@ -1271,54 +1283,32 @@ export default function ParticipantPage(props: PageProps) {
     function toggleSelectAll(checked: boolean) {
         setSelectedParticipantIds((prev) => {
             const next = new Set(prev);
-
-            if (checked) {
-                selectableVisibleParticipants.forEach((p) => next.add(p.id));
-            } else {
-                selectableVisibleParticipants.forEach((p) => next.delete(p.id));
-            }
-
+            selectableVisibleParticipants.forEach((p) => {
+                if (checked) next.add(p.id);
+                else next.delete(p.id);
+            });
             return next;
         });
     }
 
-
-    function requestPrintIds(orientation: PrintOrientation) {
-        if (selectedParticipantsPrintable.length === 0) {
-            toast.error('Select at least one NON-CHED participant to print.');
-            return;
-        }
-        setPrintOrientation(orientation);
-        window.setTimeout(() => window.print(), 80);
-    }
-
+    const breadcrumbItems = React.useMemo(() => breadcrumbs, []);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Participant" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4 print:hidden">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-[#00359c]" />
-                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                            Participant Management
-                        </h1>
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Manage participants, ASEAN countries, and user types.
-                    </p>
-                </div>
+            <div className="space-y-6">
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <div className="text-sm text-slate-500">Admin</div>
+                            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Participant Management</h1>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                Manage participants, ASEAN countries, and user types.
+                            </p>
+                        </div>
 
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <TabsList className="w-full sm:w-auto">
-                            <TabsTrigger value="participants">Participants</TabsTrigger>
-                            <TabsTrigger value="countries">Countries</TabsTrigger>
-                            <TabsTrigger value="userTypes">User Types</TabsTrigger>
-                        </TabsList>
-
-                        <div className="flex w-full gap-2 sm:w-auto">
+                        <div className="flex flex-wrap gap-2">
                             {activeTab === 'participants' ? (
                                 <Button onClick={openAddParticipant} className={cn('w-full sm:w-auto', PRIMARY_BTN)}>
                                     <Plus className="mr-2 h-4 w-4" />
@@ -1337,6 +1327,14 @@ export default function ParticipantPage(props: PageProps) {
                             )}
                         </div>
                     </div>
+                </div>
+
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+                    <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
+                        <TabsTrigger value="participants">Participants</TabsTrigger>
+                        <TabsTrigger value="countries">Countries</TabsTrigger>
+                        <TabsTrigger value="userTypes">User Types</TabsTrigger>
+                    </TabsList>
 
                     {/* -------------------- Participants -------------------- */}
                     <TabsContent value="participants" className="mt-4">
@@ -1777,10 +1775,22 @@ export default function ParticipantPage(props: PageProps) {
                         <div className="space-y-5">
                             <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/40">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{programmeParticipant.full_name}</div>
-                                        <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                                            {programmeParticipant.email} • {programmeParticipant.user_type?.name ?? '—'}
+                                    <div className="flex items-start gap-3">
+                                        {programmeParticipant.country ? (
+                                            <FlagThumb country={programmeParticipant.country} size={36} eager />
+                                        ) : (
+                                            <div className="grid size-9 place-items-center rounded-lg border border-slate-200 bg-white text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+                                                —
+                                            </div>
+                                        )}
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{programmeParticipant.full_name}</div>
+                                            <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                                                {programmeParticipant.email} • {programmeParticipant.user_type?.name ?? '—'}
+                                            </div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                {programmeParticipant.country?.name ?? 'Country unavailable'}
+                                            </div>
                                         </div>
                                     </div>
                                     <Badge className="rounded-full bg-slate-900/5 text-slate-700 dark:bg-white/10 dark:text-slate-200">
@@ -1792,86 +1802,105 @@ export default function ParticipantPage(props: PageProps) {
                                 </div>
                             </div>
 
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">Events</div>
+                                <div className="relative w-full sm:w-[320px]">
+                                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                                    <Input
+                                        value={programmeQuery}
+                                        onChange={(e) => setProgrammeQuery(e.target.value)}
+                                        placeholder="Search events..."
+                                        className="pl-9"
+                                    />
+                                </div>
+                            </div>
+
                             {normalizedProgrammes.length === 0 ? (
                                 <EmptyState
                                     icon={<CalendarDays className="h-5 w-5" />}
                                     title="No events yet"
                                     subtitle="Create events first so you can assign participants."
                                 />
+                            ) : filteredProgrammes.length === 0 ? (
+                                <EmptyState
+                                    icon={<Search className="h-5 w-5" />}
+                                    title="No matching events"
+                                    subtitle="Try adjusting the search term to find an event."
+                                />
                             ) : (
                                 <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
                                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                    {normalizedProgrammes.map((event) => {
-                                        const joinedIds = programmeParticipant.joined_programme_ids ?? [];
-                                        const isJoined = joinedIds.includes(event.id);
-                                        const isClosed = event.phase === 'closed';
-                                        const isAddDisabled = isClosed && !isJoined;
+                                        {filteredProgrammes.map((event) => {
+                                            const joinedIds = programmeParticipant.joined_programme_ids ?? [];
+                                            const isJoined = joinedIds.includes(event.id);
+                                            const isClosed = event.phase === 'closed';
+                                            const isAddDisabled = isClosed && !isJoined;
 
-                                        return (
-                                            <Card key={event.id} className="border-slate-200/70 dark:border-slate-800">
-                                                <div className="flex h-full flex-col gap-3 p-3">
-                                                    <div className="space-y-2">
-                                                        <div className="flex flex-wrap items-center gap-1.5">
-                                                            {event.tag ? (
-                                                                <Badge className="border-transparent bg-slate-900/80 text-[10px] text-white">
-                                                                    {event.tag}
+                                            return (
+                                                <Card key={event.id} className="border-slate-200/70 dark:border-slate-800">
+                                                    <div className="flex h-full flex-col gap-3 p-3">
+                                                        <div className="space-y-2">
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                {event.tag ? (
+                                                                    <Badge className="border-transparent bg-slate-900/80 text-[10px] text-white">
+                                                                        {event.tag}
+                                                                    </Badge>
+                                                                ) : null}
+                                                                <Badge className={cn('border text-[10px]', phaseBadgeClass(event.phase))}>
+                                                                    {phaseLabel(event.phase)}
                                                                 </Badge>
-                                                            ) : null}
-                                                            <Badge className={cn('border text-[10px]', phaseBadgeClass(event.phase))}>
-                                                                {phaseLabel(event.phase)}
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                                    {event.title}
+                                                                </div>
+                                                                <div className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                    {event.description}
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+                                                                <div className="flex items-center gap-2">
+                                                                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                                                                    <span>{formatEventWindow(event.startsAt, event.endsAt)}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                                                    <span>{event.location || 'Location to be announced'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-auto flex items-center justify-between gap-2">
+                                                            <Badge
+                                                                className={cn(
+                                                                    'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
+                                                                    isJoined
+                                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                                )}
+                                                            >
+                                                                {isJoined ? 'Joined' : 'Not joined'}
                                                             </Badge>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                                {event.title}
-                                                            </div>
-                                                            <div className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
-                                                                {event.description}
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
-                                                            <div className="flex items-center gap-2">
-                                                                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                                                                <span>{formatEventWindow(event.startsAt, event.endsAt)}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                                                                <span>{event.location || 'Location to be announced'}</span>
-                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant={isJoined ? 'outline' : 'default'}
+                                                                className={cn(
+                                                                    'h-8 rounded-xl px-3 text-[11px]',
+                                                                    isJoined
+                                                                        ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10'
+                                                                        : PRIMARY_BTN,
+                                                                )}
+                                                                disabled={isAddDisabled}
+                                                                title={isAddDisabled ? 'Closed events cannot be added.' : undefined}
+                                                                onClick={() => toggleProgrammeJoin(programmeParticipant, event.id, isJoined)}
+                                                            >
+                                                                {isJoined ? 'Remove' : 'Add to list'}
+                                                            </Button>
                                                         </div>
                                                     </div>
-                                                    <div className="mt-auto flex items-center justify-between gap-2">
-                                                        <Badge
-                                                            className={cn(
-                                                                'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
-                                                                isJoined
-                                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
-                                                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                                                            )}
-                                                        >
-                                                            {isJoined ? 'Joined' : 'Not joined'}
-                                                        </Badge>
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant={isJoined ? 'outline' : 'default'}
-                                                            className={cn(
-                                                                'h-8 rounded-xl px-3 text-[11px]',
-                                                                isJoined
-                                                                    ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10'
-                                                                    : PRIMARY_BTN,
-                                                            )}
-                                                            disabled={isAddDisabled}
-                                                            title={isAddDisabled ? 'Closed events cannot be added.' : undefined}
-                                                            onClick={() => toggleProgrammeJoin(programmeParticipant, event.id, isJoined)}
-                                                        >
-                                                            {isJoined ? 'Remove' : 'Add to list'}
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        );
-                                    })}
+                                                </Card>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -2213,9 +2242,6 @@ export default function ParticipantPage(props: PageProps) {
                     );
                 })()}
             </div>
-
-
-
         </AppLayout>
     );
 }
