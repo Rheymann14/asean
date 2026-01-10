@@ -282,11 +282,14 @@ export default function EventList({ programmes = [] }: PageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Event List" />
-            <div className="flex flex-col gap-8">
-                <div className="space-y-2">
-                    <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                        Select events to join
-                    </h1>
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                        <CalendarDays className="h-5 w-5 text-[#00359c]" />
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                            Select events to join
+                        </h1>
+                    </div>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                         Review ongoing, upcoming, and closed events. You can only join events that are ongoing or
                         upcoming.
