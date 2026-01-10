@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
+
 
 use App\Models\Country;
 use App\Models\UserType;
@@ -58,6 +61,27 @@ class User extends Authenticatable
             'is_active' => 'boolean',
         ];
     }
+
+
+  protected static function booted(): void
+{
+    static::creating(function ($user) {
+        if (empty($user->display_id)) {
+            // Nice human-readable ID
+            $user->display_id = 'ASEAN-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4));
+        }
+
+        if (empty($user->qr_token)) {
+            $user->qr_token = (string) Str::uuid();
+        }
+
+        if (empty($user->qr_payload)) {
+            // ✅ encrypted payload (safe to embed in QR)
+            // You can encrypt the token only, or a small JSON payload.
+            $user->qr_payload = Crypt::encryptString($user->qr_token);
+        }
+    });
+}
 
     public function country()
     {

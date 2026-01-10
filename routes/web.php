@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\ParticipantController;
+use App\Http\Controllers\ParticipantDashboardController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\UserTypeController;
 use App\Http\Controllers\IssuanceController;
@@ -31,7 +32,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('participant-dashboard', function () {
             return Inertia::render('participant-dashboard');
         })->name('participant-dashboard');
+        Route::get('/participant-dashboard', [ParticipantDashboardController::class, 'show'])
+        ->name('participant.dashboard');
     });
+
 
     Route::middleware(['role:ched'])->group(function () {
         Route::get('dashboard', function () {
