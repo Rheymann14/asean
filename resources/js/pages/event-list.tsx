@@ -199,7 +199,7 @@ function Section({
                     </div>
                 </Card>
             ) : (
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2">
                     {events.map((event) => {
                         const isSelected = selectedIds.includes(event.id);
                         const isClosed = event.phase === 'closed';
@@ -264,7 +264,7 @@ function Section({
                                                 type="button"
                                                 disabled={isClosed || isSelected}
                                                 onClick={() => onJoin(event.id)}
-                                                className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
+                                                className="bg-[#00359c] text-white shadow-sm hover:bg-[#00359c]/90"
                                             >
                                                 {isClosed ? 'Closed' : isSelected ? 'Selected' : 'Join Event'}
                                             </Button>
@@ -405,7 +405,7 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
-                                            className="h-9 w-full justify-between text-left font-normal text-slate-700 dark:text-slate-200 sm:w-64"
+                                            className="h-9 w-full justify-between text-left font-normal text-slate-700 shadow-sm dark:text-slate-200 sm:w-64"
                                         >
                                             <span className="inline-flex items-center gap-2 truncate">
                                                 {quickJoinSelection ? (
@@ -467,11 +467,16 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                     type="button"
                                     onClick={handleQuickJoin}
                                     disabled={!quickJoinId}
-                                    className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
+                                    className="bg-[#00359c] text-white shadow-sm hover:bg-[#00359c]/90"
                                 >
                                     Join
                                 </Button>
-                                <Button type="button" variant="destructive" onClick={() => setClearDialogOpen(true)}>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="shadow-sm"
+                                    onClick={() => setClearDialogOpen(true)}
+                                >
                                     Clear all
                                 </Button>
                             </div>
@@ -494,8 +499,9 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                             </Badge>
                                             <Button
                                                 type="button"
-                                                variant="ghost"
-                                                className="h-6 px-2 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+                                                variant="destructive"
+                                                size="sm"
+                                                className="h-6 px-2 text-[10px]"
                                                 onClick={() => handleLeave(event.id)}
                                             >
                                                 Remove
