@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
@@ -20,8 +21,9 @@ import {
     Phone,
     QrCode as QrCodeIcon,
     Smartphone,
-    Monitor,
+    IdCard,
     User2,
+  
 } from 'lucide-react';
 
 type Country = {
@@ -101,25 +103,33 @@ function IdCardPreview({
 }) {
     const isLandscape = orientation === 'landscape';
 
+    // ✅ correct ID aspect ratios
     const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
 
+    // ✅ print sizes (keep accurate)
     const printSize = isLandscape
         ? 'print:w-[3.37in] print:h-[2.125in]'
         : 'print:w-[3.46in] print:h-[5.51in]';
 
-    const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
-    const qrSize = isLandscape ? 108 : 180;
+    // ✅ screen preview sizing (THIS fixes “portrait too big”)
+    const maxW = isLandscape ? 'max-w-[520px]' : 'max-w-[320px] sm:max-w-[360px]';
 
-    const pad = isLandscape ? 'p-3' : 'p-5';
-    const headerLogo = isLandscape ? 'h-8 w-8' : 'h-10 w-10';
+    const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
+    // ✅ reduce portrait QR size so the card height is less visually heavy
+    const qrSize = isLandscape ? 108 : 160;
+
+    // ✅ tighten padding + typography a bit
+    const pad = isLandscape ? 'p-3' : 'p-4';
+    const headerLogo = isLandscape ? 'h-8 w-8' : 'h-9 w-9';
 
     return (
         <div
             className={cn(
-                'relative mx-auto w-full max-w-[520px] overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
+                'relative mx-auto w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
+                maxW,
                 aspect,
                 'print:max-w-none',
-                printSize
+                printSize,
             )}
         >
             {/* Background */}
@@ -129,7 +139,7 @@ function IdCardPreview({
                     alt=""
                     className={cn(
                         'absolute inset-0 h-full w-full object-cover',
-                        isLandscape ? 'opacity-45 dark:opacity-35' : 'opacity-50 dark:opacity-35'
+                        isLandscape ? 'opacity-45 dark:opacity-35' : 'opacity-45 dark:opacity-30',
                     )}
                     draggable={false}
                     loading="lazy"
@@ -161,7 +171,7 @@ function IdCardPreview({
                             <div
                                 className={cn(
                                     'truncate font-semibold tracking-wide text-slate-700 dark:text-slate-200',
-                                    isLandscape ? 'text-[11px]' : 'text-xs'
+                                    isLandscape ? 'text-[11px]' : 'text-[11px]',
                                 )}
                             >
                                 ASEAN Philippines 2026
@@ -173,13 +183,13 @@ function IdCardPreview({
                     </div>
                 </div>
 
-                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-4')} />
+                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-3')} />
 
                 {/* Body */}
                 <div
                     className={cn(
                         'flex-1',
-                        isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-4'
+                        isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-3',
                     )}
                 >
                     {/* LEFT INFO */}
@@ -191,19 +201,19 @@ function IdCardPreview({
                         <div
                             className={cn(
                                 'mt-0.5 break-words font-semibold tracking-tight text-slate-900 dark:text-slate-100',
-                                isLandscape ? 'text-sm leading-4' : 'text-xl leading-7',
-                                'line-clamp-2'
+                                isLandscape ? 'text-sm leading-4' : 'text-lg leading-6',
+                                'line-clamp-2',
                             )}
                             title={participant.name}
                         >
                             {participant.name}
                         </div>
 
-                        <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-3')}>
+                        <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-2.5')}>
                             <div
                                 className={cn(
                                     'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
-                                    isLandscape ? 'h-9 w-9' : 'h-10 w-10'
+                                    isLandscape ? 'h-9 w-9' : 'h-9 w-9',
                                 )}
                             >
                                 {flagSrc ? (
@@ -224,7 +234,7 @@ function IdCardPreview({
                                 <div
                                     className={cn(
                                         'truncate font-semibold text-slate-900 dark:text-slate-100',
-                                        isLandscape ? 'text-[12px]' : 'text-sm'
+                                        isLandscape ? 'text-[12px]' : 'text-[12px]',
                                     )}
                                 >
                                     {participant.country?.name ?? '—'}
@@ -237,7 +247,7 @@ function IdCardPreview({
                             </div>
                         </div>
 
-                        <div className={cn(isLandscape ? 'mt-2' : 'mt-4')}>
+                        <div className={cn(isLandscape ? 'mt-2' : 'mt-3')}>
                             <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                 Participant ID
                             </div>
@@ -245,14 +255,14 @@ function IdCardPreview({
                             <div
                                 className={cn(
                                     'mt-1 inline-flex max-w-full whitespace-normal break-words rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
-                                    isLandscape ? 'text-[10px] leading-4' : 'text-sm leading-5'
+                                    isLandscape ? 'text-[10px] leading-4' : 'text-[11px] leading-4',
                                 )}
                             >
                                 {participant.display_id}
                             </div>
                         </div>
 
-                        <div className={cn('text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-1.5' : 'mt-4')}>
+                        <div className={cn('text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-1.5' : 'mt-2')}>
                             Scan QR for attendance verification.
                         </div>
                     </div>
@@ -262,13 +272,13 @@ function IdCardPreview({
                         className={cn(
                             'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
                             qrPanelWidth,
-                            isLandscape ? 'p-2.5' : 'p-4'
+                            isLandscape ? 'p-2.5' : 'p-3',
                         )}
                     >
                         <div
                             className={cn(
-                                'mb-2 inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200',
-                                isLandscape ? 'mb-1 text-[10px]' : 'text-xs'
+                                'inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200',
+                                isLandscape ? 'mb-1 text-[10px]' : 'mb-1.5 text-[11px]',
                             )}
                         >
                             <QrCodeIcon className={cn(isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
@@ -296,24 +306,14 @@ function IdCardPreview({
                         )}
 
                         <div className="mt-2 w-full text-center">
-                            <div
-                                className={cn(
-                                    'font-semibold text-slate-900 dark:text-slate-100',
-                                    isLandscape ? 'text-[10px] leading-3.5' : 'text-xs'
-                                )}
-                            >
+                            <div className={cn('font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[10px]' : 'text-[11px]')}>
                                 <span className="line-clamp-2" title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participant.name}`}>
                                     {participant.country?.code?.toUpperCase() ?? ''}
                                     {participant.country?.code ? ' • ' : ''}
                                     {participant.name}
                                 </span>
                             </div>
-                            <div
-                                className={cn(
-                                    'mt-1 break-words font-mono text-slate-500 dark:text-slate-400',
-                                    isLandscape ? 'text-[10px] leading-3.5' : 'text-[11px] leading-4'
-                                )}
-                            >
+                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', isLandscape ? 'text-[10px]' : 'text-[10px]')}>
                                 {participant.display_id}
                             </div>
                         </div>
@@ -321,10 +321,10 @@ function IdCardPreview({
                 </div>
 
                 {/* Footer */}
-                <div className={cn('mt-4 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-2' : 'mt-4')}>
+                {/* <div className={cn('mt-3 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400')}>
                     <span>Keep this ID for event entry</span>
                     <span className="font-medium">ASEAN PH 2026</span>
-                </div>
+                </div> */}
             </div>
         </div>
     );
@@ -337,6 +337,9 @@ export default function ParticipantDashboard({ participant }: PageProps) {
     const [orientation, setOrientation] = React.useState<'portrait' | 'landscape'>('portrait');
     const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
     const [qrLoading, setQrLoading] = React.useState(true);
+
+    // ✅ opens full-size preview only when needed
+    const [previewOpen, setPreviewOpen] = React.useState(false);
 
     React.useEffect(() => {
         let mounted = true;
@@ -405,16 +408,13 @@ export default function ParticipantDashboard({ participant }: PageProps) {
             <div className="relative">
                 <div
                     aria-hidden
-                    className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-72 w-full rounded-[3rem]
-  bg-gradient-to-b from-slate-200/60 via-white to-transparent blur-2xl
-  dark:from-slate-800/50 dark:via-slate-950 dark:to-transparent"
+                    className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-64 w-full rounded-[3rem]
+                    bg-gradient-to-b from-slate-200/60 via-white to-transparent blur-2xl
+                    dark:from-slate-800/50 dark:via-slate-950 dark:to-transparent"
                 />
 
-
-                <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-                    {/* ✅ ONE MAIN CARD (less card noise) */}
+                <div className="w-full px-4 py-5 sm:px-6 lg:px-8">
                     <Card className="overflow-hidden rounded-3xl border-slate-200/70 bg-white/70 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/40">
-                        {/* Soft header background */}
                         <div className="relative">
                             <img
                                 src="/img/bg.png"
@@ -428,11 +428,11 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                 className="absolute inset-0 bg-gradient-to-r from-white/75 via-white/55 to-white/75 dark:from-slate-950/70 dark:via-slate-950/45 dark:to-slate-950/70"
                             />
 
-                            <CardHeader className="relative">
+                            <CardHeader className="relative py-5">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="space-y-1">
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <CardTitle className="text-balance text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                                            <CardTitle className="text-balance text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                                                 Participant ID
                                             </CardTitle>
 
@@ -440,7 +440,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 className={cn(
                                                     'rounded-full px-3 py-1 font-mono text-xs font-semibold',
                                                     'border border-sky-200 bg-sky-50 text-sky-700',
-                                                    'dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200'
+                                                    'dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200',
                                                 )}
                                             >
                                                 {participant.display_id}
@@ -448,12 +448,13 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                         </div>
 
                                         <div className="text-sm text-slate-600 dark:text-slate-300">
-                                            Your ID card and QR for event attendance.
+                                            Check your details to make sure they're correct.
                                         </div>
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2">
                                         <Button
+                                            size="sm"
                                             variant="outline"
                                             className="rounded-xl"
                                             onClick={() => copyToClipboard(participant.display_id, 'Participant ID copied')}
@@ -463,6 +464,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                         </Button>
 
                                         <Button
+                                            size="sm"
                                             variant="outline"
                                             className="rounded-xl"
                                             onClick={downloadQr}
@@ -476,9 +478,10 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                             </CardHeader>
                         </div>
 
-                        <CardContent className="space-y-6 p-4 sm:p-6">
-                            <div className="grid gap-6 lg:grid-cols-[1fr_520px]">
-                                {/* LEFT: Details (now a single list panel, no mini-cards) */}
+                        <CardContent className="space-y-4 p-4 sm:p-5">
+                            {/* ✅ narrower right column so it doesn't eat space */}
+                            <div className="grid gap-5 lg:grid-cols-[1fr_460px]">
+                                {/* LEFT: Details */}
                                 <div className="space-y-3">
                                     <div>
                                         <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Profile Details</div>
@@ -573,70 +576,113 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                     ) : null}
                                 </div>
 
-                                {/* RIGHT: Virtual ID (panel, not another full card) */}
+                                {/* RIGHT: Virtual ID (compact + scroll frame) */}
                                 <div className="space-y-3 lg:sticky lg:top-6">
-                                    <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Virtual ID</div>
                                             <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                                Switch orientation for preview/printing.
+                                               Use this virtual ID card for attendance verification.
                                             </div>
                                         </div>
 
-                                        <Badge className="rounded-full" variant="secondary">
-                                            <QrCodeIcon className="mr-1 h-4 w-4" />
-                                            Preview
-                                        </Badge>
+
+
                                     </div>
 
-                                    <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-3 backdrop-blur dark:border-white/10 dark:bg-slate-950/30 sm:p-4">
-                                        <Tabs value={orientation} onValueChange={(v) => setOrientation(v as 'portrait' | 'landscape')}>
-                                            <TabsList className="w-full rounded-2xl bg-white/70 p-1 dark:bg-slate-950/40">
-                                                <TabsTrigger
-                                                    value="portrait"
-                                                    className={cn(
-                                                        'w-full rounded-xl transition-all',
-                                                        'text-slate-700 hover:bg-slate-100/70 dark:text-slate-200 dark:hover:bg-slate-900/40',
-                                                        'data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm',
-                                                        'data-[state=active]:ring-1 data-[state=active]:ring-sky-600/30',
-                                                        'dark:data-[state=active]:bg-sky-500 dark:data-[state=active]:ring-sky-500/30'
-                                                    )}
-                                                >
-                                                    <Smartphone className="mr-2 h-4 w-4" />
-                                                    Portrait
-                                                </TabsTrigger>
+                                    <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-3 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                        {/* Controls row (compact) */}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <Tabs value={orientation} onValueChange={(v) => setOrientation(v as 'portrait' | 'landscape')}>
+                                                <TabsList className="rounded-2xl bg-white/70 p-1 dark:bg-slate-950/40">
+                                                    <TabsTrigger
+                                                        value="portrait"
+                                                        className={cn(
+                                                            'rounded-xl px-3 text-xs',
+                                                            'data-[state=active]:bg-sky-600 data-[state=active]:text-white',
+                                                            'dark:data-[state=active]:bg-sky-500',
+                                                        )}
+                                                    >
+                                                        <Smartphone className="mr-2 h-4 w-4" />
+                                                        Portrait
+                                                    </TabsTrigger>
 
-                                                <TabsTrigger
-                                                    value="landscape"
-                                                    className={cn(
-                                                        'w-full rounded-xl transition-all',
-                                                        'text-slate-700 hover:bg-slate-100/70 dark:text-slate-200 dark:hover:bg-slate-900/40',
-                                                        'data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm',
-                                                        'data-[state=active]:ring-1 data-[state=active]:ring-emerald-600/30',
-                                                        'dark:data-[state=active]:bg-emerald-500 dark:data-[state=active]:ring-emerald-500/30'
-                                                    )}
-                                                >
-                                                    <Monitor className="mr-2 h-4 w-4" />
-                                                    Landscape
-                                                </TabsTrigger>
-                                            </TabsList>
-                                        </Tabs>
+                                                    <TabsTrigger
+                                                        value="landscape"
+                                                        className={cn(
+                                                            'rounded-xl px-3 text-xs',
+                                                            'data-[state=active]:bg-emerald-600 data-[state=active]:text-white',
+                                                            'dark:data-[state=active]:bg-emerald-500',
+                                                        )}
+                                                    >
+                                                        <IdCard className="mr-2 h-4 w-4" />
+                                                        Landscape
+                                                    </TabsTrigger>
+                                                </TabsList>
+                                            </Tabs>
 
-                                        <Separator className="my-4 bg-slate-200/70 dark:bg-white/10" />
+                                            <Badge
+                                                variant="secondary"
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={() => setPreviewOpen(true)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') setPreviewOpen(true);
+                                                }}
+                                                className="rounded-full cursor-pointer select-none transition-colors hover:bg-[#00359c]/10 hover:text-[#00359c] dark:hover:bg-[#00359c]/20 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00359c]/30"
+                                            >
+                                                <QrCodeIcon className="mr-1 h-4 w-4" />
+                                                Preview
+                                            </Badge>
 
-                                        <IdCardPreview
-                                            participant={participant}
-                                            flagSrc={flagSrc}
-                                            qrDataUrl={qrDataUrl}
-                                            loading={qrLoading}
-                                            orientation={orientation}
-                                        />
+                                        </div>
+
+                                        <Separator className="my-3 bg-slate-200/70 dark:bg-white/10" />
+
+                                        {/* ✅ fixed-height frame so portrait won't push page */}
+                                        <div
+                                            className={cn(
+                                                'rounded-2xl border border-slate-200/70 bg-white/70 p-2 shadow-sm dark:border-white/10 dark:bg-slate-950/30',
+                                                orientation === 'portrait' ? 'max-h-[520px]' : 'max-h-[340px]',
+                                                'overflow-auto',
+                                            )}
+                                        >
+                                            <IdCardPreview
+                                                participant={participant}
+                                                flagSrc={flagSrc}
+                                                qrDataUrl={qrDataUrl}
+                                                loading={qrLoading}
+                                                orientation={orientation}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* ✅ Large Preview Dialog (only when user wants full size) */}
+                <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                    <DialogContent className="max-w-[900px]">
+                        <DialogHeader>
+                            <DialogTitle>Virtual ID (Large Preview)</DialogTitle>
+                            <DialogDescription>
+
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-white/10 dark:bg-slate-950/40">
+                            <IdCardPreview
+                                participant={participant}
+                                flagSrc={flagSrc}
+                                qrDataUrl={qrDataUrl}
+                                loading={qrLoading}
+                                orientation={orientation}
+                            />
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

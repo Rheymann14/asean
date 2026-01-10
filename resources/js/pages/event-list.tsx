@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { CalendarDays, Check, ChevronsUpDown, MapPin, Users2 } from 'lucide-react';
+import { CalendarDays, Check, ChevronsUpDown, MapPin, Search, Users2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FALLBACK_IMAGE = '/img/asean_banner_logo.png';
@@ -172,135 +174,179 @@ function phaseBadgeClass(phase: EventPhase) {
     }
 }
 
-function Section({
-    title,
-    description,
+function EmptyState({ label }: { label: string }) {
+    return (
+        <Card className="border-dashed border-slate-200/70 dark:border-slate-800">
+            <div className="px-4 py-4 text-xs text-slate-500 dark:text-slate-400">{label}</div>
+        </Card>
+    );
+}
+
+function EventGrid({
     events,
     selectedIds,
     onJoin,
 }: {
-    title: string;
-    description: string;
     events: EventItem[];
     selectedIds: number[];
     onJoin: (id: number) => void;
 }) {
+    if (!events.length) return <EmptyState label="No events to show here yet." />;
+
     return (
-        <section className="space-y-4">
-            <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
-            </div>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {events.map((event) => {
+                const isSelected = selectedIds.includes(event.id);
+                const isClosed = event.phase === 'closed';
 
-            {events.length === 0 ? (
-                <Card className="border-dashed">
-                    <div className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
-                        No events to show in this section yet.
-                    </div>
-                </Card>
-            ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                    {events.map((event) => {
-                        const isSelected = selectedIds.includes(event.id);
-                        const isClosed = event.phase === 'closed';
+                return (
+                    <Card
+                        key={event.id}
+                        className={cn(
+                            'border-slate-200/70 dark:border-slate-800',
+                            'hover:bg-slate-50/60 dark:hover:bg-slate-900/40',
+                            isClosed && 'opacity-80',
+                        )}
+                    >
+                        <div className="flex gap-3 p-3">
+                            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200/70 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+                                <img
+                                    src={event.imageUrl}
+                                    alt={event.title}
+                                    loading="lazy"
+                                    className={cn(
+                                        'h-full w-full object-cover',
+                                        isClosed && 'grayscale',
+                                    )}
+                                />
+                            </div>
 
-                        return (
-                            <Card key={event.id} className="overflow-hidden border-slate-200/70">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                                    <div className="sm:w-44">
-                                        <img
-                                            src={event.imageUrl}
-                                            alt={event.title}
-                                            className="h-36 w-full object-cover sm:h-full"
-                                            loading="lazy"
-                                        />
-                                    </div>
-                                    <div className="flex flex-1 flex-col gap-2.5 p-4">
-                                        <div className="flex flex-wrap items-start justify-between gap-2">
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    {event.tag ? (
-                                                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                                                            {event.tag}
-                                                        </Badge>
-                                                    ) : null}
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
-                                                    >
-                                                        {phaseLabel(event.phase)}
-                                                    </Badge>
-                                                </div>
-                                                <h3 className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                                                    {event.title}
-                                                </h3>
-                                            </div>
-                                        </div>
-
-                                        <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">
-                                            {event.description || 'No event description available yet.'}
-                                        </p>
-
-                                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-300">
-                                            <span className="inline-flex items-center gap-2">
-                                                <CalendarDays className="h-4 w-4" />
-                                                {formatEventWindow(event.startsAt, event.endsAt)}
-                                            </span>
-                                            {event.location ? (
-                                                <span className="inline-flex items-center gap-2">
-                                                    <MapPin className="h-4 w-4" />
-                                                    {event.location}
-                                                </span>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            {event.tag ? (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="h-5 px-1.5 text-[10px] uppercase tracking-wide"
+                                                >
+                                                    {event.tag}
+                                                </Badge>
                                             ) : null}
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    'h-5 px-1.5 text-[10px] uppercase tracking-wide',
+                                                    phaseBadgeClass(event.phase),
+                                                )}
+                                            >
+                                                {phaseLabel(event.phase)}
+                                            </Badge>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                                            <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                {isClosed
-                                                    ? 'Closed events are no longer open for joining.'
-                                                    : 'Select an event to confirm your participation.'}
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                disabled={isClosed || isSelected}
-                                                onClick={() => onJoin(event.id)}
-                                                className="bg-[#00359c] text-white shadow-sm hover:bg-[#00359c]/90"
-                                            >
-                                                {isClosed ? 'Closed' : isSelected ? 'Selected' : 'Join Event'}
-                                            </Button>
-                                        </div>
+                                        <p className="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                            {event.title}
+                                        </p>
                                     </div>
+
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        disabled={isClosed || isSelected}
+                                        onClick={() => onJoin(event.id)}
+                                        className={cn(
+                                            'h-8 px-3 text-xs shadow-sm',
+                                            'bg-[#00359c] text-white hover:bg-[#00359c]/90',
+                                            (isClosed || isSelected) && 'opacity-70',
+                                        )}
+                                    >
+                                        {isClosed ? 'Closed' : isSelected ? 'Selected' : 'Join'}
+                                    </Button>
                                 </div>
-                            </Card>
-                        );
-                    })}
-                </div>
-            )}
-        </section>
+
+                                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <CalendarDays className="h-3.5 w-3.5" />
+                                        <span className="truncate">{formatEventWindow(event.startsAt, event.endsAt)}</span>
+                                    </span>
+
+                                    {event.location ? (
+                                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                                            <MapPin className="h-3.5 w-3.5" />
+                                            <span className="truncate">{event.location}</span>
+                                        </span>
+                                    ) : null}
+                                </div>
+
+                                <p className="mt-1 line-clamp-1 text-xs text-slate-600 dark:text-slate-300">
+                                    {event.description || 'No description.'}
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                );
+            })}
+        </div>
     );
 }
 
 export default function EventList({ programmes = [], joined_programme_ids = [] }: PageProps) {
     const nowTs = useNowTs();
     const [selectedIds, setSelectedIds] = React.useState<number[]>(() => joined_programme_ids);
+
     const [quickJoinId, setQuickJoinId] = React.useState<string>('');
     const [quickJoinOpen, setQuickJoinOpen] = React.useState(false);
+
     const [clearDialogOpen, setClearDialogOpen] = React.useState(false);
 
+    const [tab, setTab] = React.useState<EventPhase>('ongoing');
+    const [search, setSearch] = React.useState('');
+
     const normalized = React.useMemo(() => normalizeProgrammes(programmes, nowTs), [programmes, nowTs]);
+
     const grouped = React.useMemo(() => {
-        return normalized.reduce(
+        const base = normalized.reduce(
             (acc, event) => {
                 acc[event.phase].push(event);
                 return acc;
             },
             { ongoing: [] as EventItem[], upcoming: [] as EventItem[], closed: [] as EventItem[] },
         );
+
+        const q = search.trim().toLowerCase();
+        if (!q) return base;
+
+        const match = (e: EventItem) =>
+            [e.title, e.description, e.tag, e.location].filter(Boolean).some((v) => v.toLowerCase().includes(q));
+
+        return {
+            ongoing: base.ongoing.filter(match),
+            upcoming: base.upcoming.filter(match),
+            closed: base.closed.filter(match),
+        };
+    }, [normalized, search]);
+
+    const counts = React.useMemo(() => {
+        const raw = normalized.reduce(
+            (acc, e) => {
+                acc[e.phase] += 1;
+                return acc;
+            },
+            { ongoing: 0, upcoming: 0, closed: 0 },
+        );
+        return raw;
     }, [normalized]);
 
     React.useEffect(() => {
         setSelectedIds(joined_programme_ids);
     }, [joined_programme_ids]);
+
+    React.useEffect(() => {
+        // pick a sensible default tab
+        const defaultTab: EventPhase = counts.ongoing ? 'ongoing' : counts.upcoming ? 'upcoming' : 'closed';
+        setTab(defaultTab);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [counts.ongoing, counts.upcoming, counts.closed]);
 
     const handleJoin = React.useCallback((id: number) => {
         setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -349,10 +395,7 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
         });
     }, []);
 
-    const quickJoinOptions = React.useMemo(
-        () => normalized.filter((event) => event.phase !== 'closed'),
-        [normalized],
-    );
+    const quickJoinOptions = React.useMemo(() => normalized.filter((event) => event.phase !== 'closed'), [normalized]);
 
     const quickJoinSelection = React.useMemo(
         () => quickJoinOptions.find((event) => String(event.id) === quickJoinId) ?? null,
@@ -370,42 +413,47 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Event List" />
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                        <CalendarDays className="h-5 w-5 text-[#00359c]" />
-                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                            Select events to join
-                        </h1>
+
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-3 md:p-4">
+                {/* Header (compact) */}
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                            <CalendarDays className="h-5 w-5 text-[#00359c]" />
+                            <h1 className="truncate text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                                Select events to join
+                            </h1>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                            Join ongoing or upcoming events. Closed events are read-only.
+                        </p>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                        Review ongoing, upcoming, and closed events. You can only join events that are ongoing or
-                        upcoming.
-                    </p>
                 </div>
 
-                <Card className="border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-                    <div className="flex flex-col gap-4">
+                {/* My joined (more compact) */}
+                <Card className="border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                    <div className="flex flex-col gap-3">
                         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                            <div className="flex items-start gap-3">
-                                <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#00359c]/10 text-[#00359c]">
+                            <div className="flex items-center gap-3">
+                                <div className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[#00359c]/10 text-[#00359c]">
                                     <Users2 className="h-4 w-4" />
                                 </div>
                                 <div>
                                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                         My joined events
                                     </p>
-                                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                                        {selectedSummary.length} event{selectedSummary.length === 1 ? '' : 's'} selected
+                                    <p className="text-xs text-slate-600 dark:text-slate-300">
+                                        {selectedSummary.length} selected
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+
+                            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center md:w-auto">
                                 <Popover open={quickJoinOpen} onOpenChange={setQuickJoinOpen}>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
-                                            className="h-9 w-full justify-between text-left font-normal text-slate-700 shadow-sm dark:text-slate-200 sm:w-64"
+                                            className="h-9 w-full justify-between text-left text-xs font-normal text-slate-700 shadow-sm dark:text-slate-200 sm:w-64"
                                         >
                                             <span className="inline-flex items-center gap-2 truncate">
                                                 {quickJoinSelection ? (
@@ -430,6 +478,7 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-60" />
                                         </Button>
                                     </PopoverTrigger>
+
                                     <PopoverContent className="w-[320px] p-0" align="end">
                                         <Command>
                                             <CommandInput placeholder="Search events..." />
@@ -446,9 +495,7 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                                         className="flex items-center gap-2"
                                                     >
                                                         <span className="inline-flex size-4 items-center justify-center">
-                                                            {quickJoinId === String(event.id) ? (
-                                                                <Check className="h-4 w-4" />
-                                                            ) : null}
+                                                            {quickJoinId === String(event.id) ? <Check className="h-4 w-4" /> : null}
                                                         </span>
                                                         <span className="flex-1 truncate">{event.title}</span>
                                                         <Badge
@@ -463,55 +510,60 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <Button
-                                    type="button"
-                                    onClick={handleQuickJoin}
-                                    disabled={!quickJoinId}
-                                    className="bg-[#00359c] text-white shadow-sm hover:bg-[#00359c]/90"
-                                >
-                                    Join
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    className="shadow-sm"
-                                    onClick={() => setClearDialogOpen(true)}
-                                >
-                                    Clear all
-                                </Button>
+
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        onClick={handleQuickJoin}
+                                        disabled={!quickJoinId}
+                                        className="h-9 flex-1 bg-[#00359c] text-white shadow-sm hover:bg-[#00359c]/90 sm:flex-none"
+                                    >
+                                        Join
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        className="h-9 shadow-sm"
+                                        onClick={() => setClearDialogOpen(true)}
+                                        disabled={selectedSummary.length === 0}
+                                    >
+                                        Clear all
+                                    </Button>
+                                </div>
                             </div>
                         </div>
 
+                        {/* compact chips row */}
                         {selectedSummary.length ? (
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="flex gap-2 overflow-x-auto pb-1">
                                 {selectedSummary.map((event) => (
                                     <div
                                         key={event.id}
-                                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                                        className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200/70 bg-white px-3 py-1 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                                     >
-                                        <span className="truncate font-medium">{event.title}</span>
-                                        <div className="flex items-center gap-2">
-                                            <Badge
-                                                variant="outline"
-                                                className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
-                                            >
-                                                {phaseLabel(event.phase)}
-                                            </Badge>
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="sm"
-                                                className="h-6 px-2 text-[10px]"
-                                                onClick={() => handleLeave(event.id)}
-                                            >
-                                                Remove
-                                            </Button>
-                                        </div>
+                                        <span className="max-w-[220px] truncate font-medium">{event.title}</span>
+                                        <Badge
+                                            variant="outline"
+                                            className={cn('h-5 px-1.5 text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                        >
+                                            {phaseLabel(event.phase)}
+                                        </Badge>
+
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900"
+                                            onClick={() => handleLeave(event.id)}
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </Button>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                                 Pick an ongoing or upcoming event below to join.
                             </p>
                         )}
@@ -544,29 +596,64 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                     </DialogContent>
                 </Dialog>
 
-                <Section
-                    title="Ongoing events"
-                    description="Events currently happening. Join now to participate."
-                    events={grouped.ongoing}
-                    selectedIds={selectedIds}
-                    onJoin={handleJoin}
-                />
+                {/* Events (compact tabs + search) */}
+                <Card className="border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                    <Tabs value={tab} onValueChange={(v) => setTab(v as EventPhase)} className="space-y-3">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <TabsList className="w-full justify-start bg-slate-100/70 dark:bg-slate-900/50 md:w-auto">
+                                <TabsTrigger value="ongoing" className="gap-2">
+                                    Ongoing
+                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                                        {counts.ongoing}
+                                    </Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="upcoming" className="gap-2">
+                                    Upcoming
+                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                                        {counts.upcoming}
+                                    </Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="closed" className="gap-2">
+                                    Closed
+                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                                        {counts.closed}
+                                    </Badge>
+                                </TabsTrigger>
+                            </TabsList>
 
-                <Section
-                    title="Upcoming events"
-                    description="Plan ahead and reserve your spot before the event starts."
-                    events={grouped.upcoming}
-                    selectedIds={selectedIds}
-                    onJoin={handleJoin}
-                />
+                            <div className="relative w-full md:w-72">
+                                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                                <Input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search events..."
+                                    className="h-9 pl-8 text-sm"
+                                />
+                            </div>
+                        </div>
 
-                <Section
-                    title="Closed events"
-                    description="Past events are listed for reference and cannot be joined."
-                    events={grouped.closed}
-                    selectedIds={selectedIds}
-                    onJoin={handleJoin}
-                />
+                        <TabsContent value="ongoing" className="mt-0 space-y-2">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Events currently happening. Join now.
+                            </p>
+                            <EventGrid events={grouped.ongoing} selectedIds={selectedIds} onJoin={handleJoin} />
+                        </TabsContent>
+
+                        <TabsContent value="upcoming" className="mt-0 space-y-2">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Plan ahead and reserve your spot.
+                            </p>
+                            <EventGrid events={grouped.upcoming} selectedIds={selectedIds} onJoin={handleJoin} />
+                        </TabsContent>
+
+                        <TabsContent value="closed" className="mt-0 space-y-2">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Past events (read-only).
+                            </p>
+                            <EventGrid events={grouped.closed} selectedIds={selectedIds} onJoin={handleJoin} />
+                        </TabsContent>
+                    </Tabs>
+                </Card>
             </div>
         </AppLayout>
     );
