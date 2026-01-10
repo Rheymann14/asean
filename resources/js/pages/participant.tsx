@@ -269,8 +269,8 @@ function ParticipantIdPrintCard({
     const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
     const pad = isLandscape ? 'p-3' : 'p-5';
     const headerLogo = isLandscape ? 'h-8 w-8' : 'h-10 w-10';
-    const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
-    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]';
+    const aspect = isLandscape ? 'aspect-[3.37/2.25]' : 'aspect-[3.46/5.51]';
+    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.25in]' : 'print:w-[3.46in] print:h-[5.51in]';
     const flagSrc = getFlagSrc(participant.country);
     const participantName = participant.full_name;
     const nameSize = participantName.length > 28 ? (isLandscape ? 'text-[12px] leading-4' : 'text-lg leading-6') : '';
@@ -283,6 +283,7 @@ function ParticipantIdPrintCard({
                 'print:max-w-none',
                 printSize,
             )}
+            style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >
             <div aria-hidden className="absolute inset-0">
                 <img
@@ -290,7 +291,7 @@ function ParticipantIdPrintCard({
                     alt=""
                     className={cn(
                         'absolute inset-0 h-full w-full object-cover',
-                        isLandscape ? 'opacity-45 dark:opacity-35' : 'opacity-50 dark:opacity-35',
+                        isLandscape ? 'opacity-60 dark:opacity-45' : 'opacity-70 dark:opacity-45',
                     )}
                     draggable={false}
                     loading="lazy"
@@ -1666,18 +1667,31 @@ export default function ParticipantPage(props: PageProps) {
             <div className="hidden print:block">
                 <style>{`
                     @media print {
-                        @page { size: A4 ${printOrientation}; margin: 0.35in; }
+                        @page { size: A4 ${printOrientation}; margin: 0.2in; }
                         body * { visibility: hidden; }
                         #participant-print, #participant-print * { visibility: visible; }
                         #participant-print { position: absolute; inset: 0; }
                     }
                 `}</style>
-                <div id="participant-print" className="min-h-screen bg-white p-4">
+                <div
+                    id="participant-print"
+                    className="min-h-screen bg-white p-4"
+                    style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+                >
                     <div
                         className={cn(
-                            'grid gap-4 auto-rows-max grid-flow-row-dense',
-                            printOrientation === 'landscape' ? 'grid-cols-2' : 'grid-cols-2',
+                            'grid auto-rows-max grid-flow-row-dense',
+                            printOrientation === 'landscape' ? 'grid-cols-3' : 'grid-cols-2',
                         )}
+                        style={{
+                            gridTemplateColumns:
+                                printOrientation === 'landscape'
+                                    ? 'repeat(auto-fit, 3.37in)'
+                                    : 'repeat(auto-fit, 3.46in)',
+                            gap: '0.12in',
+                            alignContent: 'start',
+                            justifyContent: 'start',
+                        }}
                     >
                         {selectedParticipants.map((participant) => (
                             <ParticipantIdPrintCard
