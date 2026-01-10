@@ -179,6 +179,7 @@ export default function Scanner(props: PageProps) {
     const readerRef = React.useRef<BrowserQRCodeReader | null>(null);
     const controlsRef = React.useRef<{ stop: () => void } | null>(null);
     const lockRef = React.useRef(false);
+    const isScanningRef = React.useRef(false);
 
     React.useEffect(() => {
         let mounted = true;
@@ -247,6 +248,7 @@ export default function Scanner(props: PageProps) {
         setLastCode('');
         setStatus('scanning');
         setIsScanning(true);
+        isScanningRef.current = true;
         lockRef.current = false;
 
         try {
@@ -279,10 +281,11 @@ export default function Scanner(props: PageProps) {
                     }
 
                     // ✅ ignore normal "not found" frames
-                    if (err && !isNotFoundZXingError(err)) {
+                    if (err && !isNotFoundZXingError(err) && isScanningRef.current) {
                         setCameraError('Camera scanning error. Try again.');
                         setStatus('error');
                         setIsScanning(false);
+                        isScanningRef.current = false;
                     }
                 },
             );
@@ -315,6 +318,7 @@ export default function Scanner(props: PageProps) {
         readerRef.current = null;
 
         setIsScanning(false);
+        isScanningRef.current = false;
         setStatus((s) => (s === 'scanning' ? 'idle' : s));
     }
 
@@ -335,6 +339,7 @@ export default function Scanner(props: PageProps) {
                     Accept: 'application/json',
                     'X-CSRF-TOKEN': csrf,
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify(payload),
             });
 
