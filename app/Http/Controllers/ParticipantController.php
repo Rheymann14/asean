@@ -36,6 +36,8 @@ class ParticipantController extends Controller
                 return [
                     'id' => $user->id,
                     'full_name' => $user->name,
+                    'display_id' => $user->display_id,
+                    'qr_payload' => $user->qr_payload,
                     'email' => $user->email,
                     'contact_number' => $user->contact_number,
                     'country_id' => $user->country_id,
