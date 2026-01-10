@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import { Form, Head, Link, useRemember } from '@inertiajs/react';
+import { Form, Head, Link, router, useRemember } from '@inertiajs/react';
 
 import { cn } from '@/lib/utils';
 import InputError from '@/components/input-error';
@@ -100,6 +100,7 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"
+                onSuccess={() => router.visit('/participant-dashboard')}
             >
                 {({ processing, errors }) => {
                     const err = errors as Record<string, string | undefined>;

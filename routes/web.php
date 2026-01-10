@@ -27,17 +27,16 @@ Route::get('/event', [ProgrammeController::class, 'publicIndex'])->name('event')
 
 Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issuances');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:participant'])->group(function () {
         Route::get('participant-dashboard', function () {
             return Inertia::render('participant-dashboard');
         })->name('participant-dashboard');
         Route::get('/participant-dashboard', [ParticipantDashboardController::class, 'show'])
-        ->name('participant.dashboard');
+            ->name('participant.dashboard');
     });
 
-
-    Route::middleware(['role:ched'])->group(function () {
+    Route::middleware(['verified', 'role:ched'])->group(function () {
         Route::get('dashboard', function () {
             return Inertia::render('dashboard');
         })->name('dashboard');

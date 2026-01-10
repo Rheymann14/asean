@@ -6,8 +6,6 @@ use App\Models\Country;
 use App\Models\User;
 use App\Models\UserType;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ParticipantController extends Controller
@@ -80,13 +78,14 @@ class ParticipantController extends Controller
             'country_id' => ['nullable', 'exists:countries,id'],
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'is_active' => ['boolean'],
+            'password' => ['nullable', 'string', 'min:8'],
         ]);
 
         User::create([
             'name' => $validated['full_name'],
             'email' => $validated['email'],
             'contact_number' => $validated['contact_number'] ?? null,
-            'password' => Hash::make(Str::random(32)),
+            'password' => $validated['password'] ?? 'aseanph2026',
             'country_id' => $validated['country_id'] ?? null,
             'user_type_id' => $validated['user_type_id'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
