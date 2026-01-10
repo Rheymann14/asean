@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CalendarDays, MapPin, Users2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const FALLBACK_IMAGE = '/img/asean_banner_logo.png';
 
@@ -302,7 +303,9 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
             {},
             {
                 preserveScroll: true,
+                onSuccess: () => toast.success('Event joined.'),
                 onError: () => {
+                    toast.error('Unable to join this event.');
                     setSelectedIds((prev) => prev.filter((item) => item !== id));
                 },
             },
@@ -317,9 +320,10 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
         [normalized, selectedIds],
     );
 
-    const handleClear = React.useCallback(() => {
+    const handleResetSelection = React.useCallback(() => {
         setSelectedIds(joined_programme_ids);
         setQuickJoinId('');
+        toast.success('Selection reset.');
     }, [joined_programme_ids]);
 
     const quickJoinOptions = React.useMemo(
@@ -353,74 +357,70 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                 </div>
 
                 <Card className="border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div className="flex items-start gap-3">
-                            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#00359c]/10 text-[#00359c]">
-                                <Users2 className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                    My joined events
-                                </p>
-                                <div className="mt-1 flex items-baseline gap-2">
-                                    <span className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                                        {selectedSummary.length}
-                                    </span>
-                                    <span className="text-sm text-slate-600 dark:text-slate-300">
-                                        event{selectedSummary.length === 1 ? '' : 's'} selected
-                                    </span>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-start gap-3">
+                                <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#00359c]/10 text-[#00359c]">
+                                    <Users2 className="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        My joined events
+                                    </p>
+                                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                                        {selectedSummary.length} event{selectedSummary.length === 1 ? '' : 's'} selected
+                                    </p>
                                 </div>
                             </div>
-                        </div>
-                        <div className="flex-1">
-                            {selectedSummary.length ? (
-                                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                    {selectedSummary.map((event) => (
-                                        <div
-                                            key={event.id}
-                                            className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-                                        >
-                                            <span className="truncate font-medium">{event.title}</span>
-                                            <Badge
-                                                variant="outline"
-                                                className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
-                                            >
-                                                {phaseLabel(event.phase)}
-                                            </Badge>
-                                        </div>
+                            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                                <select
+                                    value={quickJoinId}
+                                    onChange={(event) => setQuickJoinId(event.target.value)}
+                                    className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:w-64"
+                                >
+                                    <option value="">Quick join an event</option>
+                                    {quickJoinOptions.map((event) => (
+                                        <option key={event.id} value={event.id}>
+                                            {event.title}
+                                        </option>
                                     ))}
-                                </div>
-                            ) : (
-                                <span className="text-sm text-slate-500 dark:text-slate-400">
-                                    Pick an ongoing or upcoming event below to join.
-                                </span>
-                            )}
+                                </select>
+                                <Button type="button" onClick={handleQuickJoin} disabled={!quickJoinId}>
+                                    Join
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleResetSelection}
+                                    disabled={!selectedSummary.length}
+                                >
+                                    Reset selection
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                            <select
-                                value={quickJoinId}
-                                onChange={(event) => setQuickJoinId(event.target.value)}
-                                className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:w-64"
-                            >
-                                <option value="">Quick join an event</option>
-                                {quickJoinOptions.map((event) => (
-                                    <option key={event.id} value={event.id}>
-                                        {event.title}
-                                    </option>
+
+                        {selectedSummary.length ? (
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                {selectedSummary.map((event) => (
+                                    <div
+                                        key={event.id}
+                                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                                    >
+                                        <span className="truncate font-medium">{event.title}</span>
+                                        <Badge
+                                            variant="outline"
+                                            className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                        >
+                                            {phaseLabel(event.phase)}
+                                        </Badge>
+                                    </div>
                                 ))}
-                            </select>
-                            <Button type="button" onClick={handleQuickJoin} disabled={!quickJoinId}>
-                                Join
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleClear}
-                                disabled={!selectedSummary.length}
-                            >
-                                Reset selection
-                            </Button>
-                        </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                Pick an ongoing or upcoming event below to join.
+                            </p>
+                        )}
                     </div>
                 </Card>
 
