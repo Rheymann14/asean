@@ -53,6 +53,7 @@ import {
     Globe2,
     BadgeCheck,
     ImageUp,
+    QrCode as QrCodeIcon,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -244,6 +245,16 @@ function FlagCell({ country }: { country: Country }) {
 
 type PrintOrientation = 'portrait' | 'landscape';
 
+function getFlagSrc(country?: Country | null) {
+    if (!country) return null;
+    if (country.flag_url) return country.flag_url;
+
+    const code = (country.code || '').toLowerCase().trim();
+    if (!code) return null;
+
+    return `/asean/${code}.png`;
+}
+
 function ParticipantIdPrintCard({
     participant,
     qrDataUrl,
@@ -255,42 +266,216 @@ function ParticipantIdPrintCard({
 }) {
     const isLandscape = orientation === 'landscape';
     const qrSize = isLandscape ? 108 : 180;
+    const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
+    const pad = isLandscape ? 'p-3' : 'p-5';
+    const headerLogo = isLandscape ? 'h-8 w-8' : 'h-10 w-10';
+    const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
+    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]';
+    const flagSrc = getFlagSrc(participant.country);
 
     return (
         <div
             className={cn(
-                'flex rounded-2xl border border-slate-300 bg-white p-4 text-slate-900 print:break-inside-avoid',
-                isLandscape ? 'flex-row items-center gap-4' : 'flex-col items-center gap-5 text-center',
-                isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]',
+                'relative w-full max-w-[520px] mx-auto overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm print:break-inside-avoid',
+                aspect,
+                'print:max-w-none',
+                printSize,
             )}
         >
-            <div className={cn('flex flex-1 flex-col', isLandscape ? 'items-start text-left' : 'items-center text-center')}>
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Participant</div>
-                <div className={cn('mt-1 text-base font-semibold leading-tight', isLandscape ? '' : 'text-lg')}>
-                    {participant.full_name}
-                </div>
-                <div className="mt-1 text-xs text-slate-600">{participant.country?.name ?? '—'}</div>
-                <div className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Participant ID</div>
-                <div className="text-lg font-bold">{participant.display_id ?? '—'}</div>
+            <div aria-hidden className="absolute inset-0">
+                <img
+                    src="/img/bg.png"
+                    alt=""
+                    className={cn(
+                        'absolute inset-0 h-full w-full object-cover',
+                        isLandscape ? 'opacity-45' : 'opacity-50',
+                    )}
+                    draggable={false}
+                    loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55" />
+                <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl" />
             </div>
 
-            <div className={cn('flex flex-col items-center gap-2', isLandscape ? '' : 'mt-1')}>
-                {qrDataUrl ? (
-                    <img
-                        src={qrDataUrl}
-                        alt="Participant QR code"
-                        className="rounded-xl border border-slate-200"
-                        style={{ width: qrSize, height: qrSize }}
-                    />
-                ) : (
-                    <div
-                        className="grid place-items-center rounded-xl border border-dashed border-slate-300 text-xs text-slate-500"
-                        style={{ width: qrSize, height: qrSize }}
-                    >
-                        QR unavailable
+            <div className={cn('relative flex h-full flex-col text-slate-900', pad)}>
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                        <img
+                            src="/img/asean_logo.png"
+                            alt="ASEAN"
+                            className={cn('object-contain drop-shadow-sm', headerLogo)}
+                            draggable={false}
+                            loading="lazy"
+                        />
+                        <img
+                            src="/img/bagong_pilipinas.png"
+                            alt="ASEAN"
+                            className={cn('object-contain drop-shadow-sm', headerLogo)}
+                            draggable={false}
+                            loading="lazy"
+                        />
+
+                        <div className="min-w-0">
+                            <div
+                                className={cn(
+                                    'truncate font-semibold tracking-wide text-slate-700',
+                                    isLandscape ? 'text-[11px]' : 'text-xs',
+                                )}
+                            >
+                                ASEAN Philippines 2026
+                            </div>
+                            <div className="truncate text-[10px] text-slate-500">Participant Identification</div>
+                        </div>
                     </div>
-                )}
-                <div className="text-[10px] font-medium text-slate-500">Scan for verification</div>
+                </div>
+
+                <Separator className={cn('bg-slate-200/70', isLandscape ? 'my-2' : 'my-4')} />
+
+                <div
+                    className={cn(
+                        'flex-1',
+                        isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-4',
+                    )}
+                >
+                    <div className="min-w-0">
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                            Participant
+                        </div>
+                        <div
+                            className={cn(
+                                'mt-0.5 font-semibold tracking-tight text-slate-900 break-words line-clamp-2',
+                                isLandscape ? 'text-sm leading-4' : 'text-xl leading-7',
+                            )}
+                            title={participant.full_name}
+                        >
+                            {participant.full_name}
+                        </div>
+
+                        <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-3')}>
+                            <div
+                                className={cn(
+                                    'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm',
+                                    isLandscape ? 'h-9 w-9' : 'h-10 w-10',
+                                )}
+                            >
+                                {flagSrc ? (
+                                    <img
+                                        src={flagSrc}
+                                        alt={participant.country?.name ?? 'Country flag'}
+                                        className="h-full w-full object-cover"
+                                        draggable={false}
+                                        loading="lazy"
+                                        onError={(e) => {
+                                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                        }}
+                                    />
+                                ) : null}
+                            </div>
+
+                            <div className="min-w-0">
+                                <div
+                                    className={cn(
+                                        'truncate font-semibold text-slate-900',
+                                        isLandscape ? 'text-[12px]' : 'text-sm',
+                                    )}
+                                >
+                                    {participant.country?.name ?? '—'}
+                                </div>
+                                {participant.country?.code ? (
+                                    <div className="text-[11px] font-medium text-slate-500">
+                                        {participant.country.code.toUpperCase()}
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+
+                        <div className={cn(isLandscape ? 'mt-2' : 'mt-4')}>
+                            <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                                Participant ID
+                            </div>
+                            <div
+                                className={cn(
+                                    'mt-1 inline-flex max-w-full rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono font-semibold text-slate-900 shadow-sm backdrop-blur',
+                                    isLandscape ? 'text-[10px] leading-4' : 'text-sm leading-5',
+                                    'whitespace-normal break-words',
+                                )}
+                            >
+                                {participant.display_id ?? '—'}
+                            </div>
+                        </div>
+
+                        <div className={cn('text-[10px] text-slate-500', isLandscape ? 'mt-1.5' : 'mt-4')}>
+                            Scan QR for attendance verification.
+                        </div>
+                    </div>
+
+                    <div
+                        className={cn(
+                            'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur',
+                            qrPanelWidth,
+                            isLandscape ? 'p-2.5' : 'p-4',
+                        )}
+                    >
+                        <div
+                            className={cn(
+                                'inline-flex items-center gap-1.5 font-semibold text-slate-700',
+                                isLandscape ? 'mb-1 text-[10px]' : 'mb-2 text-xs',
+                            )}
+                        >
+                            <QrCodeIcon className={cn(isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
+                            QR Code
+                        </div>
+
+                        {qrDataUrl ? (
+                            <img
+                                src={qrDataUrl}
+                                alt="Participant QR code"
+                                className="rounded-2xl bg-white p-2 object-contain"
+                                style={{ width: qrSize, height: qrSize }}
+                                draggable={false}
+                            />
+                        ) : (
+                            <div
+                                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center"
+                                style={{ width: qrSize, height: qrSize }}
+                            >
+                                <QrCodeIcon className="h-7 w-7 text-slate-400" />
+                                <div className="text-[10px] font-medium text-slate-600">QR unavailable</div>
+                            </div>
+                        )}
+
+                        <div className="mt-2 w-full text-center">
+                            <div
+                                className={cn(
+                                    'font-semibold text-slate-900',
+                                    isLandscape ? 'text-[10px] leading-3.5' : 'text-xs',
+                                )}
+                            >
+                                <span
+                                    className="line-clamp-2"
+                                    title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participant.full_name}`}
+                                >
+                                    {participant.country?.code?.toUpperCase() ?? ''}
+                                    {participant.country?.code ? ' • ' : ''}
+                                    {participant.full_name}
+                                </span>
+                            </div>
+                            <div
+                                className={cn(
+                                    'mt-1 font-mono text-slate-500 break-words',
+                                    isLandscape ? 'text-[10px] leading-3.5' : 'text-[11px] leading-4',
+                                )}
+                            >
+                                {participant.display_id ?? '—'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className={cn('flex items-center justify-between text-[10px] text-slate-500', isLandscape ? 'mt-2' : 'mt-4')}>
+                    <span>Keep this ID for event entry</span>
+                    <span className="font-medium">ASEAN PH 2026</span>
+                </div>
             </div>
         </div>
     );
@@ -525,7 +710,11 @@ export default function ParticipantPage(props: PageProps) {
         Promise.all(
             pending.map(async (p) => {
                 try {
-                    const dataUrl = await QRCode.toDataURL(p.qr_payload ?? '', { width: 180, margin: 1 });
+                    const dataUrl = await QRCode.toDataURL(p.qr_payload ?? '', {
+                        margin: 1,
+                        scale: 8,
+                        errorCorrectionLevel: 'M',
+                    });
                     return { id: p.id, dataUrl };
                 } catch {
                     return null;
