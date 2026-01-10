@@ -272,6 +272,7 @@ function ParticipantIdPrintCard({
     const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
     const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]';
     const flagSrc = getFlagSrc(participant.country);
+    const participantName = participant.full_name;
 
     return (
         <div
@@ -288,16 +289,16 @@ function ParticipantIdPrintCard({
                     alt=""
                     className={cn(
                         'absolute inset-0 h-full w-full object-cover',
-                        isLandscape ? 'opacity-45' : 'opacity-50',
+                        isLandscape ? 'opacity-45 dark:opacity-35' : 'opacity-50 dark:opacity-35',
                     )}
                     draggable={false}
                     loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55" />
-                <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl" />
+                <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
+                <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
             </div>
 
-            <div className={cn('relative flex h-full flex-col text-slate-900', pad)}>
+            <div className={cn('relative flex h-full flex-col', pad)}>
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2.5">
                         <img
@@ -318,18 +319,18 @@ function ParticipantIdPrintCard({
                         <div className="min-w-0">
                             <div
                                 className={cn(
-                                    'truncate font-semibold tracking-wide text-slate-700',
+                                    'truncate font-semibold tracking-wide text-slate-700 dark:text-slate-200',
                                     isLandscape ? 'text-[11px]' : 'text-xs',
                                 )}
                             >
                                 ASEAN Philippines 2026
                             </div>
-                            <div className="truncate text-[10px] text-slate-500">Participant Identification</div>
+                            <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">Participant Identification</div>
                         </div>
                     </div>
                 </div>
 
-                <Separator className={cn('bg-slate-200/70', isLandscape ? 'my-2' : 'my-4')} />
+                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-4')} />
 
                 <div
                     className={cn(
@@ -338,23 +339,23 @@ function ParticipantIdPrintCard({
                     )}
                 >
                     <div className="min-w-0">
-                        <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Participant
                         </div>
                         <div
                             className={cn(
-                                'mt-0.5 font-semibold tracking-tight text-slate-900 break-words line-clamp-2',
+                                'mt-0.5 font-semibold tracking-tight text-slate-900 dark:text-slate-100 break-words line-clamp-2',
                                 isLandscape ? 'text-sm leading-4' : 'text-xl leading-7',
                             )}
-                            title={participant.full_name}
+                            title={participantName}
                         >
-                            {participant.full_name}
+                            {participantName}
                         </div>
 
                         <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-3')}>
                             <div
                                 className={cn(
-                                    'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm',
+                                    'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
                                     isLandscape ? 'h-9 w-9' : 'h-10 w-10',
                                 )}
                             >
@@ -375,14 +376,14 @@ function ParticipantIdPrintCard({
                             <div className="min-w-0">
                                 <div
                                     className={cn(
-                                        'truncate font-semibold text-slate-900',
+                                        'truncate font-semibold text-slate-900 dark:text-slate-100',
                                         isLandscape ? 'text-[12px]' : 'text-sm',
                                     )}
                                 >
                                     {participant.country?.name ?? '—'}
                                 </div>
                                 {participant.country?.code ? (
-                                    <div className="text-[11px] font-medium text-slate-500">
+                                    <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                                         {participant.country.code.toUpperCase()}
                                     </div>
                                 ) : null}
@@ -390,12 +391,12 @@ function ParticipantIdPrintCard({
                         </div>
 
                         <div className={cn(isLandscape ? 'mt-2' : 'mt-4')}>
-                            <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                            <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                 Participant ID
                             </div>
                             <div
                                 className={cn(
-                                    'mt-1 inline-flex max-w-full rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono font-semibold text-slate-900 shadow-sm backdrop-blur',
+                                    'mt-1 inline-flex max-w-full rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono font-semibold text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
                                     isLandscape ? 'text-[10px] leading-4' : 'text-sm leading-5',
                                     'whitespace-normal break-words',
                                 )}
@@ -404,21 +405,21 @@ function ParticipantIdPrintCard({
                             </div>
                         </div>
 
-                        <div className={cn('text-[10px] text-slate-500', isLandscape ? 'mt-1.5' : 'mt-4')}>
+                        <div className={cn('text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-1.5' : 'mt-4')}>
                             Scan QR for attendance verification.
                         </div>
                     </div>
 
                     <div
                         className={cn(
-                            'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur',
+                            'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
                             qrPanelWidth,
                             isLandscape ? 'p-2.5' : 'p-4',
                         )}
                     >
                         <div
                             className={cn(
-                                'inline-flex items-center gap-1.5 font-semibold text-slate-700',
+                                'inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200',
                                 isLandscape ? 'mb-1 text-[10px]' : 'mb-2 text-xs',
                             )}
                         >
@@ -436,33 +437,33 @@ function ParticipantIdPrintCard({
                             />
                         ) : (
                             <div
-                                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center"
+                                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30"
                                 style={{ width: qrSize, height: qrSize }}
                             >
                                 <QrCodeIcon className="h-7 w-7 text-slate-400" />
-                                <div className="text-[10px] font-medium text-slate-600">QR unavailable</div>
+                                <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">QR unavailable</div>
                             </div>
                         )}
 
                         <div className="mt-2 w-full text-center">
                             <div
                                 className={cn(
-                                    'font-semibold text-slate-900',
+                                    'font-semibold text-slate-900 dark:text-slate-100',
                                     isLandscape ? 'text-[10px] leading-3.5' : 'text-xs',
                                 )}
                             >
                                 <span
                                     className="line-clamp-2"
-                                    title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participant.full_name}`}
+                                    title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participantName}`}
                                 >
                                     {participant.country?.code?.toUpperCase() ?? ''}
                                     {participant.country?.code ? ' • ' : ''}
-                                    {participant.full_name}
+                                    {participantName}
                                 </span>
                             </div>
                             <div
                                 className={cn(
-                                    'mt-1 font-mono text-slate-500 break-words',
+                                    'mt-1 font-mono text-slate-500 dark:text-slate-400 break-words',
                                     isLandscape ? 'text-[10px] leading-3.5' : 'text-[11px] leading-4',
                                 )}
                             >
@@ -472,7 +473,7 @@ function ParticipantIdPrintCard({
                     </div>
                 </div>
 
-                <div className={cn('flex items-center justify-between text-[10px] text-slate-500', isLandscape ? 'mt-2' : 'mt-4')}>
+                <div className={cn('flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-2' : 'mt-4')}>
                     <span>Keep this ID for event entry</span>
                     <span className="font-medium">ASEAN PH 2026</span>
                 </div>
