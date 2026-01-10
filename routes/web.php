@@ -11,6 +11,7 @@ use App\Http\Controllers\IssuanceController;
 use App\Http\Controllers\ContactDetailController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\VenueController;
+use App\Http\Controllers\ScannerController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -70,7 +71,8 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         Route::get('event-management', [ProgrammeController::class, 'index'])->name('event-management');
         Route::resource('programmes', ProgrammeController::class)->only(['store', 'update', 'destroy']);
 
-        Route::get('scanner', fn () => Inertia::render('scanner'))->name('scanner');
+        Route::get('scanner', [ScannerController::class, 'index'])->name('scanner');
+        Route::post('scanner/scan', [ScannerController::class, 'scan'])->name('scanner.scan');
     });
 });
 

@@ -1,0 +1,165 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ParticipantAttendance;
+use App\Models\Programme;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Inertia\Inertia;
+
+class ScannerController extends Controller
+{
+    public function index()
+    {
+        $now = now();
+
+        $programmes = Programme::query()
+            ->orderBy('starts_at')
+            ->get()
+            ->map(function (Programme $programme) use ($now) {
+                return [
+                    'id' => $programme->id,
+                    'title' => $programme->title,
+                    'starts_at' => $programme->starts_at?->toISOString(),
+                    'ends_at' => $programme->ends_at?->toISOString(),
+                    'is_active' => $programme->is_active,
+                    'phase' => $this->resolvePhase($programme, $now),
+                ];
+            })
+            ->values();
+
+        $defaultEventId = $programmes->firstWhere('phase', 'ongoing')['id']
+            ?? $programmes->firstWhere('phase', 'upcoming')['id']
+            ?? null;
+
+        return Inertia::render('scanner', [
+            'events' => $programmes,
+            'default_event_id' => $defaultEventId,
+        ]);
+    }
+
+    public function scan(Request $request)
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string'],
+            'event_id' => ['required', 'exists:programmes,id'],
+        ]);
+
+        $event = Programme::query()->find($validated['event_id']);
+        if (! $event) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Selected event not found.',
+            ]);
+        }
+
+        $participant = $this->resolveParticipant($validated['code']);
+        if (! $participant) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Invalid QR code or participant ID.',
+            ]);
+        }
+
+        if (! $participant->is_active) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Participant is inactive.',
+            ]);
+        }
+
+        $isRegistered = $participant->joinedProgrammes()
+            ->where('programmes.id', $event->id)
+            ->exists();
+
+        if (! $isRegistered) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Participant is not registered for the selected event.',
+            ]);
+        }
+
+        ParticipantAttendance::updateOrCreate(
+            ['user_id' => $participant->id, 'programme_id' => $event->id],
+            ['status' => 'scanned', 'scanned_at' => now()],
+        );
+
+        $participant->loadMissing(['country', 'userType', 'joinedProgrammes']);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Attendance recorded successfully.',
+            'participant' => [
+                'id' => $participant->id,
+                'full_name' => $participant->name,
+                'email' => $participant->email,
+                'country' => $participant->country?->name,
+                'country_flag_url' => $participant->country?->flag_url,
+                'user_type' => $participant->userType?->name,
+                'is_verified' => (bool) $participant->email_verified_at,
+            ],
+            'registered_events' => $participant->joinedProgrammes
+                ->sortBy('starts_at')
+                ->map(fn (Programme $programme) => [
+                    'id' => $programme->id,
+                    'title' => $programme->title,
+                    'starts_at' => $programme->starts_at?->toISOString(),
+                ])
+                ->values(),
+            'checked_in_event' => [
+                'id' => $event->id,
+                'title' => $event->title,
+            ],
+        ]);
+    }
+
+    private function resolveParticipant(string $code): ?User
+    {
+        $participant = User::query()
+            ->where('display_id', $code)
+            ->first();
+
+        if ($participant) {
+            return $participant;
+        }
+
+        try {
+            $token = Crypt::decryptString($code);
+            $participant = User::query()
+                ->where('qr_token', $token)
+                ->first();
+        } catch (DecryptException) {
+            $participant = User::query()
+                ->where('qr_token', $code)
+                ->first();
+        }
+
+        return $participant;
+    }
+
+    private function resolvePhase(Programme $programme, Carbon $now): string
+    {
+        if (! $programme->is_active) {
+            return 'closed';
+        }
+
+        $start = $programme->starts_at ?? $programme->ends_at ?? $now;
+        $end = $programme->ends_at;
+
+        if ($end && $now->greaterThan($end)) {
+            return 'closed';
+        }
+
+        if ($now->lessThan($start)) {
+            return 'upcoming';
+        }
+
+        $sameDay = $now->isSameDay($start);
+
+        return $sameDay ? 'ongoing' : 'closed';
+    }
+}
