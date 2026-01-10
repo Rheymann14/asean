@@ -62,6 +62,11 @@ export default function PublicLayout({
     const { auth } = usePage<SharedData>().props;
     const pageUrl = usePage().url;
     const isHome = pageUrl === '/' || pageUrl.startsWith('/?');
+    const userType = auth.user?.user_type ?? auth.user?.userType;
+    const roleName = (userType?.name ?? '').toUpperCase();
+    const roleSlug = (userType?.slug ?? '').toUpperCase();
+    const isChed = roleName === 'CHED' || roleSlug === 'CHED';
+    const dashboardHref = isChed ? '/dashboard' : '/participant-dashboard';
 
     const toHref = (href: string) => {
         if (href.startsWith('#') && !isHome) return `/${href}`;
@@ -152,7 +157,7 @@ export default function PublicLayout({
 
                             {auth.user ? (
                                 <Button asChild className="rounded-xl px-5 py-6 text-base">
-                                    <Link href="/dashboard">
+                                    <Link href={dashboardHref}>
                                         <LayoutDashboard className="mr-2 h-5 w-5" />
                                         Dashboard
                                     </Link>
@@ -252,7 +257,7 @@ export default function PublicLayout({
                                             <div className="mt-2 grid gap-2">
                                                 {auth.user ? (
                                                     <Button asChild className="rounded-xl">
-                                                        <Link href="/dashboard">Dashboard</Link>
+                                                        <Link href={dashboardHref}>Dashboard</Link>
                                                     </Button>
                                                 ) : (
                                                     <>
