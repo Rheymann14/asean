@@ -265,6 +265,22 @@ function StatusBadge({ active }: { active: boolean }) {
     );
 }
 
+function RegistrationBadge({ registered }: { registered: boolean }) {
+    return (
+        <Badge
+            variant={registered ? 'default' : 'secondary'}
+            className={cn(
+                'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px]',
+                registered
+                    ? 'bg-blue-600/10 text-blue-700 hover:bg-blue-600/10 dark:bg-blue-500/15 dark:text-blue-300'
+                    : 'bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300',
+            )}
+        >
+            {registered ? 'Registered' : 'Not registered'}
+        </Badge>
+    );
+}
+
 function EmptyState({
     icon,
     title,
@@ -1495,6 +1511,7 @@ export default function ParticipantPage(props: PageProps) {
                                                     <TableHead className="w-[200px]">Contact Number</TableHead>
                                                     <TableHead className="w-[200px]">User Type</TableHead>
                                                     <TableHead className="w-[140px]">Status</TableHead>
+                                                    <TableHead className="w-[160px]">Registered</TableHead>
                                                     <TableHead className="w-[140px]">Created</TableHead>
                                                     <TableHead className="w-[80px] text-right">Action</TableHead>
                                                 </TableRow>
@@ -1564,6 +1581,10 @@ export default function ParticipantPage(props: PageProps) {
 
                                                             <TableCell>
                                                                 <StatusBadge active={p.is_active} />
+                                                            </TableCell>
+
+                                                            <TableCell>
+                                                                <RegistrationBadge registered={(p.joined_programme_ids ?? []).length > 0} />
                                                             </TableCell>
 
                                                             <TableCell className="text-slate-700 dark:text-slate-300">
