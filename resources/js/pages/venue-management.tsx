@@ -542,12 +542,19 @@ export default function VenueManagement(props: PageProps) {
                                                 <SelectValue placeholder="Select event" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {programmes.map((p) => (
-                                                    <SelectItem key={p.id} value={String(p.id)}>
-                                                        {p.title}
-                                                    </SelectItem>
-                                                ))}
+                                                {programmes?.length ? (
+                                                    programmes.map((p) => (
+                                                        <SelectItem key={p.id} value={String(p.id)}>
+                                                            {p.title}
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
+                                                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                                        No record found, try adding events first.
+                                                    </div>
+                                                )}
                                             </SelectContent>
+
                                         </Select>
                                         {form.errors.programme_id ? (
                                             <div className="text-xs text-red-600">{form.errors.programme_id}</div>

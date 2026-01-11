@@ -163,7 +163,7 @@ function Pill({ children, tone = 'default' }: { children: React.ReactNode; tone?
             className={cn(
                 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
                 tone === 'success' &&
-                    'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+                'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
                 tone === 'danger' && 'bg-red-600/10 text-red-700 dark:bg-red-500/15 dark:text-red-300',
                 tone === 'default' && 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
             )}
@@ -314,8 +314,8 @@ export default function Scanner(props: PageProps) {
                 e?.name === 'NotAllowedError'
                     ? 'Camera permission denied. Please allow camera access.'
                     : e?.name === 'NotFoundError'
-                      ? 'No camera found on this device.'
-                      : 'Unable to start camera. Try again.';
+                        ? 'No camera found on this device.'
+                        : 'Unable to start camera. Try again.';
             setCameraError(msg);
             setStatus('error');
             setIsScanning(false);
@@ -418,12 +418,12 @@ export default function Scanner(props: PageProps) {
                                 {status === 'verifying'
                                     ? 'Verifying...'
                                     : status === 'scanning'
-                                      ? 'Scanning'
-                                      : status === 'success'
-                                        ? 'Verified'
-                                        : status === 'error'
-                                          ? 'Rejected'
-                                          : 'Ready'}
+                                        ? 'Scanning'
+                                        : status === 'success'
+                                            ? 'Verified'
+                                            : status === 'error'
+                                                ? 'Rejected'
+                                                : 'Ready'}
                             </Pill>
                         </div>
                     </div>
@@ -679,15 +679,12 @@ export default function Scanner(props: PageProps) {
                                     </div>
                                 </div>
 
-                                {result.already_checked_in ? (
+                                {result.already_checked_in && (
                                     <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                                         Already checked in
                                     </span>
-                                ) : (
-                                    <Button onClick={scanAgain} variant="secondary" className="rounded-2xl">
-                                        Scan Again
-                                    </Button>
                                 )}
+
                             </div>
 
                             {result.participant ? (
