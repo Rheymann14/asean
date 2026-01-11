@@ -46,7 +46,7 @@ type DashboardEvent = {
 };
 
 type LineDatum = {
-    date: string;
+    month: number;
     label: string;
     scans: number;
     scans_by_country: Record<string, number>;
@@ -352,96 +352,15 @@ export default function Dashboard() {
                     />
                 </div>
 
-                {/* Table + Charts */}
-                <div className="grid gap-3 lg:grid-cols-3">
-                    {/* Top Events table */}
-                    <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border lg:col-span-1">
-                        <CardHeader className="p-4 pb-2">
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="space-y-0.5">
-                                    <CardTitle className="text-sm">Top Events</CardTitle>
-                                    <div className="text-xs text-muted-foreground">Sorted by check-ins (up to 20)</div>
-                                </div>
-
-                                <Badge variant="secondary" className="rounded-full text-[11px]">
-                                    {topEventsRows.length} shown
-                                </Badge>
-                            </div>
-                        </CardHeader>
-
-                        <CardContent className="p-0">
-                            <div className="max-h-[220px] overflow-auto">
-                                <table className="w-full text-xs">
-                                    <thead className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
-                                        <tr className="text-muted-foreground">
-                                            <th className="w-10 px-4 py-2 text-left font-semibold">#</th>
-                                            <th className="px-2 py-2 text-left font-semibold">Event</th>
-                                            <th className="w-24 px-2 py-2 text-left font-semibold">Date</th>
-                                            <th className="w-28 px-4 py-2 text-right font-semibold">Attendance</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody className="divide-y">
-                                        {topEventsRows.map((ev, idx) => {
-                                            const pct = Math.max(0, Math.min(100, Math.round((ev.attendance / maxScanned) * 100)));
-
-                                            return (
-                                                <tr key={ev.id} className="hover:bg-muted/40">
-                                                    {/* ✅ removed dots after number */}
-                                                    <td className="px-4 py-2 align-top">
-                                                        <span className="font-semibold text-foreground">{idx + 1}</span>
-                                                    </td>
-
-                                                    <td className="px-2 py-2">
-                                                        <div className="min-w-0">
-                                                            <div className="truncate font-medium text-foreground" title={ev.title}>
-                                                                {ev.title}
-                                                            </div>
-
-                                                            {/* ✅ subtle solid indicator bar (NO gradient) */}
-                                                            <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
-                                                                <div
-                                                                    className="h-1.5 rounded-full"
-                                                                    style={{
-                                                                        width: `${pct}%`,
-                                                                        backgroundColor: CHART_PRIMARY,
-                                                                        opacity: 0.9,
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </td>
-
-                                                    <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
-                                                        {formatShortDate(ev.starts_at)}
-                                                    </td>
-
-                                                    <td className="px-4 py-2 align-top text-right">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-7 px-2 text-xs font-semibold text-foreground"
-                                                            onClick={() => openAttendance(ev)}
-                                                        >
-                                                            {ev.attendance.toLocaleString()}
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardContent>
-                    </Card>
-
+                {/* Charts */}
+                <div className="grid gap-3 lg:grid-cols-2">
                     {/* Scan Trend (Area) - no gradient */}
-                    <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border lg:col-span-1">
+                    <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
                         <CardHeader className="p-4 pb-2">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5">
                                     <CardTitle className="text-sm">Scan Trend</CardTitle>
-                                    <div className="text-xs text-muted-foreground">Last 7 days</div>
+                                    <div className="text-xs text-muted-foreground">January to December</div>
                                 </div>
 
                                 <Badge variant="secondary" className="rounded-full text-[11px]">
@@ -490,7 +409,7 @@ export default function Dashboard() {
                     </Card>
 
                     {/* Donut (subtle solid colors) */}
-                    <Card className="relative overflow-hidden rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border lg:col-span-1">
+                    <Card className="relative overflow-hidden rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
                         <CardHeader className="relative p-4 pb-2">
                             <CardTitle className="text-sm">Scan Rate</CardTitle>
                             <div className="text-xs text-muted-foreground">Scanned vs not scanned</div>
@@ -550,6 +469,87 @@ export default function Dashboard() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Top Events table */}
+                <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
+                    <CardHeader className="p-4 pb-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                                <CardTitle className="text-sm">Top Events</CardTitle>
+                                <div className="text-xs text-muted-foreground">Sorted by check-ins (up to 20)</div>
+                            </div>
+
+                            <Badge variant="secondary" className="rounded-full text-[11px]">
+                                {topEventsRows.length} shown
+                            </Badge>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent className="p-0">
+                        <div className="max-h-[220px] overflow-auto">
+                            <table className="w-full text-xs">
+                                <thead className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
+                                    <tr className="text-muted-foreground">
+                                        <th className="w-10 px-4 py-2 text-left font-semibold">#</th>
+                                        <th className="px-2 py-2 text-left font-semibold">Event</th>
+                                        <th className="w-24 px-2 py-2 text-left font-semibold">Date</th>
+                                        <th className="w-28 px-4 py-2 text-right font-semibold">Attendance</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody className="divide-y">
+                                    {topEventsRows.map((ev, idx) => {
+                                        const pct = Math.max(0, Math.min(100, Math.round((ev.attendance / maxScanned) * 100)));
+
+                                        return (
+                                            <tr key={ev.id} className="hover:bg-muted/40">
+                                                {/* ✅ removed dots after number */}
+                                                <td className="px-4 py-2 align-top">
+                                                    <span className="font-semibold text-foreground">{idx + 1}</span>
+                                                </td>
+
+                                                <td className="px-2 py-2">
+                                                    <div className="min-w-0">
+                                                        <div className="truncate font-medium text-foreground" title={ev.title}>
+                                                            {ev.title}
+                                                        </div>
+
+                                                        {/* ✅ subtle solid indicator bar (NO gradient) */}
+                                                        <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+                                                            <div
+                                                                className="h-1.5 rounded-full"
+                                                                style={{
+                                                                    width: `${pct}%`,
+                                                                    backgroundColor: CHART_PRIMARY,
+                                                                    opacity: 0.9,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
+                                                    {formatShortDate(ev.starts_at)}
+                                                </td>
+
+                                                <td className="px-4 py-2 align-top text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 px-2 text-xs font-semibold text-foreground"
+                                                        onClick={() => openAttendance(ev)}
+                                                    >
+                                                        {ev.attendance.toLocaleString()}
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <Dialog
                     open={attendanceOpen}

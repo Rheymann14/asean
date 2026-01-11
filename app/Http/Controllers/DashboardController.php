@@ -103,40 +103,37 @@ class DashboardController extends Controller
             })
             ->values();
 
-        $start = now()->startOfDay()->subDays(6);
-        $end = now()->endOfDay();
+        $year = now()->year;
 
-        $dailyTotals = ParticipantAttendance::query()
+        $monthlyTotals = ParticipantAttendance::query()
             ->whereNotNull('scanned_at')
-            ->whereBetween('scanned_at', [$start, $end])
-            ->selectRaw('DATE(scanned_at) as day, COUNT(*) as total')
-            ->groupBy('day')
-            ->pluck('total', 'day');
+            ->whereYear('scanned_at', $year)
+            ->selectRaw('MONTH(scanned_at) as month, COUNT(*) as total')
+            ->groupBy('month')
+            ->pluck('total', 'month');
 
-        $dailyByCountry = ParticipantAttendance::query()
+        $monthlyByCountry = ParticipantAttendance::query()
             ->join('users', 'participant_attendances.user_id', '=', 'users.id')
             ->whereNotNull('participant_attendances.scanned_at')
             ->whereNotNull('users.country_id')
-            ->whereBetween('participant_attendances.scanned_at', [$start, $end])
-            ->selectRaw('DATE(participant_attendances.scanned_at) as day, users.country_id as country_id, COUNT(*) as total')
-            ->groupBy('day', 'country_id')
+            ->whereYear('participant_attendances.scanned_at', $year)
+            ->selectRaw('MONTH(participant_attendances.scanned_at) as month, users.country_id as country_id, COUNT(*) as total')
+            ->groupBy('month', 'country_id')
             ->get()
-            ->groupBy('day');
+            ->groupBy('month');
 
         $lineData = collect();
 
-        for ($offset = 0; $offset < 7; $offset++) {
-            $day = $start->copy()->addDays($offset);
-            $dayKey = $day->toDateString();
-            $countryRows = $dailyByCountry->get($dayKey, collect());
+        for ($month = 1; $month <= 12; $month++) {
+            $countryRows = $monthlyByCountry->get($month, collect());
             $countryCounts = $countryRows->mapWithKeys(fn ($row) => [
                 (string) $row->country_id => (int) $row->total,
             ])->all();
 
             $lineData->push([
-                'date' => $dayKey,
-                'label' => $day->format('M d'),
-                'scans' => (int) ($dailyTotals[$dayKey] ?? 0),
+                'month' => $month,
+                'label' => now()->copy()->startOfYear()->setMonth($month)->format('M'),
+                'scans' => (int) ($monthlyTotals[$month] ?? 0),
                 'scans_by_country' => $countryCounts,
             ]);
         }
