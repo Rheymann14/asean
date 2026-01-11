@@ -2,11 +2,12 @@ import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
@@ -18,23 +19,68 @@ import { cn } from '@/lib/utils';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: dashboard().url }];
 
-type CountryOption = { value: string; label: string; flag: string };
+type CountryOption = {
+    id: number;
+    code: string;
+    name: string;
+    flag_url?: string | null;
+};
 
-const ASEAN_COUNTRIES: CountryOption[] = [
-    { value: 'brunei', label: 'Brunei Darussalam', flag: '/asean/brunei.jpg' },
-    { value: 'cambodia', label: 'Cambodia', flag: '/asean/cambodia.jpg' },
-    { value: 'indonesia', label: 'Indonesia', flag: '/asean/indonesia.jpg' },
-    { value: 'laos', label: 'Lao PDR', flag: '/asean/laos.jpg' },
-    { value: 'malaysia', label: 'Malaysia', flag: '/asean/malaysia.jpg' },
-    { value: 'myanmar', label: 'Myanmar', flag: '/asean/myanmar.jpg' },
-    { value: 'philippines', label: 'Philippines', flag: '/asean/philippines.jpg' },
-    { value: 'singapore', label: 'Singapore', flag: '/asean/singapore.jpg' },
-    { value: 'thailand', label: 'Thailand', flag: '/asean/thailand.jpg' },
-    { value: 'vietnam', label: 'Viet Nam', flag: '/asean/vietnam.jpg' },
-];
+type EventParticipant = {
+    id: number | null;
+    name: string | null;
+    email: string | null;
+    display_id: string | null;
+    country_id: number | null;
+    country_name: string | null;
+    country_flag_url: string | null;
+    scanned_at: string | null;
+};
 
-function fmtShortDate(d: Date) {
-    return new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit' }).format(d);
+type DashboardEvent = {
+    id: number;
+    title: string;
+    starts_at: string | null;
+    attendance_count: number;
+    participants: EventParticipant[];
+};
+
+type LineDatum = {
+    date: string;
+    label: string;
+    scans: number;
+    scans_by_country: Record<string, number>;
+};
+
+type PageProps = {
+    countries: CountryOption[];
+    stats: {
+        participants_total: number;
+        events_total: number;
+        scans_total: number;
+    };
+    country_stats: Record<string, { participants: number; scans: number }>;
+    events: DashboardEvent[];
+    line_data: LineDatum[];
+};
+
+function formatShortDate(dateString?: string | null) {
+    if (!dateString) return 'TBA';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).format(date);
+}
+
+function formatTime(dateString?: string | null) {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-PH', { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
+function getFlagSrc(country?: CountryOption | null) {
+    if (!country) return null;
+    if (country.flag_url) return country.flag_url;
+    const code = (country.code || '').toLowerCase().trim();
+    return code ? `/asean/${code}.png` : null;
 }
 
 function KpiCard({
@@ -79,10 +125,18 @@ function KpiCard({
 }
 
 export default function Dashboard() {
+    const { props } = usePage<PageProps>();
     const [open, setOpen] = React.useState(false);
     const [country, setCountry] = React.useState<string | null>(null);
+    const [attendanceOpen, setAttendanceOpen] = React.useState(false);
+    const [selectedEvent, setSelectedEvent] = React.useState<(DashboardEvent & { participants: EventParticipant[] }) | null>(
+        null,
+    );
 
-    const current = country ? ASEAN_COUNTRIES.find((c) => c.value === country) : null;
+    const { countries, stats, events, country_stats: countryStats, line_data: lineData } = props;
+
+    const countryId = country ? Number(country) : null;
+    const current = countryId ? countries.find((c) => c.id === countryId) ?? null : null;
 
     // ✅ Subtle chart colors (no gradients)
     const CHART_PRIMARY = '#60a5fa'; // soft blue
@@ -90,64 +144,39 @@ export default function Dashboard() {
     const PIE_SCANNED = '#86efac'; // soft green
     const PIE_NOT = '#fda4af'; // soft rose
 
-    // ✅ mock stats (UI only)
-    const stats = React.useMemo(() => {
-        const base = { participants_total: 842, events_total: 14, scans_total: 623 };
-        if (!current) return { ...base, participants_filtered: base.participants_total, scans_total: base.scans_total };
+    const filteredParticipants = countryId ? countryStats?.[String(countryId)]?.participants ?? 0 : stats.participants_total;
+    const filteredScans = countryId ? countryStats?.[String(countryId)]?.scans ?? 0 : stats.scans_total;
 
-        const factor = 0.12 + (current.value.length % 5) * 0.02;
-        return {
-            ...base,
-            participants_filtered: Math.max(12, Math.round(base.participants_total * factor)),
-            scans_total: Math.max(6, Math.round(base.scans_total * factor)),
-        };
-    }, [current]);
-
-    // ✅ mock attendance per event (UI only)
     const attendanceByEvent = React.useMemo(() => {
-        const items = [
-            { id: 1, title: 'Opening Ceremony', date: 'Jan 12, 2026', scanned: 210 },
-            { id: 2, title: 'Plenary Session A', date: 'Jan 13, 2026', scanned: 176 },
-            { id: 3, title: 'Ministerial Roundtable', date: 'Jan 13, 2026', scanned: 124 },
-            { id: 4, title: 'Cultural Night', date: 'Jan 14, 2026', scanned: 198 },
-            { id: 5, title: 'Closing Ceremony', date: 'Jan 15, 2026', scanned: 160 },
-            { id: 6, title: 'Press Briefing', date: 'Jan 12, 2026', scanned: 98 },
-            { id: 7, title: 'B2B / Networking', date: 'Jan 14, 2026', scanned: 132 },
-        ];
+        return events.map((event) => {
+            const filtered = countryId
+                ? event.participants.filter((participant) => participant.country_id === countryId)
+                : event.participants;
 
-        if (!current) return items;
+            return {
+                ...event,
+                participants: filtered,
+                attendance: countryId ? filtered.length : event.attendance_count,
+            };
+        });
+    }, [events, countryId]);
 
-        const f = 0.15 + (current.value.length % 4) * 0.03;
-        return items.map((x) => ({ ...x, scanned: Math.max(1, Math.round(x.scanned * f)) }));
-    }, [current]);
-
-    /** ✅ Top events table rows (up to 20) */
     const topEventsRows = React.useMemo(() => {
-        return attendanceByEvent.slice().sort((a, b) => b.scanned - a.scanned).slice(0, 20);
+        return attendanceByEvent.slice().sort((a, b) => b.attendance - a.attendance).slice(0, 20);
     }, [attendanceByEvent]);
 
-    const maxScanned = React.useMemo(() => Math.max(1, ...topEventsRows.map((x) => x.scanned)), [topEventsRows]);
+    const maxScanned = React.useMemo(() => Math.max(1, ...topEventsRows.map((x) => x.attendance)), [topEventsRows]);
 
-    // ✅ area chart data (7 days)
-    const lineData = React.useMemo(() => {
-        const today = new Date();
-        const points = Array.from({ length: 7 }).map((_, idx) => {
-            const d = new Date(today);
-            d.setDate(today.getDate() - (6 - idx));
-            const base = current ? 8 : 45;
-            const jitter = (d.getDate() % 7) * (current ? 1.2 : 4.3);
-            return { day: fmtShortDate(d), scans: Math.max(0, Math.round(base + jitter)) };
-        });
+    const chartLineData = React.useMemo(() => {
+        return lineData.map((item) => ({
+            day: item.label,
+            scans: countryId ? item.scans_by_country[String(countryId)] ?? 0 : item.scans,
+        }));
+    }, [lineData, countryId]);
 
-        const last = points[points.length - 1];
-        if (last) last.scans = current ? Math.min(40, last.scans + 6) : Math.min(90, last.scans + 14);
-        return points;
-    }, [current]);
-
-    // ✅ donut chart data (scanned vs remaining)
     const donut = React.useMemo(() => {
-        const scanned = Math.max(0, stats.scans_total);
-        const remaining = Math.max(0, stats.participants_filtered - scanned);
+        const scanned = Math.max(0, filteredScans);
+        const remaining = Math.max(0, filteredParticipants - scanned);
         const total = Math.max(1, scanned + remaining);
         const rate = Math.round((scanned / total) * 100);
 
@@ -161,7 +190,7 @@ export default function Dashboard() {
                 { name: 'Not scanned', value: remaining },
             ],
         };
-    }, [stats.participants_filtered, stats.scans_total]);
+    }, [filteredParticipants, filteredScans]);
 
     const currentBadge = current ? (
         <Badge variant="secondary" className="rounded-full">
@@ -169,11 +198,19 @@ export default function Dashboard() {
         </Badge>
     ) : null;
 
+    const selectedParticipants = selectedEvent?.participants ?? [];
+    const selectedEventDate = selectedEvent?.starts_at ? formatShortDate(selectedEvent.starts_at) : null;
+
+    const openAttendance = (event: (DashboardEvent & { participants: EventParticipant[] }) | null) => {
+        setSelectedEvent(event);
+        setAttendanceOpen(!!event);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
 
-            <div className="flex h-full flex-1 flex-col gap-3 overflow-x-auto rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-3 overflow-x-auto rounded-xl p-3">
                 {/* Header (compact) */}
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-0.5">
@@ -188,8 +225,10 @@ export default function Dashboard() {
                                 <span className="inline-flex items-center gap-2">
                                     Showing for
                                     <span className="inline-flex items-center gap-2 rounded-full border bg-background px-2 py-1 text-foreground">
-                                        <img src={current.flag} alt="" className="size-4 rounded-full object-cover" />
-                                        <span className="max-w-[170px] truncate font-medium">{current.label}</span>
+                                        {getFlagSrc(current) ? (
+                                            <img src={getFlagSrc(current) ?? ''} alt="" className="size-4 rounded-full object-cover" />
+                                        ) : null}
+                                        <span className="max-w-[170px] truncate font-medium">{current.name}</span>
                                     </span>
                                 </span>
                             ) : (
@@ -211,8 +250,14 @@ export default function Dashboard() {
                                     <span className="inline-flex items-center gap-2">
                                         {current ? (
                                             <>
-                                                <img src={current.flag} alt="" className="size-5 rounded-full object-cover" />
-                                                <span className="max-w-[180px] truncate">{current.label}</span>
+                                                {getFlagSrc(current) ? (
+                                                    <img
+                                                        src={getFlagSrc(current) ?? ''}
+                                                        alt=""
+                                                        className="size-5 rounded-full object-cover"
+                                                    />
+                                                ) : null}
+                                                <span className="max-w-[180px] truncate">{current.name}</span>
                                             </>
                                         ) : (
                                             <span className="text-muted-foreground">All countries</span>
@@ -242,21 +287,23 @@ export default function Dashboard() {
                                             <span>All countries</span>
                                         </CommandItem>
 
-                                        {ASEAN_COUNTRIES.map((c) => (
+                                        {countries.map((c) => (
                                             <CommandItem
-                                                key={c.value}
-                                                value={c.label}
+                                                key={c.id}
+                                                value={String(c.id)}
                                                 onSelect={() => {
-                                                    setCountry(c.value);
+                                                    setCountry(String(c.id));
                                                     setOpen(false);
                                                 }}
                                                 className="gap-2"
                                             >
                                                 <span className="inline-flex size-4 items-center justify-center">
-                                                    {country === c.value ? <Check className="size-4" /> : null}
+                                                    {country === String(c.id) ? <Check className="size-4" /> : null}
                                                 </span>
-                                                <img src={c.flag} alt="" className="size-5 rounded-full object-cover" />
-                                                <span className="truncate">{c.label}</span>
+                                                {getFlagSrc(c) ? (
+                                                    <img src={getFlagSrc(c) ?? ''} alt="" className="size-5 rounded-full object-cover" />
+                                                ) : null}
+                                                <span className="truncate">{c.name}</span>
                                             </CommandItem>
                                         ))}
                                     </CommandGroup>
@@ -270,7 +317,7 @@ export default function Dashboard() {
                 <div className="grid gap-3 md:grid-cols-3">
                     <KpiCard
                         title="Participants"
-                        value={stats.participants_filtered.toLocaleString()}
+                        value={filteredParticipants.toLocaleString()}
                         icon={Users}
                         badge={currentBadge}
                         hint={
@@ -291,7 +338,7 @@ export default function Dashboard() {
 
                     <KpiCard
                         title="QR Scans"
-                        value={stats.scans_total.toLocaleString()}
+                        value={filteredScans.toLocaleString()}
                         icon={QrCode}
                         hint={
                             <span className="inline-flex items-center gap-2">
@@ -313,7 +360,7 @@ export default function Dashboard() {
                             <div className="flex items-center justify-between gap-3">
                                 <div className="space-y-0.5">
                                     <CardTitle className="text-sm">Top Events</CardTitle>
-                                    <div className="text-xs text-muted-foreground">Sorted by successful scans (up to 20)</div>
+                                    <div className="text-xs text-muted-foreground">Sorted by check-ins (up to 20)</div>
                                 </div>
 
                                 <Badge variant="secondary" className="rounded-full text-[11px]">
@@ -323,20 +370,20 @@ export default function Dashboard() {
                         </CardHeader>
 
                         <CardContent className="p-0">
-                            <div className="max-h-[230px] overflow-auto">
+                            <div className="max-h-[220px] overflow-auto">
                                 <table className="w-full text-xs">
                                     <thead className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
                                         <tr className="text-muted-foreground">
                                             <th className="w-10 px-4 py-2 text-left font-semibold">#</th>
                                             <th className="px-2 py-2 text-left font-semibold">Event</th>
                                             <th className="w-24 px-2 py-2 text-left font-semibold">Date</th>
-                                            <th className="w-20 px-4 py-2 text-right font-semibold">Scans</th>
+                                            <th className="w-28 px-4 py-2 text-right font-semibold">Attendance</th>
                                         </tr>
                                     </thead>
 
                                     <tbody className="divide-y">
                                         {topEventsRows.map((ev, idx) => {
-                                            const pct = Math.max(0, Math.min(100, Math.round((ev.scanned / maxScanned) * 100)));
+                                            const pct = Math.max(0, Math.min(100, Math.round((ev.attendance / maxScanned) * 100)));
 
                                             return (
                                                 <tr key={ev.id} className="hover:bg-muted/40">
@@ -365,10 +412,19 @@ export default function Dashboard() {
                                                         </div>
                                                     </td>
 
-                                                    <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">{ev.date}</td>
+                                                    <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
+                                                        {formatShortDate(ev.starts_at)}
+                                                    </td>
 
                                                     <td className="px-4 py-2 align-top text-right">
-                                                        <div className="font-semibold text-foreground">{ev.scanned.toLocaleString()}</div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 px-2 text-xs font-semibold text-foreground"
+                                                            onClick={() => openAttendance(ev)}
+                                                        >
+                                                            {ev.attendance.toLocaleString()}
+                                                        </Button>
                                                     </td>
                                                 </tr>
                                             );
@@ -394,9 +450,9 @@ export default function Dashboard() {
                             </div>
                         </CardHeader>
 
-                        <CardContent className="h-[230px] p-4 pt-2">
+                        <CardContent className="h-[210px] p-4 pt-2">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={lineData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                <AreaChart data={chartLineData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                                     <XAxis dataKey="day" tickLine={false} axisLine={false} className="text-[11px]" />
                                     <YAxis tickLine={false} axisLine={false} className="text-[11px]" />
@@ -440,7 +496,7 @@ export default function Dashboard() {
                             <div className="text-xs text-muted-foreground">Scanned vs not scanned</div>
                         </CardHeader>
 
-                        <CardContent className="relative h-[230px] p-4 pt-2">
+                        <CardContent className="relative h-[210px] p-4 pt-2">
                             <div className="absolute inset-0 grid place-items-center pt-6">
                                 <div className="text-center">
                                     <div className="text-3xl font-semibold tracking-tight">{donut.rate}%</div>
@@ -494,6 +550,75 @@ export default function Dashboard() {
                         </CardContent>
                     </Card>
                 </div>
+
+                <Dialog
+                    open={attendanceOpen}
+                    onOpenChange={(open) => {
+                        setAttendanceOpen(open);
+                        if (!open) {
+                            setSelectedEvent(null);
+                        }
+                    }}
+                >
+                    <DialogContent className="sm:max-w-[760px]">
+                        <DialogHeader>
+                            <DialogTitle>{selectedEvent ? `${selectedEvent.title} Attendance` : 'Attendance'}</DialogTitle>
+                            <DialogDescription>
+                                {selectedEventDate ? `${selectedEventDate} • ` : ''}{' '}
+                                {selectedParticipants.length.toLocaleString()} checked-in participants
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="max-h-[420px] overflow-auto rounded-xl border">
+                            {selectedParticipants.length ? (
+                                <table className="w-full text-xs">
+                                    <thead className="sticky top-0 z-10 border-b bg-background/95 text-muted-foreground">
+                                        <tr>
+                                            <th className="w-10 px-3 py-2 text-left font-semibold">#</th>
+                                            <th className="px-3 py-2 text-left font-semibold">Participant</th>
+                                            <th className="px-3 py-2 text-left font-semibold">Country</th>
+                                            <th className="w-28 px-3 py-2 text-left font-semibold">Checked in</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {selectedParticipants.map((participant, index) => (
+                                            <tr key={`${participant.id ?? 'participant'}-${index}`} className="hover:bg-muted/40">
+                                                <td className="px-3 py-2 align-top text-muted-foreground">{index + 1}</td>
+                                                <td className="px-3 py-2 align-top">
+                                                    <div className="font-medium text-foreground">{participant.name ?? 'Unknown'}</div>
+                                                    <div className="text-[11px] text-muted-foreground">
+                                                        {participant.display_id ?? participant.email ?? '—'}
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-2 align-top">
+                                                    <div className="inline-flex items-center gap-2">
+                                                        {participant.country_flag_url ? (
+                                                            <img
+                                                                src={participant.country_flag_url}
+                                                                alt=""
+                                                                className="size-4 rounded-full object-cover"
+                                                            />
+                                                        ) : null}
+                                                        <span className="text-muted-foreground">
+                                                            {participant.country_name ?? '—'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-2 align-top text-muted-foreground">
+                                                    {formatTime(participant.scanned_at)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-center text-sm text-muted-foreground">
+                                    No checked-in participants yet.
+                                </div>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );
