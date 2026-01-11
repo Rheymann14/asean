@@ -3,9 +3,11 @@ import PublicLayout from '@/layouts/public-layout';
 import { Head } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     ArrowRight,
     CalendarClock,
+    Search,
     Timer,
     CircleCheck,
     CircleX,
@@ -493,11 +495,19 @@ function EventTile({
     );
 }
 
-function ProgrammeGroups({ items }: { items: FlexHoverItem[] }) {
+function ProgrammeGroups({ items, query }: { items: FlexHoverItem[]; query: string }) {
     const nowTs = useNowTs(60_000);
+    const normalizedQuery = query.trim().toLowerCase();
+    const filteredItems = React.useMemo(() => {
+        if (!normalizedQuery) return items;
+        return items.filter((item) => {
+            const haystack = `${item.title} ${item.body}`.toLowerCase();
+            return haystack.includes(normalizedQuery);
+        });
+    }, [items, normalizedQuery]);
 
     const enriched = React.useMemo(() => {
-        return items
+        return filteredItems
             .map((it) => ({
                 ...it,
                 _startTs: new Date(it.startsAt).getTime(),
@@ -505,7 +515,7 @@ function ProgrammeGroups({ items }: { items: FlexHoverItem[] }) {
                 _phase: getEventPhase(it.startsAt, it.endsAt, nowTs),
             }))
             .sort((a, b) => a._startTs - b._startTs);
-    }, [items, nowTs]);
+    }, [filteredItems, nowTs]);
 
     const ongoing = enriched.filter((x) => x._phase === 'ongoing').sort((a, b) => a._startTs - b._startTs);
     const upcoming = enriched.filter((x) => x._phase === 'upcoming').sort((a, b) => a._startTs - b._startTs);
@@ -562,6 +572,7 @@ function ProgrammeGroups({ items }: { items: FlexHoverItem[] }) {
 }
 
 export default function Programme({ programmes = [] }: PageProps) {
+    const [query, setQuery] = React.useState('');
     const items = React.useMemo<FlexHoverItem[]>(() => {
         return programmes.map((programme, index) => {
             const pdfUrl = resolvePdfUrl(programme.pdf_url);
@@ -621,9 +632,18 @@ export default function Programme({ programmes = [] }: PageProps) {
                     </div>
 
                     {/* list area */}
-                    <div className="mx-auto mt-2 max-w-5xl">
+                    <div className="mx-auto mt-6 max-w-5xl">
+                        <div className="relative mx-auto mb-6 max-w-xl">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Input
+                                value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                                placeholder="Search ongoing, upcoming, or closed events..."
+                                className="h-11 rounded-2xl border-slate-200 bg-white/80 pl-9 text-sm shadow-sm focus-visible:ring-[#0033A0]/30 dark:border-slate-700 dark:bg-slate-900/60"
+                            />
+                        </div>
                         {items.length ? (
-                            <ProgrammeGroups items={items} />
+                            <ProgrammeGroups items={items} query={query} />
                         ) : (
                             <EmptyState text="No event are available yet." />
                         )}
