@@ -4,9 +4,7 @@ import { register } from '@/routes';
 import { cn, resolveUrl } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
 
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
@@ -207,21 +205,96 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
     const sectionNavItems = React.useMemo(() => PUBLIC_NAV_ITEMS.filter((i) => i.href.startsWith('#')), []);
     const [feedbackRating, setFeedbackRating] = React.useState(0);
     const [feedbackOpen, setFeedbackOpen] = React.useState(false);
-    const [feedbackType, setFeedbackType] = React.useState<'event' | 'user-experience'>('user-experience');
-    const [feedbackTypeOpen, setFeedbackTypeOpen] = React.useState(false);
+    const [includeUserExperience, setIncludeUserExperience] = React.useState(true);
+    const [includeEventFeedback, setIncludeEventFeedback] = React.useState(false);
+    const [recommendations, setRecommendations] = React.useState('');
+    const [feedbackStatus, setFeedbackStatus] = React.useState<'idle' | 'success' | 'error'>('idle');
+    const [feedbackMessage, setFeedbackMessage] = React.useState('');
+    const [feedbackSubmitting, setFeedbackSubmitting] = React.useState(false);
     const [eventRatings, setEventRatings] = React.useState<Record<string, number>>({});
 
     const eventCategories = React.useMemo(
         () => ['Venue', 'Food', 'Speaker', 'Program flow', 'Sound system'],
         [],
     );
-    const feedbackTypeOptions = React.useMemo(
-        () => [
-            { value: 'user-experience', label: 'User experience' },
-            { value: 'event', label: 'Event' },
-        ],
-        [],
+    const hasEventRatings = React.useMemo(
+        () => includeEventFeedback && Object.values(eventRatings).some((value) => value > 0),
+        [eventRatings, includeEventFeedback],
     );
+    const hasUserExperienceRating = includeUserExperience && feedbackRating > 0;
+    const canSubmitFeedback = hasEventRatings || hasUserExperienceRating;
+
+    const sendFeedback = React.useCallback(async () => {
+        if (feedbackSubmitting) return;
+
+        if (!canSubmitFeedback) {
+            setFeedbackStatus('error');
+            setFeedbackMessage('Please add at least one rating before sending your feedback.');
+            return;
+        }
+
+        setFeedbackSubmitting(true);
+        setFeedbackStatus('idle');
+        setFeedbackMessage('');
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+        const eventRatingsPayload = Object.fromEntries(
+            Object.entries(eventRatings).filter(([, value]) => value > 0),
+        );
+
+        const payload: Record<string, unknown> = {};
+
+        if (includeUserExperience && feedbackRating > 0) {
+            payload.user_experience_rating = feedbackRating;
+        }
+
+        if (includeEventFeedback && Object.keys(eventRatingsPayload).length > 0) {
+            payload.event_ratings = eventRatingsPayload;
+        }
+
+        if (recommendations.trim()) {
+            payload.recommendations = recommendations.trim();
+        }
+
+        try {
+            const response = await fetch('/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                const message = errorData?.message || 'We could not send your feedback. Please try again.';
+                setFeedbackStatus('error');
+                setFeedbackMessage(message);
+                return;
+            }
+
+            setFeedbackStatus('success');
+            setFeedbackMessage('Thanks for sharing your feedback!');
+            setFeedbackRating(0);
+            setEventRatings({});
+            setRecommendations('');
+        } catch (error) {
+            setFeedbackStatus('error');
+            setFeedbackMessage('We could not send your feedback. Please try again.');
+        } finally {
+            setFeedbackSubmitting(false);
+        }
+    }, [
+        canSubmitFeedback,
+        eventRatings,
+        feedbackRating,
+        feedbackSubmitting,
+        includeEventFeedback,
+        includeUserExperience,
+        recommendations,
+    ]);
 
     const [activeHref, setActiveHref] = React.useState<string>(() => {
         if (typeof window === 'undefined') return '#home';
@@ -409,46 +482,30 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
 
                             <div className="mt-4 space-y-4">
                                 <div className="space-y-2">
-                                    <p className="text-xs font-semibold text-slate-700">Rate type</p>
-                                    <Popover open={feedbackTypeOpen} onOpenChange={setFeedbackTypeOpen}>
-                                        <PopoverTrigger asChild>
-                                            <button
-                                                type="button"
-                                                className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3c73]/20"
-                                            >
-                                                <span>
-                                                    {feedbackTypeOptions.find((option) => option.value === feedbackType)
-                                                        ?.label ?? 'Select type'}
-                                                </span>
-                                                <ChevronDown className="h-4 w-4 text-slate-400" />
-                                            </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[240px] max-w-[calc(100vw-3.5rem)] p-0" align="end">
-                                            <Command>
-                                                <CommandInput placeholder="Search type..." />
-                                                <CommandList className="max-h-48 overscroll-contain">
-                                                    <CommandEmpty>No matches found.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {feedbackTypeOptions.map((option) => (
-                                                            <CommandItem
-                                                                key={option.value}
-                                                                value={option.label}
-                                                                onSelect={() => {
-                                                                    setFeedbackType(option.value as 'event' | 'user-experience');
-                                                                    setFeedbackTypeOpen(false);
-                                                                }}
-                                                            >
-                                                                {option.label}
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <p className="text-xs font-semibold text-slate-700">Include feedback for</p>
+                                    <div className="space-y-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm">
+                                        <label className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-slate-300 text-[#1e3c73]"
+                                                checked={includeUserExperience}
+                                                onChange={(event) => setIncludeUserExperience(event.target.checked)}
+                                            />
+                                            User experience
+                                        </label>
+                                        <label className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-slate-300 text-[#1e3c73]"
+                                                checked={includeEventFeedback}
+                                                onChange={(event) => setIncludeEventFeedback(event.target.checked)}
+                                            />
+                                            Event
+                                        </label>
+                                    </div>
                                 </div>
 
-                                {feedbackType === 'event' && (
+                                {includeEventFeedback && (
                                     <div>
                                         <p className="text-xs font-semibold text-slate-700">Event highlights</p>
                                         <div className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-2 overscroll-contain">
@@ -503,7 +560,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                     </div>
                                 )}
 
-                                {feedbackType === 'user-experience' && (
+                                {includeUserExperience && (
                                     <div>
                                         <p className="text-xs font-semibold text-slate-700">Ease of navigation</p>
                                         <div className="mt-2 flex items-center gap-2">
@@ -540,13 +597,30 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                     <textarea
                                         rows={3}
                                         placeholder="Tell us what would make the experience even better..."
+                                        value={recommendations}
+                                        onChange={(event) => setRecommendations(event.target.value)}
                                         className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm outline-none transition focus:border-[#1e3c73] focus:ring-2 focus:ring-[#1e3c73]/20"
                                     />
                                 </label>
 
-                                <Button className="h-10 w-full rounded-2xl bg-[#1e3c73] text-xs font-semibold text-white shadow-lg shadow-[#1e3c73]/30 hover:bg-[#25468a]">
-                                    Send feedback
+                                <Button
+                                    type="button"
+                                    onClick={sendFeedback}
+                                    disabled={!canSubmitFeedback || feedbackSubmitting}
+                                    className="h-10 w-full rounded-2xl bg-[#1e3c73] text-xs font-semibold text-white shadow-lg shadow-[#1e3c73]/30 transition hover:bg-[#25468a] disabled:cursor-not-allowed disabled:bg-slate-400"
+                                >
+                                    {feedbackSubmitting ? 'Sending...' : 'Send feedback'}
                                 </Button>
+                                {feedbackMessage && (
+                                    <p
+                                        className={cn(
+                                            'text-xs font-medium',
+                                            feedbackStatus === 'success' ? 'text-emerald-600' : 'text-rose-600',
+                                        )}
+                                    >
+                                        {feedbackMessage}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
