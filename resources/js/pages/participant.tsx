@@ -1330,22 +1330,22 @@ export default function ParticipantPage(props: PageProps) {
         <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Participant" />
 
-               <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="space-y-2">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-         
 
-                            <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-[#00359c]" />
-                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                           Participant Management
-                        </h1>
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Manage participants, ASEAN countries, and user types.
-                    </p>
-                </div>
+
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                                <Users className="h-5 w-5 text-[#00359c]" />
+                                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                                    Participant Management
+                                </h1>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                Manage participants, ASEAN countries, and user types.
+                            </p>
+                        </div>
 
                         <div className="flex flex-wrap gap-2">
                             {activeTab === 'participants' ? (
@@ -1885,15 +1885,36 @@ export default function ParticipantPage(props: PageProps) {
                                                         <div className="flex h-full flex-col gap-3 p-3">
                                                             <div className="space-y-2">
                                                                 <div className="flex flex-wrap items-center gap-1.5">
-                                                                    {event.tag ? (
-                                                                        <Badge className="border-transparent bg-slate-900/80 text-[10px] text-white">
-                                                                            {event.tag}
+                                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                                        {event.tag ? (
+                                                                            <Badge className="border-transparent bg-slate-900/80 text-[10px] text-white">
+                                                                                {event.tag}
+                                                                            </Badge>
+                                                                        ) : null}
+
+                                                                        <Badge className={cn('border text-[10px]', phaseBadgeClass(event.phase))}>
+                                                                            {phaseLabel(event.phase)}
                                                                         </Badge>
-                                                                    ) : null}
-                                                                    <Badge className={cn('border text-[10px]', phaseBadgeClass(event.phase))}>
-                                                                        {phaseLabel(event.phase)}
-                                                                    </Badge>
+                                                                    </div>
+
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant={isJoined ? 'outline' : 'default'}
+                                                                        className={cn(
+                                                                            'ml-auto h-8 rounded-xl px-3 text-[11px]', // ✅ pushes to right
+                                                                            isJoined
+                                                                                ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10'
+                                                                                : PRIMARY_BTN,
+                                                                        )}
+                                                                        disabled={isAddDisabled}
+                                                                        title={isAddDisabled ? 'Closed events cannot be added.' : undefined}
+                                                                        onClick={() => toggleProgrammeJoin(programmeParticipant, event.id, isJoined)}
+                                                                    >
+                                                                        {isJoined ? 'Remove Event' : 'Add to list'}
+                                                                    </Button>
                                                                 </div>
+
                                                                 <div>
                                                                     <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                                                         {event.title}
@@ -1927,37 +1948,26 @@ export default function ParticipantPage(props: PageProps) {
                                                                     </Badge>
                                                                     {isCheckedIn ? (
                                                                         <>
-                                                                            <Badge className="rounded-full border border-transparent bg-blue-100 px-2.5 py-1 text-[11px] text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
-                                                                                Checked in
+                                                                            <Badge className="inline-flex items-center gap-2 rounded-full border border-transparent bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
+                                                                                <span>Checked in</span>
+
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="h-5 rounded-full border border-red-200 bg-white/60 px-2 text-[10px] font-semibold leading-none text-red-700 hover:bg-red-50 hover:text-red-700 dark:border-red-500/40 dark:bg-transparent dark:text-red-300 dark:hover:bg-red-500/10"
+
+                                                                                    onClick={() => revertProgrammeAttendance(programmeParticipant, event.id)}
+                                                                                >
+                                                                                    Revert
+                                                                                </Button>
                                                                             </Badge>
-                                                                            <Button
-                                                                                type="button"
-                                                                                size="sm"
-                                                                                variant="outline"
-                                                                                className="h-7 rounded-full border-red-200 px-2.5 text-[11px] text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10"
-                                                                                onClick={() => revertProgrammeAttendance(programmeParticipant, event.id)}
-                                                                            >
-                                                                                Revert
-                                                                            </Button>
+
+
                                                                         </>
                                                                     ) : null}
                                                                 </div>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    variant={isJoined ? 'outline' : 'default'}
-                                                                    className={cn(
-                                                                        'h-8 rounded-xl px-3 text-[11px]',
-                                                                        isJoined
-                                                                            ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10'
-                                                                            : PRIMARY_BTN,
-                                                                    )}
-                                                                    disabled={isAddDisabled}
-                                                                    title={isAddDisabled ? 'Closed events cannot be added.' : undefined}
-                                                                    onClick={() => toggleProgrammeJoin(programmeParticipant, event.id, isJoined)}
-                                                                >
-                                                                    {isJoined ? 'Remove' : 'Add to list'}
-                                                                </Button>
+
                                                             </div>
                                                         </div>
                                                     </Card>
