@@ -508,7 +508,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                 {includeEventFeedback && (
                                     <div>
                                         <p className="text-xs font-semibold text-slate-700">Event highlights</p>
-                                        <div className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-2 overscroll-contain">
+                                        <div className="mt-2 space-y-2">
                                             {eventCategories.map((category) => {
                                                 const rating = eventRatings[category] ?? 0;
                                                 return (
