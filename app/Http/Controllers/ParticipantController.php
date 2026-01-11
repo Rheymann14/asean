@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Country;
+use App\Models\ParticipantAttendance;
 use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
@@ -30,10 +31,15 @@ class ParticipantController extends Controller
             'is_active' => $type->is_active,
         ]);
 
+        $attendanceByUser = ParticipantAttendance::query()
+            ->select(['user_id', 'programme_id', 'scanned_at'])
+            ->get()
+            ->groupBy('user_id');
+
         $participants = User::with(['country', 'userType', 'joinedProgrammes'])
             ->orderBy('name')
             ->get()
-            ->map(function (User $user) {
+            ->map(function (User $user) use ($attendanceByUser) {
                 return [
                     'id' => $user->id,
                     'full_name' => $user->name,
@@ -48,6 +54,14 @@ class ParticipantController extends Controller
                     'joined_programme_ids' => $user->joinedProgrammes
                         ? $user->joinedProgrammes->pluck('id')->values()->all()
                         : [],
+                    'checked_in_programmes' => $attendanceByUser
+                        ->get($user->id, collect())
+                        ->map(fn (ParticipantAttendance $attendance) => [
+                            'id' => $attendance->programme_id,
+                            'scanned_at' => $attendance->scanned_at?->toISOString(),
+                        ])
+                        ->values()
+                        ->all(),
                     'country' => $user->country
                         ? [
                             'id' => $user->country->id,
@@ -192,6 +206,16 @@ class ParticipantController extends Controller
     public function leaveProgramme(Request $request, User $participant, Programme $programme)
     {
         $participant->joinedProgrammes()->detach($programme->id);
+
+        return back();
+    }
+
+    public function revertAttendance(Request $request, User $participant, Programme $programme)
+    {
+        ParticipantAttendance::query()
+            ->where('user_id', $participant->id)
+            ->where('programme_id', $programme->id)
+            ->delete();
 
         return back();
     }

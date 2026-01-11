@@ -103,6 +103,10 @@ type ParticipantRow = {
     is_active: boolean;
     created_at?: string | null;
     joined_programme_ids?: number[];
+    checked_in_programmes?: Array<{
+        id: number;
+        scanned_at?: string | null;
+    }>;
 
     // optional expanded props if your backend includes them
     country?: Country | null;
@@ -139,6 +143,8 @@ const ENDPOINTS = {
     participantProgrammes: {
         join: (participantId: number, programmeId: number) => `/participants/${participantId}/programmes/${programmeId}`,
         leave: (participantId: number, programmeId: number) => `/participants/${participantId}/programmes/${programmeId}`,
+        revertAttendance: (participantId: number, programmeId: number) =>
+            `/participants/${participantId}/programmes/${programmeId}/attendance`,
     },
     countries: {
         store: '/participants/countries',
@@ -161,6 +167,15 @@ function formatDateSafe(value?: string | null) {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return '—';
     return new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }).format(d);
+}
+
+function formatDateTimeShort(value?: string | null) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '—';
+    const date = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).format(d);
+    const time = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' }).format(d);
+    return `${date} • ${time}`;
 }
 
 const FALLBACK_EVENT_IMAGE = '/img/asean_banner_logo.png';
@@ -1064,6 +1079,19 @@ export default function ParticipantPage(props: PageProps) {
         });
     }
 
+    function updateProgrammeCheckIn(programmeId: number, scannedAt: string | null) {
+        setProgrammeParticipant((prev) => {
+            if (!prev) return prev;
+            const current = new Map((prev.checked_in_programmes ?? []).map((item) => [item.id, item]));
+            if (scannedAt) {
+                current.set(programmeId, { id: programmeId, scanned_at: scannedAt });
+            } else {
+                current.delete(programmeId);
+            }
+            return { ...prev, checked_in_programmes: Array.from(current.values()) };
+        });
+    }
+
     function toggleProgrammeJoin(participant: ParticipantRow, programmeId: number, isJoined: boolean) {
         const endpoint = isJoined
             ? ENDPOINTS.participantProgrammes.leave(participant.id, programmeId)
@@ -1074,6 +1102,7 @@ export default function ParticipantPage(props: PageProps) {
                 preserveScroll: true,
                 onSuccess: () => {
                     updateProgrammeSelection(programmeId, false);
+                    updateProgrammeCheckIn(programmeId, null);
                     toast.success('Event removed from participant.');
                 },
                 onError: () => toast.error('Unable to update participant events.'),
@@ -1093,6 +1122,17 @@ export default function ParticipantPage(props: PageProps) {
                 onError: () => toast.error('Unable to update participant events.'),
             },
         );
+    }
+
+    function revertProgrammeAttendance(participant: ParticipantRow, programmeId: number) {
+        router.delete(ENDPOINTS.participantProgrammes.revertAttendance(participant.id, programmeId), {
+            preserveScroll: true,
+            onSuccess: () => {
+                updateProgrammeCheckIn(programmeId, null);
+                toast.success('Attendance reverted.');
+            },
+            onError: () => toast.error('Unable to revert attendance.'),
+        });
     }
 
     function requestDelete(kind: 'participant' | 'country' | 'userType', id: number, label: string) {
@@ -1849,7 +1889,10 @@ export default function ParticipantPage(props: PageProps) {
                                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                             {filteredProgrammes.map((event) => {
                                                 const joinedIds = programmeParticipant.joined_programme_ids ?? [];
+                                                const checkedInProgrammes = programmeParticipant.checked_in_programmes ?? [];
                                                 const isJoined = joinedIds.includes(event.id);
+                                                const checkInRecord = checkedInProgrammes.find((item) => item.id === event.id) ?? null;
+                                                const isCheckedIn = Boolean(checkInRecord);
                                                 const isClosed = event.phase === 'closed';
                                                 const isAddDisabled = isClosed && !isJoined;
 
@@ -1887,16 +1930,34 @@ export default function ParticipantPage(props: PageProps) {
                                                                 </div>
                                                             </div>
                                                             <div className="mt-auto flex items-center justify-between gap-2">
-                                                                <Badge
-                                                                    className={cn(
-                                                                        'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
-                                                                        isJoined
-                                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
-                                                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                                                                    )}
-                                                                >
-                                                                    {isJoined ? 'Joined' : 'Not joined'}
-                                                                </Badge>
+                                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                                    <Badge
+                                                                        className={cn(
+                                                                            'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
+                                                                            isJoined
+                                                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                                        )}
+                                                                    >
+                                                                        {isJoined ? 'Joined' : 'Not joined'}
+                                                                    </Badge>
+                                                                    {isCheckedIn ? (
+                                                                        <>
+                                                                            <Badge className="rounded-full border border-transparent bg-blue-100 px-2.5 py-1 text-[11px] text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
+                                                                                Checked in • {formatDateTimeShort(checkInRecord?.scanned_at)}
+                                                                            </Badge>
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="sm"
+                                                                                variant="outline"
+                                                                                className="h-7 rounded-full border-red-200 px-2.5 text-[11px] text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10"
+                                                                                onClick={() => revertProgrammeAttendance(programmeParticipant, event.id)}
+                                                                            >
+                                                                                Revert
+                                                                            </Button>
+                                                                        </>
+                                                                    ) : null}
+                                                                </div>
                                                                 <Button
                                                                     type="button"
                                                                     size="sm"
