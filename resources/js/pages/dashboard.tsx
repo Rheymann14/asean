@@ -52,6 +52,13 @@ type LineDatum = {
     scans_by_country: Record<string, number>;
 };
 
+type FeedbackEntry = {
+    id: number;
+    user_experience_rating: number | null;
+    recommendations: string | null;
+    created_at: string | null;
+};
+
 type PageProps = {
     countries: CountryOption[];
     stats: {
@@ -62,6 +69,11 @@ type PageProps = {
     country_stats: Record<string, { participants: number; scans: number }>;
     events: DashboardEvent[];
     line_data: LineDatum[];
+    feedback: {
+        total: number;
+        avg_rating: number | null;
+        entries: FeedbackEntry[];
+    };
 };
 
 function formatShortDate(dateString?: string | null) {
@@ -133,7 +145,7 @@ export default function Dashboard() {
         null,
     );
 
-    const { countries, stats, events, country_stats: countryStats, line_data: lineData } = props;
+    const { countries, stats, events, country_stats: countryStats, line_data: lineData, feedback } = props;
 
     const countryId = country ? Number(country) : null;
     const current = countryId ? countries.find((c) => c.id === countryId) ?? null : null;
@@ -470,86 +482,138 @@ export default function Dashboard() {
                     </Card>
                 </div>
 
-                {/* Top Events table */}
-                <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <CardHeader className="p-4 pb-2">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="space-y-0.5">
-                                <CardTitle className="text-sm">Top Events</CardTitle>
-                                <div className="text-xs text-muted-foreground">Sorted by check-ins</div>
+                <div className="grid gap-3 lg:grid-cols-3">
+                    {/* Top Events table */}
+                    <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border lg:col-span-2">
+                        <CardHeader className="p-4 pb-2">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="space-y-0.5">
+                                    <CardTitle className="text-sm">Top Events</CardTitle>
+                                    <div className="text-xs text-muted-foreground">Sorted by check-ins</div>
+                                </div>
+
+                                <Badge variant="secondary" className="rounded-full text-[11px]">
+                                    {topEventsRows.length} shown
+                                </Badge>
+                            </div>
+                        </CardHeader>
+
+                        <CardContent className="p-0">
+                            <div className="max-h-[220px] overflow-auto">
+                                <table className="w-full text-xs">
+                                    <thead className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
+                                        <tr className="text-muted-foreground">
+                                            <th className="w-10 px-4 py-2 text-left font-semibold">#</th>
+                                            <th className="px-2 py-2 text-left font-semibold">Event</th>
+                                            <th className="w-24 px-2 py-2 text-left font-semibold">Date</th>
+                                            <th className="w-28 px-4 py-2 text-right font-semibold">Attendance</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody className="divide-y">
+                                        {topEventsRows.map((ev, idx) => {
+                                            const pct = Math.max(0, Math.min(100, Math.round((ev.attendance / maxScanned) * 100)));
+
+                                            return (
+                                                <tr key={ev.id} className="hover:bg-muted/40">
+                                                    {/* ✅ removed dots after number */}
+                                                    <td className="px-4 py-2 align-top">
+                                                        <span className="font-semibold text-foreground">{idx + 1}</span>
+                                                    </td>
+
+                                                    <td className="px-2 py-2">
+                                                        <div className="min-w-0">
+                                                            <div className="truncate font-medium text-foreground" title={ev.title}>
+                                                                {ev.title}
+                                                            </div>
+
+                                                            {/* ✅ subtle solid indicator bar (NO gradient) */}
+                                                            <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+                                                                <div
+                                                                    className="h-1.5 rounded-full"
+                                                                    style={{
+                                                                        width: `${pct}%`,
+                                                                        backgroundColor: CHART_PRIMARY,
+                                                                        opacity: 0.9,
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
+                                                        {formatShortDate(ev.starts_at)}
+                                                    </td>
+
+                                                    <td className="px-4 py-2 align-top text-right">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 px-2 text-xs font-semibold text-foreground"
+                                                            onClick={() => openAttendance(ev)}
+                                                        >
+                                                            {ev.attendance.toLocaleString()}
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
+                        <CardHeader className="p-4 pb-2">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="space-y-0.5">
+                                    <CardTitle className="text-sm">Feedback</CardTitle>
+                                    <div className="text-xs text-muted-foreground">Latest responses</div>
+                                </div>
+
+                                <Badge variant="secondary" className="rounded-full text-[11px]">
+                                    {feedback.total.toLocaleString()} total
+                                </Badge>
+                            </div>
+                        </CardHeader>
+
+                        <CardContent className="p-4 pt-0">
+                            <div className="flex items-center justify-between rounded-xl border border-dashed px-3 py-2 text-xs">
+                                <span className="text-muted-foreground">Average rating</span>
+                                <span className="font-semibold text-foreground">
+                                    {feedback.avg_rating !== null ? `${feedback.avg_rating}/5` : '—'}
+                                </span>
                             </div>
 
-                            <Badge variant="secondary" className="rounded-full text-[11px]">
-                                {topEventsRows.length} shown
-                            </Badge>
-                        </div>
-                    </CardHeader>
-
-                    <CardContent className="p-0">
-                        <div className="max-h-[220px] overflow-auto">
-                            <table className="w-full text-xs">
-                                <thead className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
-                                    <tr className="text-muted-foreground">
-                                        <th className="w-10 px-4 py-2 text-left font-semibold">#</th>
-                                        <th className="px-2 py-2 text-left font-semibold">Event</th>
-                                        <th className="w-24 px-2 py-2 text-left font-semibold">Date</th>
-                                        <th className="w-28 px-4 py-2 text-right font-semibold">Attendance</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody className="divide-y">
-                                    {topEventsRows.map((ev, idx) => {
-                                        const pct = Math.max(0, Math.min(100, Math.round((ev.attendance / maxScanned) * 100)));
-
-                                        return (
-                                            <tr key={ev.id} className="hover:bg-muted/40">
-                                                {/* ✅ removed dots after number */}
-                                                <td className="px-4 py-2 align-top">
-                                                    <span className="font-semibold text-foreground">{idx + 1}</span>
-                                                </td>
-
-                                                <td className="px-2 py-2">
-                                                    <div className="min-w-0">
-                                                        <div className="truncate font-medium text-foreground" title={ev.title}>
-                                                            {ev.title}
-                                                        </div>
-
-                                                        {/* ✅ subtle solid indicator bar (NO gradient) */}
-                                                        <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
-                                                            <div
-                                                                className="h-1.5 rounded-full"
-                                                                style={{
-                                                                    width: `${pct}%`,
-                                                                    backgroundColor: CHART_PRIMARY,
-                                                                    opacity: 0.9,
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </td>
-
-                                                <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
-                                                    {formatShortDate(ev.starts_at)}
-                                                </td>
-
-                                                <td className="px-4 py-2 align-top text-right">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-7 px-2 text-xs font-semibold text-foreground"
-                                                        onClick={() => openAttendance(ev)}
-                                                    >
-                                                        {ev.attendance.toLocaleString()}
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
+                            <div className="mt-3 space-y-3">
+                                {feedback.entries.length ? (
+                                    feedback.entries.map((entry) => (
+                                        <div key={entry.id} className="rounded-xl border px-3 py-2 text-xs">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium text-foreground">
+                                                    {entry.user_experience_rating !== null
+                                                        ? `${entry.user_experience_rating}/5`
+                                                        : 'No rating'}
+                                                </span>
+                                                <span className="text-[11px] text-muted-foreground">
+                                                    {entry.created_at ? formatShortDate(entry.created_at) : '—'}
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 text-muted-foreground">
+                                                {entry.recommendations?.trim() ? entry.recommendations : 'No recommendations shared.'}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="rounded-xl border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
+                                        No feedback submitted yet.
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
                 <Dialog
                     open={attendanceOpen}

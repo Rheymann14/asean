@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Country;
+use App\Models\Feedback;
 use App\Models\ParticipantAttendance;
 use App\Models\Programme;
 use App\Models\User;
@@ -179,6 +180,21 @@ class DashboardController extends Controller
             ]);
         }
 
+        $feedbackStats = Feedback::query()
+            ->selectRaw('COUNT(*) as total, AVG(user_experience_rating) as avg_rating')
+            ->first();
+
+        $feedbackEntries = Feedback::query()
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn (Feedback $feedback) => [
+                'id' => $feedback->id,
+                'user_experience_rating' => $feedback->user_experience_rating,
+                'recommendations' => $feedback->recommendations,
+                'created_at' => $feedback->created_at?->toISOString(),
+            ]);
+
         return Inertia::render('dashboard', [
             'countries' => $countries,
             'stats' => [
@@ -189,6 +205,11 @@ class DashboardController extends Controller
             'country_stats' => $countryStats,
             'events' => $events,
             'line_data' => $lineData,
+            'feedback' => [
+                'total' => (int) ($feedbackStats->total ?? 0),
+                'avg_rating' => $feedbackStats?->avg_rating !== null ? round((float) $feedbackStats->avg_rating, 1) : null,
+                'entries' => $feedbackEntries,
+            ],
         ]);
     }
 }
