@@ -4,6 +4,8 @@ import { register } from '@/routes';
 import { cn, resolveUrl } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
 
 import useEmblaCarousel from 'embla-carousel-react';
@@ -206,10 +208,18 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
     const [feedbackRating, setFeedbackRating] = React.useState(0);
     const [feedbackOpen, setFeedbackOpen] = React.useState(false);
     const [feedbackType, setFeedbackType] = React.useState<'event' | 'user-experience'>('user-experience');
+    const [feedbackTypeOpen, setFeedbackTypeOpen] = React.useState(false);
     const [eventRatings, setEventRatings] = React.useState<Record<string, number>>({});
 
     const eventCategories = React.useMemo(
         () => ['Venue', 'Food', 'Speaker', 'Program flow', 'Sound system'],
+        [],
+    );
+    const feedbackTypeOptions = React.useMemo(
+        () => [
+            { value: 'user-experience', label: 'User experience' },
+            { value: 'event', label: 'Event' },
+        ],
         [],
     );
 
@@ -258,6 +268,16 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
             window.removeEventListener('hashchange', onHash);
         };
     }, [sectionNavItems]);
+
+    React.useEffect(() => {
+        if (typeof document === 'undefined') return;
+        const bodyStyle = document.body.style;
+        const originalOverflow = bodyStyle.overflow;
+        if (feedbackOpen) bodyStyle.overflow = 'hidden';
+        return () => {
+            bodyStyle.overflow = originalOverflow;
+        };
+    }, [feedbackOpen]);
 
     return (
         <>
@@ -388,27 +408,50 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                             </div>
 
                             <div className="mt-4 space-y-4">
-                                <label className="block text-xs font-semibold text-slate-700">
-                                    Rate type
-                                    <div className="relative mt-2 w-full">
-                                        <select
-                                            className="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-3 py-2 pr-9 text-xs text-slate-700 shadow-sm outline-none transition focus:border-[#1e3c73] focus:ring-2 focus:ring-[#1e3c73]/20"
-                                            value={feedbackType}
-                                            onChange={(event) =>
-                                                setFeedbackType(event.target.value as 'event' | 'user-experience')
-                                            }
-                                        >
-                                            <option value="user-experience">User experience</option>
-                                            <option value="event">Event</option>
-                                        </select>
-                                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                    </div>
-                                </label>
+                                <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-slate-700">Rate type</p>
+                                    <Popover open={feedbackTypeOpen} onOpenChange={setFeedbackTypeOpen}>
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3c73]/20"
+                                            >
+                                                <span>
+                                                    {feedbackTypeOptions.find((option) => option.value === feedbackType)
+                                                        ?.label ?? 'Select type'}
+                                                </span>
+                                                <ChevronDown className="h-4 w-4 text-slate-400" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[240px] max-w-[calc(100vw-3.5rem)] p-0" align="end">
+                                            <Command>
+                                                <CommandInput placeholder="Search type..." />
+                                                <CommandList className="max-h-48 overscroll-contain">
+                                                    <CommandEmpty>No matches found.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {feedbackTypeOptions.map((option) => (
+                                                            <CommandItem
+                                                                key={option.value}
+                                                                value={option.label}
+                                                                onSelect={() => {
+                                                                    setFeedbackType(option.value as 'event' | 'user-experience');
+                                                                    setFeedbackTypeOpen(false);
+                                                                }}
+                                                            >
+                                                                {option.label}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
 
                                 {feedbackType === 'event' && (
                                     <div>
                                         <p className="text-xs font-semibold text-slate-700">Event highlights</p>
-                                        <div className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-2">
+                                        <div className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-2 overscroll-contain">
                                             {eventCategories.map((category) => {
                                                 const rating = eventRatings[category] ?? 0;
                                                 return (
