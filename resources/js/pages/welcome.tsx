@@ -4,7 +4,7 @@ import { register } from '@/routes';
 import { cn, resolveUrl } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
 
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
@@ -612,14 +612,22 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                     {feedbackSubmitting ? 'Sending...' : 'Send feedback'}
                                 </Button>
                                 {feedbackMessage && (
-                                    <p
+                                    <div
                                         className={cn(
-                                            'text-xs font-medium',
-                                            feedbackStatus === 'success' ? 'text-emerald-600' : 'text-rose-600',
+                                            'flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold',
+                                            feedbackStatus === 'success'
+                                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                : 'border-rose-200 bg-rose-50 text-rose-600',
                                         )}
                                     >
-                                        {feedbackMessage}
-                                    </p>
+                                        {feedbackStatus === 'success' && <CheckCircle2 className="h-4 w-4" />}
+                                        <span>{feedbackMessage}</span>
+                                        {feedbackStatus === 'success' && (
+                                            <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-emerald-700">
+                                                Sent
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
