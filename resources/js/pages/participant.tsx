@@ -104,6 +104,10 @@ type ParticipantRow = {
     created_at?: string | null;
     joined_programme_ids?: number[];
     checked_in_programme_ids?: number[];
+    checked_in_programmes?: {
+        programme_id: number;
+        scanned_at?: string | null;
+    }[];
 
     // optional expanded props if your backend includes them
     country?: Country | null;
@@ -164,6 +168,19 @@ function formatDateSafe(value?: string | null) {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return '—';
     return new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }).format(d);
+}
+
+function formatDateTimeSafe(value?: string | null) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(d);
 }
 
 const FALLBACK_EVENT_IMAGE = '/img/asean_banner_logo.png';
@@ -1874,7 +1891,11 @@ export default function ParticipantPage(props: PageProps) {
                                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                             {filteredProgrammes.map((event) => {
                                                 const joinedIds = programmeParticipant.joined_programme_ids ?? [];
-                                                const checkedInIds = programmeParticipant.checked_in_programme_ids ?? [];
+                                                const checkedInEntries = programmeParticipant.checked_in_programmes ?? [];
+                                                const checkedInIds =
+                                                    programmeParticipant.checked_in_programme_ids ??
+                                                    checkedInEntries.map((entry) => entry.programme_id);
+                                                const checkedInEntry = checkedInEntries.find((entry) => entry.programme_id === event.id);
                                                 const isJoined = joinedIds.includes(event.id);
                                                 const isCheckedIn = checkedInIds.includes(event.id);
                                                 const isClosed = event.phase === 'closed';
@@ -1930,6 +1951,11 @@ export default function ParticipantPage(props: PageProps) {
                                                                             <Badge className="rounded-full border border-transparent bg-blue-100 px-2.5 py-1 text-[11px] text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
                                                                                 Checked in
                                                                             </Badge>
+                                                                            {checkedInEntry?.scanned_at ? (
+                                                                                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                                    Scanned {formatDateTimeSafe(checkedInEntry.scanned_at)}
+                                                                                </span>
+                                                                            ) : null}
                                                                             <Button
                                                                                 type="button"
                                                                                 size="sm"

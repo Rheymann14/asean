@@ -32,7 +32,7 @@ class ParticipantController extends Controller
         ]);
 
         $attendanceByUser = ParticipantAttendance::query()
-            ->select(['user_id', 'programme_id'])
+            ->select(['user_id', 'programme_id', 'scanned_at'])
             ->get()
             ->groupBy('user_id');
 
@@ -40,6 +40,8 @@ class ParticipantController extends Controller
             ->orderBy('name')
             ->get()
             ->map(function (User $user) use ($attendanceByUser) {
+                $attendanceEntries = $attendanceByUser->get($user->id, collect());
+
                 return [
                     'id' => $user->id,
                     'full_name' => $user->name,
@@ -54,9 +56,15 @@ class ParticipantController extends Controller
                     'joined_programme_ids' => $user->joinedProgrammes
                         ? $user->joinedProgrammes->pluck('id')->values()->all()
                         : [],
-                    'checked_in_programme_ids' => $attendanceByUser
-                        ->get($user->id, collect())
+                    'checked_in_programme_ids' => $attendanceEntries
                         ->pluck('programme_id')
+                        ->values()
+                        ->all(),
+                    'checked_in_programmes' => $attendanceEntries
+                        ->map(fn (ParticipantAttendance $attendance) => [
+                            'programme_id' => $attendance->programme_id,
+                            'scanned_at' => $attendance->scanned_at?->toISOString(),
+                        ])
                         ->values()
                         ->all(),
                     'country' => $user->country
