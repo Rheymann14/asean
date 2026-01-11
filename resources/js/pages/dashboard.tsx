@@ -591,9 +591,13 @@ export default function Dashboard() {
                                     <div className="text-xs text-muted-foreground">Latest responses</div>
                                 </div>
 
-                                <Badge variant="secondary" className="rounded-full text-[11px]">
+                                <Badge
+                                    variant="secondary"
+                                    className="rounded-full border border-amber-200/70 bg-amber-50/70 text-[11px] text-amber-800 hover:bg-amber-100/70 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/15"
+                                >
                                     {feedback.total.toLocaleString()} total
                                 </Badge>
+
                             </div>
                         </CardHeader>
 
@@ -643,7 +647,7 @@ export default function Dashboard() {
                                                     {hiddenCount > 0 ? (
                                                         <button
                                                             type="button"
-                                                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground transition hover:text-foreground"
+                                                            className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 transition hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/15"
                                                             onClick={() =>
                                                                 setExpandedFeedback((prev) => ({
                                                                     ...prev,
@@ -653,6 +657,7 @@ export default function Dashboard() {
                                                         >
                                                             {isExpanded ? 'Hide' : `+${hiddenCount} more`}
                                                         </button>
+
                                                     ) : null}
                                                 </div>
                                                 <div className="mt-2 text-muted-foreground line-clamp-2">
