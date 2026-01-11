@@ -480,7 +480,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                 </button>
                             </div>
 
-                            <div className="mt-4 max-h-[calc(70vh-6rem)] space-y-4 overflow-y-auto pr-1 pb-3">
+                            <div className="mt-4 max-h-[calc(70vh-10rem)] space-y-4 overflow-y-auto pr-1">
                                 <div className="space-y-2">
                                     <p className="text-xs font-semibold text-slate-700">Include feedback for</p>
                                     <div className="space-y-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm">
@@ -602,7 +602,8 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                         className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm outline-none transition focus:border-[#1e3c73] focus:ring-2 focus:ring-[#1e3c73]/20"
                                     />
                                 </label>
-
+                            </div>
+                            <div className="mt-4 space-y-2">
                                 <Button
                                     type="button"
                                     onClick={sendFeedback}
