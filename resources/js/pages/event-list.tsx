@@ -48,6 +48,7 @@ type EventItem = {
     endsAt?: string;
     location: string;
     imageUrl: string;
+    pdfUrl?: string | null;
     phase: EventPhase;
 };
 
@@ -66,6 +67,12 @@ function resolveImageUrl(imageUrl?: string | null) {
     if (!imageUrl) return FALLBACK_IMAGE;
     if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
     return `/event-images/${imageUrl}`;
+}
+
+function resolvePdfUrl(pdfUrl?: string | null) {
+    if (!pdfUrl) return null;
+    if (pdfUrl.startsWith('http') || pdfUrl.startsWith('/')) return pdfUrl;
+    return `/downloadables/${pdfUrl}`;
 }
 
 function useNowTs(intervalMs = 60_000) {
@@ -144,6 +151,7 @@ function normalizeProgrammes(programmes: ProgrammeRow[], nowTs: number): EventIt
                 endsAt,
                 location: venueLabel || (programme.location ?? ''),
                 imageUrl: resolveImageUrl(programme.image_url),
+                pdfUrl: resolvePdfUrl(programme.pdf_url),
                 phase,
             };
         })
@@ -198,6 +206,7 @@ function EventGrid({
             {events.map((event) => {
                 const isSelected = selectedIds.includes(event.id);
                 const isClosed = event.phase === 'closed';
+                const hasPdf = Boolean(event.pdfUrl);
 
                 return (
                     <Card
@@ -249,19 +258,34 @@ function EventGrid({
                                         </p>
                                     </div>
 
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        disabled={isClosed || isSelected}
-                                        onClick={() => onJoin(event.id)}
-                                        className={cn(
-                                            'h-8 px-3 text-xs shadow-sm',
-                                            'bg-[#00359c] text-white hover:bg-[#00359c]/90',
-                                            (isClosed || isSelected) && 'opacity-70',
-                                        )}
-                                    >
-                                        {isClosed ? 'Closed' : isSelected ? 'Selected' : 'Join'}
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        {hasPdf ? (
+                                            <Button
+                                                asChild
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-8 px-3 text-xs"
+                                            >
+                                                <a href={event.pdfUrl ?? undefined} target="_blank" rel="noreferrer">
+                                                    View program
+                                                </a>
+                                            </Button>
+                                        ) : null}
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            disabled={isClosed || isSelected}
+                                            onClick={() => onJoin(event.id)}
+                                            className={cn(
+                                                'h-8 px-3 text-xs shadow-sm',
+                                                'bg-[#00359c] text-white hover:bg-[#00359c]/90',
+                                                (isClosed || isSelected) && 'opacity-70',
+                                            )}
+                                        >
+                                            {isClosed ? 'Closed' : isSelected ? 'Selected' : 'Join'}
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600 dark:text-slate-300">
