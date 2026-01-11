@@ -6,6 +6,7 @@ use App\Models\Country;
 use App\Models\ParticipantAttendance;
 use App\Models\Programme;
 use App\Models\User;
+use App\Models\UserType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -14,6 +15,22 @@ class DashboardController extends Controller
 {
     public function show(Request $request)
     {
+        $chedTypeId = UserType::query()
+            ->where('slug', 'ched')
+            ->orWhere('name', 'CHED')
+            ->value('id');
+
+        $excludeChed = function ($query) use ($chedTypeId) {
+            if (! $chedTypeId) {
+                return;
+            }
+
+            $query->where(function ($inner) use ($chedTypeId) {
+                $inner->where('users.user_type_id', '!=', $chedTypeId)
+                    ->orWhereNull('users.user_type_id');
+            });
+        };
+
         $countries = Country::orderBy('name')->get()->map(fn (Country $country) => [
             'id' => $country->id,
             'code' => $country->code,
@@ -24,17 +41,23 @@ class DashboardController extends Controller
 
         $participantsTotal = User::query()
             ->where('is_active', true)
+            ->tap($excludeChed)
             ->count();
 
         $eventsTotal = Programme::query()->count();
 
         $scansTotal = ParticipantAttendance::query()
-            ->whereNotNull('scanned_at')
+            ->join('users', 'participant_attendances.user_id', '=', 'users.id')
+            ->whereNotNull('participant_attendances.scanned_at')
+            ->tap(function ($query) use ($excludeChed) {
+                $excludeChed($query);
+            })
             ->count();
 
         $participantsByCountry = User::query()
             ->where('is_active', true)
             ->whereNotNull('country_id')
+            ->tap($excludeChed)
             ->select('country_id', DB::raw('count(*) as total'))
             ->groupBy('country_id')
             ->pluck('total', 'country_id');
@@ -43,6 +66,9 @@ class DashboardController extends Controller
             ->join('users', 'participant_attendances.user_id', '=', 'users.id')
             ->whereNotNull('participant_attendances.scanned_at')
             ->whereNotNull('users.country_id')
+            ->tap(function ($query) use ($excludeChed) {
+                $excludeChed($query);
+            })
             ->select('users.country_id', DB::raw('count(*) as total'))
             ->groupBy('users.country_id')
             ->pluck('total', 'users.country_id');
@@ -68,6 +94,14 @@ class DashboardController extends Controller
         $attendances = ParticipantAttendance::query()
             ->with(['participant.country'])
             ->whereNotNull('scanned_at')
+            ->when($chedTypeId, function ($query) use ($chedTypeId) {
+                $query->whereHas('participant', function ($inner) use ($chedTypeId) {
+                    $inner->where(function ($nested) use ($chedTypeId) {
+                        $nested->where('user_type_id', '!=', $chedTypeId)
+                            ->orWhereNull('user_type_id');
+                    });
+                });
+            })
             ->orderByDesc('scanned_at')
             ->get()
             ->groupBy('programme_id');
@@ -106,8 +140,12 @@ class DashboardController extends Controller
         $year = now()->year;
 
         $monthlyTotals = ParticipantAttendance::query()
-            ->whereNotNull('scanned_at')
-            ->whereYear('scanned_at', $year)
+            ->join('users', 'participant_attendances.user_id', '=', 'users.id')
+            ->whereNotNull('participant_attendances.scanned_at')
+            ->whereYear('participant_attendances.scanned_at', $year)
+            ->tap(function ($query) use ($excludeChed) {
+                $excludeChed($query);
+            })
             ->selectRaw('MONTH(scanned_at) as month, COUNT(*) as total')
             ->groupBy('month')
             ->pluck('total', 'month');
@@ -117,6 +155,9 @@ class DashboardController extends Controller
             ->whereNotNull('participant_attendances.scanned_at')
             ->whereNotNull('users.country_id')
             ->whereYear('participant_attendances.scanned_at', $year)
+            ->tap(function ($query) use ($excludeChed) {
+                $excludeChed($query);
+            })
             ->selectRaw('MONTH(participant_attendances.scanned_at) as month, users.country_id as country_id, COUNT(*) as total')
             ->groupBy('month', 'country_id')
             ->get()
