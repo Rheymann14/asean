@@ -9,6 +9,7 @@ use App\Http\Controllers\CountryController;
 use App\Http\Controllers\UserTypeController;
 use App\Http\Controllers\IssuanceController;
 use App\Http\Controllers\ContactDetailController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\VenueController;
 use App\Http\Controllers\ScannerController;
@@ -18,6 +19,8 @@ Route::get('/', function () {
         'canRegister' => Features::enabled(Features::registration()),
     ]);
 })->name('home');
+
+Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
 
 Route::get('/contact-us', [ContactDetailController::class, 'publicIndex'])->name('contact-us');
 
