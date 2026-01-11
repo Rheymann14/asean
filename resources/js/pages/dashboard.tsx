@@ -162,6 +162,7 @@ export default function Dashboard() {
     const [selectedEvent, setSelectedEvent] = React.useState<(DashboardEvent & { participants: EventParticipant[] }) | null>(
         null,
     );
+    const [expandedFeedback, setExpandedFeedback] = React.useState<Record<number, boolean>>({});
 
     const { countries, stats, events, country_stats: countryStats, line_data: lineData, feedback } = props;
 
@@ -607,11 +608,13 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            <div className="mt-3 space-y-3">
+                            <div className="mt-3 max-h-[220px] space-y-3 overflow-auto pr-1">
                                 {feedback.entries.length ? (
                                     feedback.entries.map((entry) => {
                                         const eventRatings = Object.entries(entry.event_ratings ?? {}).filter(([, value]) => value > 0);
-                                        const visibleRatings = eventRatings.slice(0, 2);
+                                        const isExpanded = expandedFeedback[entry.id] ?? false;
+                                        const visibleRatings = isExpanded ? eventRatings : eventRatings.slice(0, 2);
+                                        const hiddenCount = Math.max(0, eventRatings.length - 2);
 
                                         return (
                                             <div key={entry.id} className="rounded-xl border px-3 py-2 text-xs">
@@ -637,10 +640,19 @@ export default function Dashboard() {
                                                             <StarRating value={value} />
                                                         </span>
                                                     ))}
-                                                    {eventRatings.length > 2 ? (
-                                                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">
-                                                            +{eventRatings.length - 2} more
-                                                        </span>
+                                                    {hiddenCount > 0 ? (
+                                                        <button
+                                                            type="button"
+                                                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground transition hover:text-foreground"
+                                                            onClick={() =>
+                                                                setExpandedFeedback((prev) => ({
+                                                                    ...prev,
+                                                                    [entry.id]: !isExpanded,
+                                                                }))
+                                                            }
+                                                        >
+                                                            {isExpanded ? 'Hide' : `+${hiddenCount} more`}
+                                                        </button>
                                                     ) : null}
                                                 </div>
                                                 <div className="mt-2 text-muted-foreground line-clamp-2">
