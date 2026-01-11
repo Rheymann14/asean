@@ -5,9 +5,18 @@ import { cn, resolveUrl } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
-
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
+
+type AnimeApi = {
+    set: (targets: HTMLElement | HTMLElement[], params: Record<string, unknown>) => void;
+};
+
+declare global {
+    interface Window {
+        anime?: AnimeApi;
+    }
+}
 
 type FlagItem = { name: string; src: string };
 
@@ -22,6 +31,66 @@ const ASEAN_FLAGS = [
     { name: 'Cambodia', src: '/asean/cambodia.jpg' },
     { name: 'Singapore', src: '/asean/singapore.jpg' },
     { name: 'Vietnam', src: '/asean/vietnam.jpg' },
+] as const;
+
+const LEADERSHIP_SPOTLIGHTS = [
+    {
+        title: 'President',
+        name: 'Republic of the Philippines',
+        description: 'Championing regional cooperation and people-first governance.',
+        image: '/img/background.jpg',
+    },
+    {
+        title: 'CHED Chair',
+        name: 'Commission on Higher Education',
+        description: 'Driving policy that empowers ASEAN youth and future leaders.',
+        image: '/img/ched_co.jpg',
+    },
+    {
+        title: 'Commissioner',
+        name: 'Academic Excellence',
+        description: 'Supporting quality assurance and innovation in higher education.',
+        image: '/img/tourism/urban.jpg',
+    },
+    {
+        title: 'Commissioner',
+        name: 'Student Mobility',
+        description: 'Advancing cross-border learning and cultural exchange.',
+        image: '/img/tourism/festival.jpg',
+    },
+    {
+        title: 'Commissioner',
+        name: 'Research Collaboration',
+        description: 'Strengthening knowledge partnerships across ASEAN.',
+        image: '/img/tourism/ecotourism.jpg',
+    },
+] as const;
+
+const UPDATES_POSTS = [
+    {
+        title: 'ASEAN 2026 Kickoff Summit',
+        date: 'February 2026',
+        summary: 'A shared roadmap for inclusive growth and regional solidarity.',
+        image: '/img/tourism/beach.jpg',
+    },
+    {
+        title: 'Cultural Showcase Series',
+        date: 'March 2026',
+        summary: 'Celebrating heritage, creativity, and the stories of ASEAN communities.',
+        image: '/img/tourism/festival.jpg',
+    },
+    {
+        title: 'Sustainable Tourism Highlights',
+        date: 'April 2026',
+        summary: 'Highlighting ecotourism initiatives and green innovation.',
+        image: '/img/tourism/ecotourism.jpg',
+    },
+    {
+        title: 'Education & Mobility Forum',
+        date: 'May 2026',
+        summary: 'New opportunities for students, researchers, and academic leaders.',
+        image: '/img/tourism/urban.jpg',
+    },
 ] as const;
 
 function usePrefersReducedMotion() {
@@ -202,6 +271,7 @@ function AseanFlagsSlider({ items }: { items: readonly FlagItem[] }) {
 }
 
 export default function Welcome({ canRegister = true }: { canRegister?: boolean }) {
+    const prefersReducedMotion = usePrefersReducedMotion();
     const sectionNavItems = React.useMemo(() => PUBLIC_NAV_ITEMS.filter((i) => i.href.startsWith('#')), []);
     const [feedbackRating, setFeedbackRating] = React.useState(0);
     const [feedbackOpen, setFeedbackOpen] = React.useState(false);
@@ -352,11 +422,52 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
         };
     }, [feedbackOpen]);
 
+    React.useEffect(() => {
+        if (typeof window === 'undefined' || prefersReducedMotion) return;
+        const elements = Array.from(document.querySelectorAll<HTMLElement>('[data-parallax]'));
+        if (!elements.length) return;
+
+        const anime = window.anime;
+        let frame = 0;
+        const onScroll = () => {
+            window.cancelAnimationFrame(frame);
+            frame = window.requestAnimationFrame(() => {
+                const scrollY = window.scrollY;
+                elements.forEach((element) => {
+                    const speed = Number(element.dataset.parallax ?? '0.15');
+                    const translateY = scrollY * speed;
+                    if (anime) {
+                        anime.set(element, { translateY });
+                    } else {
+                        element.style.transform = `translateY(${translateY}px)`;
+                    }
+                });
+            });
+        };
+
+        onScroll();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll);
+
+        return () => {
+            window.cancelAnimationFrame(frame);
+            window.removeEventListener('scroll', onScroll);
+            window.removeEventListener('resize', onScroll);
+        };
+    }, [prefersReducedMotion]);
+
     return (
         <>
             <Head title="">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+                <script
+                    defer
+                    src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"
+                    integrity="sha512-9r3YJ6Bz9bXlQ5p2RA5xYB0cYVNRyPQq+Wl6Xw2mf1SW+8kK9cf1aAiykywnF0z1U0x9xeXt2Gg4Cw2r7jR0Wg=="
+                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
+                />
             </Head>
 
             <PublicLayout
@@ -379,12 +490,14 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                     <div className="w-full">
                         <div className="mx-auto max-w-3xl text-center">
                             <div className="animate-in fade-in zoom-in-95 duration-700">
-                                <img
-                                    src="/img/asean_banner_logo.png"
-                                    alt="ASEAN Philippines 2026 Banner"
-                                    className="mx-auto w-full max-w-3xl drop-shadow-sm"
-                                    draggable={false}
-                                />
+                                <div data-parallax="0.12" className="mx-auto w-full max-w-3xl">
+                                    <img
+                                        src="/img/asean_banner_logo.png"
+                                        alt="ASEAN Philippines 2026 Banner"
+                                        className="w-full drop-shadow-sm"
+                                        draggable={false}
+                                    />
+                                </div>
                             </div>
 
                             <p className="mt-4 animate-in fade-in slide-in-from-bottom-3 duration-700 text-lg font-semibold tracking-[0.25em] text-slate-700">
@@ -407,8 +520,6 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                                     <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" />
                                                 </Link>
                                             </Button>
-
-                                         
                                         </div>
                                     </div>
                                 </div>
@@ -444,10 +555,105 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                     <div className="mt-10">
                         <AseanFlagsSlider items={ASEAN_FLAGS} />
                     </div>
+                </section>
 
-             
+                <section id="leadership" className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-4xl text-center">
+                        <p className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.34em] text-slate-500">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#FCD116]" />
+                            LEADERSHIP
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#FCD116]" />
+                        </p>
+                        <h2 className="mt-3 text-balance text-3xl font-semibold leading-tight text-slate-900 sm:text-5xl">
+                            Guiding voices for ASEAN Philippines 2026
+                        </h2>
+                        <p className="mt-4 text-base text-slate-600 sm:text-lg">
+                            Meet the leaders shaping the regional agenda and championing higher education partnerships.
+                        </p>
+                    </div>
 
+                    <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        {LEADERSHIP_SPOTLIGHTS.map((leader, index) => (
+                            <article
+                                key={`${leader.title}-${index}`}
+                                className="group relative overflow-hidden rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_20px_55px_-35px_rgba(15,23,42,0.55)] backdrop-blur"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/40 to-white/0" />
+                                <div className="relative space-y-4">
+                                    <div data-parallax="0.06" className="overflow-hidden rounded-2xl">
+                                        <img
+                                            src={leader.image}
+                                            alt={leader.name}
+                                            className="h-44 w-full rounded-2xl object-cover transition duration-500 group-hover:scale-105"
+                                            loading="lazy"
+                                            decoding="async"
+                                        />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1e3c73]">
+                                            {leader.title}
+                                        </p>
+                                        <h3 className="mt-2 text-xl font-semibold text-slate-900">{leader.name}</h3>
+                                        <p className="mt-2 text-sm text-slate-600">{leader.description}</p>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                </section>
 
+                <section id="updates" className="mx-auto w-full max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
+                    <div className="grid gap-8 rounded-[32px] border border-white/50 bg-gradient-to-br from-white/85 via-white/70 to-white/90 px-6 py-10 shadow-[0_25px_60px_-40px_rgba(15,23,42,0.5)] backdrop-blur md:grid-cols-[1.1fr_2fr] md:items-center">
+                        <div>
+                            <p className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.34em] text-slate-500">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#FCD116]" />
+                                LATEST
+                            </p>
+                            <h2 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
+                                Updates & highlight reels
+                            </h2>
+                            <p className="mt-4 text-sm text-slate-600 sm:text-base">
+                                Stay in the loop with curated posts, official highlights, and partner announcements.
+                            </p>
+                            <div className="mt-6 flex flex-wrap gap-3">
+                                <button className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-600">
+                                    All updates
+                                </button>
+                                <button className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-600">
+                                    Policy
+                                </button>
+                                <button className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-600">
+                                    Events
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {UPDATES_POSTS.map((post, index) => (
+                                <article
+                                    key={`${post.title}-${index}`}
+                                    className="group overflow-hidden rounded-3xl border border-white/60 bg-white/90 shadow-[0_16px_45px_-32px_rgba(15,23,42,0.5)]"
+                                >
+                                    <div data-parallax="0.08" className="relative h-36 overflow-hidden">
+                                        <img
+                                            src={post.image}
+                                            alt={post.title}
+                                            className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                                            loading="lazy"
+                                            decoding="async"
+                                        />
+                                        <span className="absolute left-4 top-4 rounded-full bg-white/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow">
+                                            {post.date}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-2 px-4 py-4">
+                                        <h3 className="text-base font-semibold text-slate-900">{post.title}</h3>
+                                        <p className="text-xs text-slate-600">{post.summary}</p>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    </div>
                 </section>
 
                 <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
