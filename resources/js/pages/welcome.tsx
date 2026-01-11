@@ -480,7 +480,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                 </button>
                             </div>
 
-                            <div className="mt-4 max-h-[calc(70vh-7rem)] space-y-4 overflow-y-auto pr-1">
+                            <div className="mt-4 max-h-[calc(70vh-6rem)] space-y-4 overflow-y-auto pr-1 pb-3">
                                 <div className="space-y-2">
                                     <p className="text-xs font-semibold text-slate-700">Include feedback for</p>
                                     <div className="space-y-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm">
