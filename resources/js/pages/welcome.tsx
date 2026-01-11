@@ -4,7 +4,7 @@ import { register } from '@/routes';
 import { cn, resolveUrl } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
 
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
@@ -367,7 +367,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                 : 'pointer-events-none translate-y-4 scale-95 opacity-0',
                         )}
                     >
-                        <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.6)] backdrop-blur">
+                        <div className="rounded-2xl border border-white/80 bg-white/95 p-4 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.6)] ring-1 ring-slate-200/60 backdrop-blur overflow-hidden">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#1e3c73]">
@@ -390,16 +390,19 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                             <div className="mt-4 space-y-4">
                                 <label className="block text-xs font-semibold text-slate-700">
                                     Rate type
-                                    <select
-                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm outline-none transition focus:border-[#1e3c73] focus:ring-2 focus:ring-[#1e3c73]/20"
-                                        value={feedbackType}
-                                        onChange={(event) =>
-                                            setFeedbackType(event.target.value as 'event' | 'user-experience')
-                                        }
-                                    >
-                                        <option value="user-experience">User experience</option>
-                                        <option value="event">Event</option>
-                                    </select>
+                                    <div className="relative mt-2 w-full">
+                                        <select
+                                            className="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-3 py-2 pr-9 text-xs text-slate-700 shadow-sm outline-none transition focus:border-[#1e3c73] focus:ring-2 focus:ring-[#1e3c73]/20"
+                                            value={feedbackType}
+                                            onChange={(event) =>
+                                                setFeedbackType(event.target.value as 'event' | 'user-experience')
+                                            }
+                                        >
+                                            <option value="user-experience">User experience</option>
+                                            <option value="event">Event</option>
+                                        </select>
+                                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                    </div>
                                 </label>
 
                                 {feedbackType === 'event' && (
@@ -432,7 +435,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                                                         className={cn(
                                                                             'inline-flex h-8 w-8 items-center justify-center rounded-full border transition',
                                                                             isActive
-                                                                                ? 'border-[#1e3c73]/30 bg-[#1e3c73]/10 text-[#1e3c73]'
+                                                                                ? 'border-amber-300/60 bg-amber-100/60 text-amber-500'
                                                                                 : 'border-slate-200 text-slate-400 hover:border-[#1e3c73]/40 hover:text-[#1e3c73]',
                                                                         )}
                                                                         aria-label={`Rate ${category} ${star} star${star === 1 ? '' : 's'}`}
@@ -440,7 +443,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                                                         <Star
                                                                             className={cn(
                                                                                 'h-4 w-4',
-                                                                                isActive ? 'fill-[#1e3c73]' : '',
+                                                                                isActive ? 'fill-amber-400 text-amber-400' : '',
                                                                             )}
                                                                         />
                                                                     </button>
@@ -471,13 +474,13 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                                         className={cn(
                                                             'inline-flex h-8 w-8 items-center justify-center rounded-full border transition',
                                                             isActive
-                                                                ? 'border-[#1e3c73]/30 bg-[#1e3c73]/10 text-[#1e3c73]'
+                                                                ? 'border-amber-300/60 bg-amber-100/60 text-amber-500'
                                                                 : 'border-slate-200 text-slate-400 hover:border-[#1e3c73]/40 hover:text-[#1e3c73]',
                                                         )}
                                                         aria-label={`Rate ${star} star${star === 1 ? '' : 's'}`}
                                                     >
                                                         <Star
-                                                            className={cn('h-4 w-4', isActive ? 'fill-[#1e3c73]' : '')}
+                                                            className={cn('h-4 w-4', isActive ? 'fill-amber-400 text-amber-400' : '')}
                                                         />
                                                     </button>
                                                 );
