@@ -466,7 +466,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                     <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#1e3c73]">
                                         ASEAN Philippines 2026
                                     </p>
-                                    <h3 className="mt-1 text-base font-semibold text-slate-900">Feedback Lounge</h3>
+                                  
                                     <p className="mt-1 text-xs text-slate-600">
                                         Share your experience to help us elevate the event.
                                     </p>
