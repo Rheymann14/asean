@@ -13,6 +13,7 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\VenueController;
 use App\Http\Controllers\ScannerController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -49,9 +50,7 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         });
 
     Route::middleware(['verified', 'role:ched'])->group(function () {
-        Route::get('dashboard', function () {
-            return Inertia::render('dashboard');
-        })->name('dashboard');
+        Route::get('dashboard', [DashboardController::class, 'show'])->name('dashboard');
         Route::get('participant', [ParticipantController::class, 'index'])->name('participant');
 
         Route::resource('participants', ParticipantController::class)->only(['store', 'update', 'destroy']);
