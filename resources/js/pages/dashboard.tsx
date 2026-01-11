@@ -14,7 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '
 
 import { ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
 
-import { Check, ChevronsUpDown, Users, CalendarFold, QrCode, Filter, House } from 'lucide-react';
+import { Check, ChevronsUpDown, Users, CalendarFold, QrCode, Filter, House, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: dashboard().url }];
@@ -55,6 +55,7 @@ type LineDatum = {
 type FeedbackEntry = {
     id: number;
     user_experience_rating: number | null;
+    event_ratings: Record<string, number> | null;
     recommendations: string | null;
     created_at: string | null;
 };
@@ -133,6 +134,23 @@ function KpiCard({
                 </div>
             </CardHeader>
         </Card>
+    );
+}
+
+function StarRating({ value, max = 5 }: { value: number; max?: number }) {
+    const filled = Math.round(value);
+    return (
+        <div className="inline-flex items-center gap-0.5" aria-label={`${value} out of ${max} stars`}>
+            {Array.from({ length: max }, (_, index) => {
+                const isFilled = index + 1 <= filled;
+                return (
+                    <Star
+                        key={index}
+                        className={cn('h-3 w-3', isFilled ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/40')}
+                    />
+                );
+            })}
+        </div>
     );
 }
 
@@ -581,30 +599,58 @@ export default function Dashboard() {
                         <CardContent className="p-4 pt-0">
                             <div className="flex items-center justify-between rounded-xl border border-dashed px-3 py-2 text-xs">
                                 <span className="text-muted-foreground">Average rating</span>
-                                <span className="font-semibold text-foreground">
-                                    {feedback.avg_rating !== null ? `${feedback.avg_rating}/5` : '—'}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {feedback.avg_rating !== null ? <StarRating value={feedback.avg_rating} /> : null}
+                                    <span className="font-semibold text-foreground">
+                                        {feedback.avg_rating !== null ? `${feedback.avg_rating}/5` : '—'}
+                                    </span>
+                                </div>
                             </div>
 
                             <div className="mt-3 space-y-3">
                                 {feedback.entries.length ? (
-                                    feedback.entries.map((entry) => (
-                                        <div key={entry.id} className="rounded-xl border px-3 py-2 text-xs">
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-medium text-foreground">
-                                                    {entry.user_experience_rating !== null
-                                                        ? `${entry.user_experience_rating}/5`
-                                                        : 'No rating'}
-                                                </span>
-                                                <span className="text-[11px] text-muted-foreground">
-                                                    {entry.created_at ? formatShortDate(entry.created_at) : '—'}
-                                                </span>
+                                    feedback.entries.map((entry) => {
+                                        const eventRatings = Object.entries(entry.event_ratings ?? {}).filter(([, value]) => value > 0);
+                                        const visibleRatings = eventRatings.slice(0, 2);
+
+                                        return (
+                                            <div key={entry.id} className="rounded-xl border px-3 py-2 text-xs">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium text-foreground">Feedback</span>
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {entry.created_at ? formatShortDate(entry.created_at) : '—'}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                    {entry.user_experience_rating !== null ? (
+                                                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-foreground">
+                                                            UX
+                                                            <StarRating value={entry.user_experience_rating} />
+                                                        </span>
+                                                    ) : null}
+                                                    {visibleRatings.map(([label, value]) => (
+                                                        <span
+                                                            key={label}
+                                                            className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-foreground"
+                                                        >
+                                                            <span className="truncate">{label}</span>
+                                                            <StarRating value={value} />
+                                                        </span>
+                                                    ))}
+                                                    {eventRatings.length > 2 ? (
+                                                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">
+                                                            +{eventRatings.length - 2} more
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                                <div className="mt-2 text-muted-foreground line-clamp-2">
+                                                    {entry.recommendations?.trim()
+                                                        ? entry.recommendations
+                                                        : 'No recommendations shared.'}
+                                                </div>
                                             </div>
-                                            <div className="mt-2 text-muted-foreground">
-                                                {entry.recommendations?.trim() ? entry.recommendations : 'No recommendations shared.'}
-                                            </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="rounded-xl border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
                                         No feedback submitted yet.

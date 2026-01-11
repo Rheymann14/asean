@@ -191,6 +191,7 @@ class DashboardController extends Controller
             ->map(fn (Feedback $feedback) => [
                 'id' => $feedback->id,
                 'user_experience_rating' => $feedback->user_experience_rating,
+                'event_ratings' => $feedback->event_ratings,
                 'recommendations' => $feedback->recommendations,
                 'created_at' => $feedback->created_at?->toISOString(),
             ]);
