@@ -4,7 +4,7 @@ import { register } from '@/routes';
 import { cn, resolveUrl } from '@/lib/utils';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, MessageCircle, Star } from 'lucide-react';
 
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
@@ -206,6 +206,12 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
     const [feedbackRating, setFeedbackRating] = React.useState(0);
     const [feedbackOpen, setFeedbackOpen] = React.useState(false);
     const [feedbackType, setFeedbackType] = React.useState<'event' | 'user-experience'>('user-experience');
+    const [eventRatings, setEventRatings] = React.useState<Record<string, number>>({});
+
+    const eventCategories = React.useMemo(
+        () => ['Venue', 'Food', 'Speaker', 'Program flow', 'Sound system'],
+        [],
+    );
 
     const [activeHref, setActiveHref] = React.useState<string>(() => {
         if (typeof window === 'undefined') return '#home';
@@ -358,9 +364,9 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
                                         <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#1e3c73]">
-                                            Normalized Migration
+                                            ASEAN Philippines 2026
                                         </p>
-                                        <h3 className="mt-2 text-lg font-semibold text-slate-900">Floating Feedback</h3>
+                                        <h3 className="mt-2 text-lg font-semibold text-slate-900">Feedback Lounge</h3>
                                         <p className="mt-1 text-sm text-slate-600">
                                             Share your experience to help us elevate the event.
                                         </p>
@@ -390,53 +396,86 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                     </label>
 
                                     {feedbackType === 'event' && (
-                                        <label className="block text-sm font-semibold text-slate-700">
-                                            Event focus
-                                            <select
-                                                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#1e3c73] focus:ring-2 focus:ring-[#1e3c73]/20"
-                                                defaultValue="venue"
-                                            >
-                                                <option value="venue">Venue</option>
-                                                <option value="food">Food</option>
-                                                <option value="speaker">Speaker</option>
-                                                <option value="program-flow">Program flow</option>
-                                            </select>
-                                        </label>
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-700">Event highlights</p>
+                                            <div className="mt-2 max-h-48 space-y-3 overflow-y-auto pr-2">
+                                                {eventCategories.map((category) => {
+                                                    const rating = eventRatings[category] ?? 0;
+                                                    return (
+                                                        <div key={category} className="rounded-2xl border border-slate-200/80 bg-white px-3 py-2">
+                                                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                                                {category}
+                                                            </p>
+                                                            <div className="mt-2 flex items-center gap-2">
+                                                                {[1, 2, 3, 4, 5].map((star) => {
+                                                                    const isActive = star <= rating;
+                                                                    return (
+                                                                        <button
+                                                                            key={star}
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                setEventRatings((current) => ({
+                                                                                    ...current,
+                                                                                    [category]: star,
+                                                                                }))
+                                                                            }
+                                                                            className={cn(
+                                                                                'inline-flex h-9 w-9 items-center justify-center rounded-full border transition',
+                                                                                isActive
+                                                                                    ? 'border-[#1e3c73]/30 bg-[#1e3c73]/10 text-[#1e3c73]'
+                                                                                    : 'border-slate-200 text-slate-400 hover:border-[#1e3c73]/40 hover:text-[#1e3c73]',
+                                                                            )}
+                                                                            aria-label={`Rate ${category} ${star} star${star === 1 ? '' : 's'}`}
+                                                                        >
+                                                                            <Star className={cn('h-4 w-4', isActive ? 'fill-[#1e3c73]' : '')} />
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                                <span className="text-xs font-medium text-slate-500">
+                                                                    {rating ? `${rating}/5` : 'Tap a star'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     )}
 
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-700">
-                                            {feedbackType === 'user-experience'
-                                                ? 'Ease of navigation'
-                                                : 'Overall event rating'}
-                                        </p>
-                                        <div className="mt-2 flex items-center gap-2">
-                                            {[1, 2, 3, 4, 5].map((star) => {
-                                                const isActive = star <= feedbackRating;
-                                                return (
-                                                    <button
-                                                        key={star}
-                                                        type="button"
-                                                        onClick={() => setFeedbackRating(star)}
-                                                        className={cn(
-                                                            'inline-flex h-10 w-10 items-center justify-center rounded-full border transition',
-                                                            isActive
-                                                                ? 'border-[#1e3c73]/30 bg-[#1e3c73]/10 text-[#1e3c73]'
-                                                                : 'border-slate-200 text-slate-400 hover:border-[#1e3c73]/40 hover:text-[#1e3c73]',
-                                                        )}
-                                                        aria-label={`Rate ${star} star${star === 1 ? '' : 's'}`}
-                                                    >
-                                                        <Star
-                                                            className={cn('h-5 w-5', isActive ? 'fill-[#1e3c73]' : '')}
-                                                        />
-                                                    </button>
-                                                );
-                                            })}
-                                            <span className="text-xs font-medium text-slate-500">
-                                                {feedbackRating ? `${feedbackRating}/5` : 'Tap a star'}
-                                            </span>
+                                    {feedbackType === 'user-experience' && (
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-700">Ease of navigation</p>
+                                            <div className="mt-2 flex items-center gap-2">
+                                                {[1, 2, 3, 4, 5].map((star) => {
+                                                    const isActive = star <= feedbackRating;
+                                                    return (
+                                                        <button
+                                                            key={star}
+                                                            type="button"
+                                                            onClick={() => setFeedbackRating(star)}
+                                                            className={cn(
+                                                                'inline-flex h-10 w-10 items-center justify-center rounded-full border transition',
+                                                                isActive
+                                                                    ? 'border-[#1e3c73]/30 bg-[#1e3c73]/10 text-[#1e3c73]'
+                                                                    : 'border-slate-200 text-slate-400 hover:border-[#1e3c73]/40 hover:text-[#1e3c73]',
+                                                            )}
+                                                            aria-label={`Rate ${star} star${star === 1 ? '' : 's'}`}
+                                                        >
+                                                            <Star
+                                                                className={cn(
+                                                                    'h-5 w-5',
+                                                                    isActive ? 'fill-[#1e3c73]' : '',
+                                                                )}
+                                                            />
+                                                        </button>
+                                                    );
+                                                })}
+                                                <span className="text-xs font-medium text-slate-500">
+                                                    {feedbackRating ? `${feedbackRating}/5` : 'Tap a star'}
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     <label className="block text-sm font-semibold text-slate-700">
                                         Recommendations
@@ -458,8 +497,11 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                     <Button
                         type="button"
                         onClick={() => setFeedbackOpen((open) => !open)}
-                        className="h-12 rounded-full bg-[#1e3c73] px-5 text-sm font-semibold text-white shadow-lg shadow-[#1e3c73]/30 hover:bg-[#25468a]"
+                        className="group h-12 rounded-full bg-gradient-to-r from-[#1e3c73] via-[#25468a] to-[#1e3c73] px-5 text-sm font-semibold text-white shadow-lg shadow-[#1e3c73]/30 transition hover:brightness-110"
                     >
+                        <span className="mr-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                            <MessageCircle className="h-4 w-4" />
+                        </span>
                         {feedbackOpen ? 'Hide feedback' : 'Give feedback'}
                     </Button>
                 </div>
