@@ -26,7 +26,7 @@ createInertiaApp({
         delete el.dataset.page;
     },
     progress: {
-        color: '#4B5563',
+        color: '#0760dc',
     },
 });
 

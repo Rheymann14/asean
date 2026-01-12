@@ -23,7 +23,7 @@ import {
     Smartphone,
     IdCard,
     User2,
-  
+
 } from 'lucide-react';
 
 type Country = {
@@ -139,14 +139,25 @@ function IdCardPreview({
                     alt=""
                     className={cn(
                         'absolute inset-0 h-full w-full object-cover',
-                        isLandscape ? 'opacity-45 dark:opacity-35' : 'opacity-45 dark:opacity-30',
+                        // ✅ slightly darker + higher contrast
+                        'filter brightness-80 contrast-150 saturate-200',
+                        // ✅ keep dark mode readable
+                        'dark:brightness-80 dark:contrast-110',
+                        // ✅ keep your original opacity behavior
+                        isLandscape ? 'opacity-100 dark:opacity-35' : 'opacity-100 dark:opacity-30',
                     )}
                     draggable={false}
                     loading="lazy"
+                    decoding="async"
                 />
+
+                {/* ✅ tiny dark veil for extra punch */}
+                <div className="absolute inset-0 bg-black/10 dark:bg-black/15" />
+
                 <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
                 <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
             </div>
+
 
             <div className={cn('relative flex h-full flex-col', pad)}>
                 {/* Header */}
@@ -582,7 +593,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                         <div>
                                             <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Virtual ID</div>
                                             <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                               Use this virtual ID card for attendance verification.
+                                                Use this virtual ID card for attendance verification.
                                             </div>
                                         </div>
 

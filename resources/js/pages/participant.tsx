@@ -482,14 +482,26 @@ function ParticipantIdPrintCard({
                 <img
                     src="/img/bg.png"
                     alt=""
-                    className={cn('absolute inset-0 h-full w-full object-cover', isLandscape ? 'opacity-45 dark:opacity-35' : 'opacity-50 dark:opacity-35')}
+                    className={cn(
+                        'absolute inset-0 h-full w-full object-cover',
+                        // ✅ slightly darker + higher contrast
+                        'filter brightness-80 contrast-150 saturate-200',
+                        // ✅ keep dark mode readable
+                        'dark:brightness-80 dark:contrast-110',
+                        isLandscape ? 'opacity-100' : 'opacity-100',
+                    )}
                     draggable={false}
                     loading="eager"
                     decoding="async"
                 />
+
+                {/* (optional) tiny dark veil for extra punch */}
+                <div className="absolute inset-0 bg-black/10 dark:bg-black/15" />
+
                 <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
                 <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
             </div>
+
 
             <div className={cn('relative flex h-full flex-col', pad)}>
                 {/* Header */}
@@ -1402,7 +1414,7 @@ export default function ParticipantPage(props: PageProps) {
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                     <div>
                                         <CardTitle className="text-base">Participants</CardTitle>
-                                        <CardDescription>Search, filter, and manage participant records.</CardDescription>
+                                        <CardDescription></CardDescription>
                                     </div>
 
                                     <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto lg:justify-end">
@@ -1534,7 +1546,7 @@ export default function ParticipantPage(props: PageProps) {
                                                         </div>
                                                     </TableHead>
                                                     <TableHead>Email</TableHead>
-                                                    <TableHead className="w-[200px]">Contact Number</TableHead>
+                                                    {/* <TableHead className="w-[200px]">Contact Number</TableHead> */}
                                                     <TableHead className="w-[200px]">User Type</TableHead>
                                                     <TableHead className="w-[140px]">Status</TableHead>
                                                     <TableHead className="w-[140px]">Created</TableHead>
@@ -1601,7 +1613,7 @@ export default function ParticipantPage(props: PageProps) {
                                                             </TableCell>
 
                                                             <TableCell className="text-slate-700 dark:text-slate-300">{p.email}</TableCell>
-                                                            <TableCell className="text-slate-700 dark:text-slate-300">{p.contact_number ?? '—'}</TableCell>
+                                                            {/* <TableCell className="text-slate-700 dark:text-slate-300">{p.contact_number ?? '—'}</TableCell> */}
                                                             <TableCell className="text-slate-700 dark:text-slate-300">{p.user_type?.name ?? '—'}</TableCell>
 
                                                             <TableCell>

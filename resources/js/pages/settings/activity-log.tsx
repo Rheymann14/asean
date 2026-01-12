@@ -1,0 +1,618 @@
+import * as React from 'react';
+import { Head } from '@inertiajs/react';
+
+import HeadingSmall from '@/components/heading-small';
+import { type BreadcrumbItem } from '@/types';
+
+import AppLayout from '@/layouts/app-layout';
+import SettingsLayout from '@/layouts/settings/layout';
+import { index as activityLog } from '@/routes/activity-log';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+
+import { cn } from '@/lib/utils';
+import {
+    CalendarDays,
+    CheckCircle2,
+    Clock,
+    ExternalLink,
+    Filter,
+    Search,
+    ShieldAlert,
+    ShieldCheck,
+    TriangleAlert,
+    User2,
+    XCircle,
+} from 'lucide-react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Activity Log', href: activityLog().url },
+];
+
+type LogStatus = 'success' | 'failed' | 'warning' | 'info';
+type ActivityType =
+    | 'login'
+    | 'logout'
+    | 'update'
+    | 'create'
+    | 'delete'
+    | 'export'
+    | 'view'
+    | 'approve'
+    | 'reject';
+
+type ActivityLogRow = {
+    id: string;
+    page: string; // e.g. "Settings / Profile"
+    pageHref?: string; // optional
+    user: {
+        name: string;
+        role?: string;
+    };
+    activity: ActivityType;
+    description: string;
+    status: LogStatus;
+    ip?: string;
+    device?: string;
+    timestamp: string; // ISO or readable; static for now
+};
+
+type DayGroup = {
+    dayLabel: string; // e.g. "Today — Jan 12, 2026"
+    dayKey: string; // for stable key
+    rows: ActivityLogRow[];
+};
+
+const SAMPLE_GROUPS: DayGroup[] = [
+    {
+        dayLabel: 'Today — Jan 12, 2026',
+        dayKey: '2026-01-12',
+        rows: [
+            {
+                id: 'a1',
+                page: 'Settings / Activity Log',
+                pageHref: '/settings/activity-log',
+                user: { name: 'Rheymann Cuartocruz', role: 'super_admin' },
+                activity: 'view',
+                description: 'Opened Activity Log page and loaded latest entries.',
+                status: 'info',
+                ip: '192.168.1.20',
+                device: 'Chrome / Windows',
+                timestamp: '2026-01-12 00:22',
+            },
+            {
+                id: 'a2',
+                page: 'Participants / Check-in',
+                pageHref: '/participants/check-in',
+                user: { name: 'Maria Santos', role: 'ched_admin' },
+                activity: 'approve',
+                description: 'Approved participant check-in for Event #42 (ASEAN Registration Briefing).',
+                status: 'success',
+                ip: '10.0.0.8',
+                device: 'Edge / Windows',
+                timestamp: '2026-01-12 00:05',
+            },
+            {
+                id: 'a3',
+                page: 'Users / Role Management',
+                pageHref: '/users',
+                user: { name: 'John Dela Cruz', role: 'admin' },
+                activity: 'update',
+                description: 'Changed role of user “ann.lee@domain.com” from staff to editor.',
+                status: 'warning',
+                ip: '10.0.0.25',
+                device: 'Chrome / Mac',
+                timestamp: '2026-01-12 00:01',
+            },
+        ],
+    },
+    {
+        dayLabel: 'Yesterday — Jan 11, 2026',
+        dayKey: '2026-01-11',
+        rows: [
+            {
+                id: 'b1',
+                page: 'Settings / Two-Factor',
+                pageHref: '/settings/two-factor',
+                user: { name: 'Rheymann Cuartocruz', role: 'super_admin' },
+                activity: 'update',
+                description: 'Enabled two-factor authentication (Authenticator App).',
+                status: 'success',
+                ip: '192.168.1.20',
+                device: 'Chrome / Windows',
+                timestamp: '2026-01-11 21:40',
+            },
+            {
+                id: 'b2',
+                page: 'Auth / Login',
+                pageHref: '/login',
+                user: { name: 'Unknown user', role: 'guest' },
+                activity: 'login',
+                description: 'Failed login attempt for email “test@domain.com” (invalid password).',
+                status: 'failed',
+                ip: '203.177.45.10',
+                device: 'Mobile Safari / iOS',
+                timestamp: '2026-01-11 20:15',
+            },
+            {
+                id: 'b3',
+                page: 'Reports / Export',
+                pageHref: '/reports',
+                user: { name: 'Maria Santos', role: 'ched_admin' },
+                activity: 'export',
+                description: 'Exported participants list (CSV) filtered by country: PH, TH, SG.',
+                status: 'success',
+                ip: '10.0.0.8',
+                device: 'Edge / Windows',
+                timestamp: '2026-01-11 19:02',
+            },
+        ],
+    },
+    {
+        dayLabel: 'Jan 10, 2026',
+        dayKey: '2026-01-10',
+        rows: [
+            {
+                id: 'c1',
+                page: 'Venues / Manage',
+                pageHref: '/venues',
+                user: { name: 'John Dela Cruz', role: 'admin' },
+                activity: 'create',
+                description: 'Created new venue “KCC Convention Center” with map coordinates.',
+                status: 'success',
+                ip: '10.0.0.25',
+                device: 'Chrome / Mac',
+                timestamp: '2026-01-10 14:20',
+            },
+            {
+                id: 'c2',
+                page: 'Issuances / Upload',
+                pageHref: '/issuances',
+                user: { name: 'Anna Lee', role: 'editor' },
+                activity: 'create',
+                description: 'Uploaded “Office Order 01-2026” PDF and marked as active.',
+                status: 'info',
+                ip: '10.0.0.19',
+                device: 'Chrome / Windows',
+                timestamp: '2026-01-10 09:11',
+            },
+        ],
+    },
+];
+
+function statusBadgeClass(status: LogStatus) {
+    switch (status) {
+        case 'success':
+            return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200';
+        case 'failed':
+            return 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200';
+        case 'warning':
+            return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200';
+        case 'info':
+        default:
+            return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200';
+    }
+}
+
+function activityBadgeClass(type: ActivityType) {
+    // subtle but still readable
+    switch (type) {
+        case 'delete':
+        case 'reject':
+            return 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200';
+        case 'approve':
+        case 'create':
+            return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200';
+        case 'update':
+            return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200';
+        case 'export':
+            return 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200';
+        case 'login':
+        case 'logout':
+        case 'view':
+        default:
+            return 'border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200';
+    }
+}
+
+function activityIcon(type: ActivityType) {
+    switch (type) {
+        case 'approve':
+            return <ShieldCheck className="h-3.5 w-3.5" />;
+        case 'reject':
+            return <ShieldAlert className="h-3.5 w-3.5" />;
+        case 'login':
+            return <CheckCircle2 className="h-3.5 w-3.5" />;
+        case 'logout':
+            return <XCircle className="h-3.5 w-3.5" />;
+        case 'update':
+            return <Clock className="h-3.5 w-3.5" />;
+        case 'delete':
+            return <TriangleAlert className="h-3.5 w-3.5" />;
+        case 'export':
+            return <ExternalLink className="h-3.5 w-3.5" />;
+        case 'create':
+            return <CheckCircle2 className="h-3.5 w-3.5" />;
+        case 'view':
+        default:
+            return <Search className="h-3.5 w-3.5" />;
+    }
+}
+
+function formatActivity(type: ActivityType) {
+    // more readable labels
+    const map: Record<ActivityType, string> = {
+        login: 'Login',
+        logout: 'Logout',
+        update: 'Update',
+        create: 'Create',
+        delete: 'Delete',
+        export: 'Export',
+        view: 'View',
+        approve: 'Approve',
+        reject: 'Reject',
+    };
+    return map[type] ?? type;
+}
+
+export default function ActivityLog() {
+    const [query, setQuery] = React.useState('');
+    const [status, setStatus] = React.useState<'all' | LogStatus>('all');
+
+    // static date inputs (no backend yet)
+    const [from, setFrom] = React.useState('2026-01-10');
+    const [to, setTo] = React.useState('2026-01-12');
+
+    const filteredGroups = React.useMemo(() => {
+        // Static filtering: query + status only (date inputs are UI only for now)
+        const q = query.trim().toLowerCase();
+        return SAMPLE_GROUPS.map((g) => ({
+            ...g,
+            rows: g.rows.filter((r) => {
+                const matchesStatus = status === 'all' ? true : r.status === status;
+                const matchesQuery = !q
+                    ? true
+                    : [
+                        r.page,
+                        r.user.name,
+                        r.user.role ?? '',
+                        r.description,
+                        r.activity,
+                        r.ip ?? '',
+                        r.device ?? '',
+                        r.timestamp,
+                    ]
+                        .join(' ')
+                        .toLowerCase()
+                        .includes(q);
+
+                return matchesStatus && matchesQuery;
+            }),
+        })).filter((g) => g.rows.length > 0);
+    }, [query, status]);
+
+    const totalRows = React.useMemo(
+        () => filteredGroups.reduce((sum, g) => sum + g.rows.length, 0),
+        [filteredGroups],
+    );
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Activity Log" />
+
+            <SettingsLayout>
+                <div className="space-y-6">
+                    <HeadingSmall
+                        title="Activity Log"
+                        description="View users activity log and history"
+                    />
+
+                    {/* Filters */}
+                    <Card className="rounded-2xl border-slate-200/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/40">
+    <div className="grid gap-4">
+    {/* Row 1: From + To */}
+    <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-1.5">
+            <Label className="text-xs text-slate-600 dark:text-slate-300">From</Label>
+            <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                    type="date"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    className="h-9 w-full rounded-xl pl-10"
+                />
+            </div>
+        </div>
+
+        <div className="grid gap-1.5">
+            <Label className="text-xs text-slate-600 dark:text-slate-300">To</Label>
+            <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                    type="date"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    className="h-9 w-full rounded-xl pl-10"
+                />
+            </div>
+        </div>
+    </div>
+
+    {/* Row 2: Status + Search + Reset */}
+    <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
+        <div className="grid gap-1.5 sm:col-span-3">
+            <Label className="text-xs text-slate-600 dark:text-slate-300">Status</Label>
+            <Select value={status} onValueChange={(v) => setStatus(v as any)}>
+                <SelectTrigger className="h-9 w-full rounded-xl">
+                    <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="success">Success</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+
+        <div className="grid gap-1.5 sm:col-span-7">
+            <Label className="text-xs text-slate-600 dark:text-slate-300">Search</Label>
+            <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search page, user, activity, IP…"
+                    className="h-9 w-full rounded-xl pl-10"
+                />
+            </div>
+        </div>
+
+        <div className="sm:col-span-2">
+            <Label className="sr-only">Reset</Label>
+            <Button
+                type="button"
+                variant="outline"
+                className="h-9 w-full rounded-xl"
+                onClick={() => {
+                    setQuery('');
+                    setStatus('all');
+                    setFrom('2026-01-10');
+                    setTo('2026-01-12');
+                }}
+            >
+                <Filter className="mr-2 h-4 w-4" />
+                Reset
+            </Button>
+        </div>
+    </div>
+</div>
+
+
+                        <Separator className="my-4" />
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
+                            <div className="inline-flex items-center gap-2">
+                                <span className="font-medium text-slate-900 dark:text-slate-100">{totalRows}</span>
+                                <span>result(s)</span>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="hidden sm:inline">
+                                    Date range UI: <span className="font-medium">{from}</span> to{' '}
+                                    <span className="font-medium">{to}</span>
+                                </span>
+                            </div>
+
+                       
+                        </div>
+                    </Card>
+
+
+                    {/* Groups per day */}
+                    <div className="space-y-6">
+                        {filteredGroups.length === 0 ? (
+                            <Card className="rounded-2xl border-dashed border-slate-200/70 bg-white/70 p-8 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+                                <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                                    No activity found
+                                </p>
+                                <p className="mt-2">
+                                    Try adjusting your search or filters.
+                                </p>
+                            </Card>
+                        ) : (
+                            filteredGroups.map((group) => (
+                                <Card
+                                    key={group.dayKey}
+                                    className="rounded-2xl border-slate-200/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/40"
+                                >
+                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                {group.dayLabel}
+                                            </p>
+                                            <p className="text-xs text-slate-600 dark:text-slate-300">
+                                                {group.rows.length} entr{group.rows.length === 1 ? 'y' : 'ies'}
+                                            </p>
+                                        </div>
+
+                                        <Badge
+                                            className={cn(
+                                                'rounded-full border px-2 py-0.5 text-[11px]',
+                                                'border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200',
+                                            )}
+                                        >
+                                            {group.dayKey}
+                                        </Badge>
+                                    </div>
+
+                                    <div className="overflow-hidden rounded-xl border border-slate-200/70 dark:border-white/10">
+                                        <Table className="text-sm">
+                                            <TableHeader>
+                                                <TableRow className="bg-slate-50/60 dark:bg-white/5">
+                                                    <TableHead className="w-[26%] py-2 text-xs">
+                                                        Page
+                                                    </TableHead>
+                                                    <TableHead className="w-[18%] py-2 text-xs">
+                                                        User
+                                                    </TableHead>
+                                                    <TableHead className="w-[14%] py-2 text-xs">
+                                                        Activity
+                                                    </TableHead>
+                                                    <TableHead className="py-2 text-xs">
+                                                        Description
+                                                    </TableHead>
+                                                    <TableHead className="w-[10%] py-2 text-xs">
+                                                        Status
+                                                    </TableHead>
+                                                    <TableHead className="w-[12%] py-2 text-xs text-right">
+                                                        Timestamp
+                                                    </TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+
+                                            <TableBody>
+                                                {group.rows.map((row) => (
+                                                    <TableRow
+                                                        key={row.id}
+                                                        className="hover:bg-slate-50/70 dark:hover:bg-white/5"
+                                                    >
+                                                        {/* Page */}
+                                                        <TableCell className="py-2 align-top">
+                                                            <div className="min-w-0 space-y-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Badge
+                                                                        className={cn(
+                                                                            'rounded-full border px-2 py-0.5 text-[11px]',
+                                                                            'border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200',
+                                                                        )}
+                                                                    >
+                                                                        {row.page}
+                                                                    </Badge>
+
+                                                                    {row.pageHref ? (
+                                                                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                            {row.pageHref}
+                                                                        </span>
+                                                                    ) : null}
+                                                                </div>
+
+                                                                {/* extra micro info */}
+                                                                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+                                                                    {row.ip ? (
+                                                                        <span className="rounded-md bg-slate-100 px-2 py-0.5 dark:bg-white/5">
+                                                                            IP: {row.ip}
+                                                                        </span>
+                                                                    ) : null}
+                                                                    {row.device ? (
+                                                                        <span className="rounded-md bg-slate-100 px-2 py-0.5 dark:bg-white/5">
+                                                                            {row.device}
+                                                                        </span>
+                                                                    ) : null}
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+
+                                                        {/* User */}
+                                                        <TableCell className="py-2 align-top">
+                                                            <div className="space-y-1">
+                                                                <p className="truncate font-medium text-slate-900 dark:text-slate-100">
+                                                                    {row.user.name}
+                                                                </p>
+                                                                {row.user.role ? (
+                                                                    <Badge
+                                                                        className={cn(
+                                                                            'rounded-full border px-2 py-0.5 text-[11px]',
+                                                                            'border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200',
+                                                                        )}
+                                                                    >
+                                                                        {row.user.role}
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                                        —
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+
+                                                        {/* Activity */}
+                                                        <TableCell className="py-2 align-top">
+                                                            <Badge
+                                                                className={cn(
+                                                                    'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px]',
+                                                                    activityBadgeClass(row.activity),
+                                                                )}
+                                                            >
+                                                                {activityIcon(row.activity)}
+                                                                {formatActivity(row.activity)}
+                                                            </Badge>
+                                                        </TableCell>
+
+                                                        {/* Description */}
+                                                        <TableCell className="py-2 align-top">
+                                                            <p className="line-clamp-2 text-[13px] leading-5 text-slate-700 dark:text-slate-200">
+                                                                {row.description}
+                                                            </p>
+                                                        </TableCell>
+
+                                                        {/* Status */}
+                                                        <TableCell className="py-2 align-top">
+                                                            <Badge
+                                                                className={cn(
+                                                                    'rounded-full border px-2 py-0.5 text-[11px]',
+                                                                    statusBadgeClass(row.status),
+                                                                )}
+                                                            >
+                                                                {row.status === 'success'
+                                                                    ? 'Success'
+                                                                    : row.status === 'failed'
+                                                                        ? 'Failed'
+                                                                        : row.status === 'warning'
+                                                                            ? 'Warning'
+                                                                            : 'Info'}
+                                                            </Badge>
+                                                        </TableCell>
+
+                                                        {/* Timestamp */}
+                                                        <TableCell className="py-2 align-top text-right">
+                                                            <span className="text-xs text-slate-600 dark:text-slate-300">
+                                                                {row.timestamp}
+                                                            </span>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </Card>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </SettingsLayout>
+        </AppLayout>
+    );
+}
