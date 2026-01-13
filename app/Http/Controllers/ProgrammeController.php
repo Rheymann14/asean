@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Programme;
+use App\Models\ParticipantAttendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -67,6 +68,11 @@ class ProgrammeController extends Controller
 
     public function participantIndex(Request $request)
     {
+        $attendanceEntries = ParticipantAttendance::query()
+            ->select(['programme_id', 'scanned_at'])
+            ->where('user_id', $request->user()->id)
+            ->get();
+
         $programmes = Programme::query()
             ->with(['venues' => fn ($query) => $query->where('is_active', true)->orderBy('id')])
             ->latest('starts_at')
@@ -100,6 +106,13 @@ class ProgrammeController extends Controller
             'joined_programme_ids' => $request->user()
                 ->joinedProgrammes()
                 ->pluck('programmes.id'),
+            'checked_in_programmes' => $attendanceEntries
+                ->map(fn (ParticipantAttendance $attendance) => [
+                    'programme_id' => $attendance->programme_id,
+                    'scanned_at' => $attendance->scanned_at?->toISOString(),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 
