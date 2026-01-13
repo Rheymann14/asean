@@ -503,7 +503,10 @@ export default function EventList({ programmes = [], joined_programme_ids = [], 
     const missedEvents = React.useMemo(
         () =>
             normalized.filter(
-                (event) => selectedIds.includes(event.id) && !attendanceByProgramme.get(event.id),
+                (event) =>
+                    selectedIds.includes(event.id) &&
+                    !attendanceByProgramme.get(event.id) &&
+                    event.phase === 'closed',
             ),
         [normalized, selectedIds, attendanceByProgramme],
     );
