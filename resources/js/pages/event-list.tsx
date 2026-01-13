@@ -624,39 +624,82 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                 <Card className="border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
                     <Tabs value={tab} onValueChange={(v) => setTab(v as EventPhase)} className="space-y-3">
                         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                            <TabsList className="w-full justify-start bg-slate-100/70 dark:bg-slate-900/50 md:w-auto">
-                                <TabsTrigger value="ongoing" className="gap-2">
-                                    Ongoing
-                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                                        {counts.ongoing}
-                                    </Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="upcoming" className="gap-2">
-                                    Upcoming
-                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                                        {counts.upcoming}
-                                    </Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="closed" className="gap-2">
-                                    Closed
-                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                                        {counts.closed}
-                                    </Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="join" className="gap-2">
-                                    Join
-                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                                        {counts.ongoing}
-                                    </Badge>
-                                </TabsTrigger>
-                                <TabsTrigger value="missed" className="gap-2">
-                                    Missed
-                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                                        {counts.ongoing}
-                                    </Badge>
-                                </TabsTrigger>
+                            <TabsList className="w-full flex-wrap items-center justify-start gap-2 bg-slate-100/70 p-1.5 dark:bg-slate-900/50 md:w-auto">
+                                {/* STATUS GROUP */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <TabsTrigger
+                                        value="ongoing"
+                                        className="gap-2 data-[state=active]:bg-amber-50 data-[state=active]:text-amber-800 dark:data-[state=active]:bg-amber-500/15 dark:data-[state=active]:text-amber-200"
+                                    >
+                                        Ongoing
+                                        <Badge
+                                            variant="outline"
+                                            className="h-5 border-amber-200 bg-amber-50/60 px-1.5 text-[10px] text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200"
+                                        >
+                                            {counts.ongoing}
+                                        </Badge>
+                                    </TabsTrigger>
 
+                                    <TabsTrigger
+                                        value="upcoming"
+                                        className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-800 dark:data-[state=active]:bg-blue-500/15 dark:data-[state=active]:text-blue-200"
+                                    >
+                                        Upcoming
+                                        <Badge
+                                            variant="outline"
+                                            className="h-5 border-blue-200 bg-blue-50/60 px-1.5 text-[10px] text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-200"
+                                        >
+                                            {counts.upcoming}
+                                        </Badge>
+                                    </TabsTrigger>
+
+                                    <TabsTrigger
+                                        value="closed"
+                                        className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-800 dark:data-[state=active]:bg-red-500/15 dark:data-[state=active]:text-red-200"
+                                    >
+                                        Closed
+                                        <Badge
+                                            variant="outline"
+                                            className="h-5 border-red-200 bg-red-50/60 px-1.5 text-[10px] text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200"
+                                        >
+                                            {counts.closed}
+                                        </Badge>
+                                    </TabsTrigger>
+                                </div>
+
+                                {/* Divider */}
+                                <div className="hidden h-6 w-px bg-slate-200 dark:bg-slate-700 md:block" />
+
+                                {/* ATTENDANCE GROUP */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <TabsTrigger
+                                        value="attended"
+                                        className="gap-2 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-800 dark:data-[state=active]:bg-emerald-500/15 dark:data-[state=active]:text-emerald-200"
+                                    >
+                                        Attended
+                                        <Badge
+                                            variant="outline"
+                                            className="h-5 border-emerald-200 bg-emerald-50/60 px-1.5 text-[10px] text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                        >
+                                            {counts.closed}
+                                        </Badge>
+                                    </TabsTrigger>
+
+                                    <TabsTrigger
+                                        value="missed"
+                                        className="gap-2 data-[state=active]:bg-slate-100 data-[state=active]:text-slate-800 dark:data-[state=active]:bg-slate-700/40 dark:data-[state=active]:text-slate-100"
+                                    >
+                                        Missed
+                                        <Badge
+                                            variant="outline"
+                                            className="h-5 border-slate-200 bg-slate-50/70 px-1.5 text-[10px] text-slate-700 dark:border-slate-600/40 dark:bg-slate-800/40 dark:text-slate-200"
+                                        >
+                                            {counts.closed}
+                                        </Badge>
+                                    </TabsTrigger>
+                                </div>
                             </TabsList>
+
 
                             <div className="relative w-full md:w-72">
                                 <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
