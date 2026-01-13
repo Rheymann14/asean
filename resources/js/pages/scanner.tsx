@@ -139,6 +139,13 @@ function normalizePngDataUrl(v?: string | null) {
     return null;
 }
 
+function getFlagSrc(countryCode?: string | null, countryFlagUrl?: string | null) {
+    if (countryFlagUrl) return countryFlagUrl;
+    const code = (countryCode || '').toLowerCase().trim();
+    if (!code) return null;
+    return `/asean/${code}.png`;
+}
+
 function resolveEventPhase(event: EventRow, now: number) {
     if (event.phase) return event.phase;
     if (event.is_active === false) return 'closed';
@@ -454,6 +461,7 @@ export default function Scanner(props: PageProps) {
     // ✅ dialog for BOTH success and error
     const [resultOpen, setResultOpen] = React.useState(false);
     const rescanOnCloseRef = React.useRef(false);
+    const resultOpenRef = React.useRef(false);
 
     // ✅ QR preview that never becomes "undefined"
     const [qrPreview, setQrPreview] = React.useState<string | null>(null);
@@ -508,10 +516,13 @@ export default function Scanner(props: PageProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [resultOpen]);
 
+    React.useEffect(() => {
+        resultOpenRef.current = resultOpen;
+    }, [resultOpen]);
+
     // ✅ Build QR image for ID card:
     // 1) use backend qr_data_url if provided
     // 2) else generate from participant.qr_payload / participant.qr_token
-    // 3) else fallback to lastCode
     React.useEffect(() => {
         let alive = true;
 
@@ -525,10 +536,7 @@ export default function Scanner(props: PageProps) {
                 return;
             }
 
-            const payload =
-                (p?.qr_payload ?? '').trim() ||
-                (p?.qr_token ?? '').trim() ||
-                (lastCode ?? '').trim();
+            const payload = (p?.qr_payload ?? '').trim() || (p?.qr_token ?? '').trim();
 
             if (!payload) {
                 setQrPreview(null);
@@ -557,7 +565,7 @@ export default function Scanner(props: PageProps) {
         return () => {
             alive = false;
         };
-    }, [result?.qr_data_url, result?.participant?.qr_payload, result?.participant?.qr_token, lastCode]);
+    }, [result?.qr_data_url, result?.participant?.qr_payload, result?.participant?.qr_token]);
 
     function vibrateSuccess() {
         if (navigator.vibrate) navigator.vibrate([40, 40, 90]);
@@ -576,12 +584,29 @@ export default function Scanner(props: PageProps) {
         video.srcObject = null;
     }
 
+    function openResultDialog(data: ScanResponse) {
+        setResult(data);
+        setStatus(data.ok ? 'success' : 'error');
+        setResultOpen(true);
+        setIsScanning(false);
+        isScanningRef.current = false;
+    }
+
     function ensureEventSelected() {
         if (!selectedEventId) {
             const data = { ok: false, message: 'Please select an event before scanning.' } as ScanResponse;
-            setResult(data);
-            setStatus('error');
-            setResultOpen(true);
+            if (!resultOpenRef.current) openResultDialog(data);
+            return false;
+        }
+        if (selectedEventPhase && selectedEventPhase !== 'ongoing') {
+            const data = {
+                ok: false,
+                message:
+                    selectedEventPhase === 'upcoming'
+                        ? 'This event has not started yet. Scanning will open once it is ongoing.'
+                        : 'This event is no longer open for scanning.',
+            } as ScanResponse;
+            if (!resultOpenRef.current) openResultDialog(data);
             return false;
         }
         return true;
@@ -694,17 +719,13 @@ export default function Scanner(props: PageProps) {
 
             const data = (await res.json()) as ScanResponse;
 
-            setResult(data);
-            setStatus(data.ok ? 'success' : 'error');
-            setResultOpen(true);
+            openResultDialog(data);
 
             if (data.ok) vibrateSuccess();
             else vibrateError();
         } catch {
             const data = { ok: false, message: 'Network/server error. Please try again.' } as ScanResponse;
-            setResult(data);
-            setStatus('error');
-            setResultOpen(true);
+            openResultDialog(data);
             vibrateError();
         }
     }
@@ -722,6 +743,7 @@ export default function Scanner(props: PageProps) {
 
     const selectedEvent = selectedEventId ? events.find((e) => String(e.id) === selectedEventId) : null;
     const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, nowTs) : undefined;
+    const isEventBlocked = !!selectedEventPhase && selectedEventPhase !== 'ongoing';
 
     const filteredEvents = React.useMemo(() => {
         return events.map((event) => ({
@@ -730,12 +752,12 @@ export default function Scanner(props: PageProps) {
         }));
     }, [events, nowTs]);
 
-    // ✅ build ID-card participant shape (no undefined)
+    // ✅ build ID-card participant shape (match virtual ID content)
     const cardParticipant = React.useMemo(() => {
         const p = result?.participant;
         if (!p) return null;
 
-        const displayId = (p.display_id ?? '').toString().trim() || String(p.id);
+        const displayId = (p.display_id ?? '').toString().trim() || '—';
 
         return {
             name: p.full_name,
@@ -747,7 +769,7 @@ export default function Scanner(props: PageProps) {
         };
     }, [result?.participant]);
 
-    const flagSrc = result?.participant?.country_flag_url ?? null;
+    const flagSrc = getFlagSrc(result?.participant?.country_code, result?.participant?.country_flag_url);
     const qrDataUrl = qrPreview;
 
     const dialogTone = result?.ok ? 'success' : 'danger';
@@ -1063,9 +1085,16 @@ export default function Scanner(props: PageProps) {
                         </Popover>
 
                         {selectedEvent ? (
-                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <CalendarDays className="h-4 w-4" />
-                                <span>{fmtDate(selectedEvent.starts_at) ?? '—'}</span>
+                            <div className="flex flex-col gap-1 text-xs text-slate-500">
+                                <div className="flex items-center gap-2">
+                                    <CalendarDays className="h-4 w-4" />
+                                    <span>{fmtDate(selectedEvent.starts_at) ?? '—'}</span>
+                                </div>
+                                {isEventBlocked ? (
+                                    <div className="text-xs font-medium text-red-600 dark:text-red-400">
+                                        Scanning is disabled until the event is ongoing.
+                                    </div>
+                                ) : null}
                             </div>
                         ) : null}
                     </div>
@@ -1142,7 +1171,11 @@ export default function Scanner(props: PageProps) {
 
                         <div className="grid grid-cols-2 gap-2">
                             {!isScanning ? (
-                                <Button onClick={startScan} className={cn('h-11 rounded-2xl', PRIMARY_BTN)}>
+                                <Button
+                                    onClick={startScan}
+                                    className={cn('h-11 rounded-2xl', PRIMARY_BTN)}
+                                    disabled={isEventBlocked}
+                                >
                                     <Camera className="mr-2 h-4 w-4" />
                                     Start Scanning
                                 </Button>
@@ -1171,6 +1204,7 @@ export default function Scanner(props: PageProps) {
                                     <Button
                                         onClick={() => manualCode.trim() && verifyCode(manualCode.trim())}
                                         className={cn('h-11 rounded-2xl', PRIMARY_BTN)}
+                                        disabled={isEventBlocked}
                                     >
                                         Verify
                                     </Button>
@@ -1181,7 +1215,7 @@ export default function Scanner(props: PageProps) {
                 </div>
 
                 <div className="border-t border-slate-200 bg-white px-4 py-4 dark:border-slate-800 dark:bg-slate-950">
-                    {status === 'verifying' ? (
+                    {status === 'verifying' && !resultOpen ? (
                         <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/30">
                             <div className="flex items-center gap-3">
                                 <div className="grid size-10 place-items-center rounded-2xl bg-[#00359c]/10 text-[#00359c] dark:bg-[#00359c]/15">
