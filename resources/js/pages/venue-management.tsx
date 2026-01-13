@@ -36,6 +36,16 @@ import {
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
+
 import {
     Plus,
     Search,
@@ -48,6 +58,8 @@ import {
     Building2,
     CheckCircle2,
     XCircle,
+    ChevronsUpDown,
+    Check,
 } from 'lucide-react';
 
 type ProgrammeRow = {
@@ -208,6 +220,98 @@ function extractIframeSrc(value: string) {
     return match?.[1] ?? trimmed;
 }
 
+/** ✅ Searchable command combobox for Events */
+function EventCombobox({
+    programmes,
+    value,
+    onChange,
+    programmesWithVenue,
+    editingProgrammeId,
+}: {
+    programmes: ProgrammeRow[];
+    value: string;
+    onChange: (v: string) => void;
+    programmesWithVenue: Set<number>;
+    editingProgrammeId: number | null;
+}) {
+    const [open, setOpen] = React.useState(false);
+
+    const selected = React.useMemo(() => {
+        const id = Number(value);
+        if (!value || Number.isNaN(id)) return null;
+        return programmes.find((p) => p.id === id) ?? null;
+    }, [programmes, value]);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                >
+                    <span className={cn('truncate', !selected && 'text-muted-foreground')}>
+                        {selected ? selected.title : 'Select event'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+
+            <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder="Search event..." />
+                    <CommandList>
+                        <CommandEmpty>No event found.</CommandEmpty>
+
+                        <CommandGroup>
+                            {programmes.map((p) => {
+                                const hasVenue = programmesWithVenue.has(p.id);
+
+                                // ✅ disable if already has venue (but allow current event when editing)
+                                const disabled = hasVenue && (editingProgrammeId == null || editingProgrammeId !== p.id);
+
+                                const isSelected = value === String(p.id);
+
+                                return (
+                                    <CommandItem
+                                        key={p.id}
+                                        value={`${p.title} ${p.id}`}
+                                        disabled={disabled}
+                                        onSelect={() => {
+                                            if (disabled) return;
+                                            onChange(String(p.id));
+                                            setOpen(false);
+                                        }}
+                                        className={cn(disabled && 'opacity-50')}
+                                    >
+                                        <div className="flex w-full items-center gap-3">
+                                            <Check className={cn('h-4 w-4', isSelected ? 'opacity-100' : 'opacity-0')} />
+                                            <span className="flex-1 truncate">{p.title}</span>
+
+                                            <span
+                                                className={cn(
+                                                    'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
+                                                    hasVenue
+                                                        ? 'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                                        : 'bg-amber-600/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+                                                )}
+                                            >
+                                                {hasVenue ? 'Has venue' : 'No venue yet'}
+                                            </span>
+                                        </div>
+                                    </CommandItem>
+                                );
+                            })}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 export default function VenueManagement(props: PageProps) {
     const programmes: ProgrammeRow[] = React.useMemo(() => props.programmes ?? [], [props.programmes]);
     const venues: VenueRow[] = React.useMemo(() => props.venues ?? [], [props.venues]);
@@ -221,6 +325,15 @@ export default function VenueManagement(props: PageProps) {
         }));
     }, [venues, programmeById]);
 
+    // ✅ which programmes already have a venue (used to disable options in Add dialog)
+    const programmesWithVenue = React.useMemo(() => {
+        const set = new Set<number>();
+        for (const v of resolvedVenues) {
+            if (typeof v.programme_id === 'number') set.add(v.programme_id);
+        }
+        return set;
+    }, [resolvedVenues]);
+
     const [q, setQ] = React.useState('');
     const [eventFilter, setEventFilter] = React.useState<string>('all');
     const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
@@ -228,7 +341,8 @@ export default function VenueManagement(props: PageProps) {
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase();
         return resolvedVenues.filter((v) => {
-            const matchesQuery = !query || `${v.name} ${v.address} ${v.programme?.title ?? ''}`.toLowerCase().includes(query);
+            const matchesQuery =
+                !query || `${v.name} ${v.address} ${v.programme?.title ?? ''}`.toLowerCase().includes(query);
             const matchesEvent = eventFilter === 'all' || String(v.programme_id ?? '') === eventFilter;
             const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? v.is_active : !v.is_active);
             return matchesQuery && matchesEvent && matchesStatus;
@@ -354,7 +468,7 @@ export default function VenueManagement(props: PageProps) {
                         </h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Manage venue details and map location per event. (Badges can be added later.)
+                        Manage venue details and map location per event.
                     </p>
                 </div>
 
@@ -472,7 +586,6 @@ export default function VenueManagement(props: PageProps) {
                                                     <div className="line-clamp-2">{v.address}</div>
                                                 </TableCell>
 
-                                                {/* ✅ SWITCH REMOVED FROM TABLE */}
                                                 <TableCell>
                                                     <StatusBadge active={v.is_active} />
                                                 </TableCell>
@@ -527,6 +640,9 @@ export default function VenueManagement(props: PageProps) {
                         <DialogTitle>{editing ? 'Edit Venue' : 'Add Venue'}</DialogTitle>
                         <DialogDescription>
                             Set venue details for a specific event, including Google Maps link and Embed URL.
+                            <span className="mt-1 block text-xs text-slate-600 dark:text-slate-400">
+                                Events marked <span className="font-medium">Has venue</span> are disabled to prevent duplicate venue assignments.
+                            </span>
                         </DialogDescription>
                     </DialogHeader>
 
@@ -537,25 +653,21 @@ export default function VenueManagement(props: PageProps) {
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-1.5 sm:col-span-2">
                                         <div className="text-sm font-medium">Event</div>
-                                        <Select value={form.data.programme_id} onValueChange={(v) => form.setData('programme_id', v)}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select event" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {programmes?.length ? (
-                                                    programmes.map((p) => (
-                                                        <SelectItem key={p.id} value={String(p.id)}>
-                                                            {p.title}
-                                                        </SelectItem>
-                                                    ))
-                                                ) : (
-                                                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                                                        No record found, try adding events first.
-                                                    </div>
-                                                )}
-                                            </SelectContent>
 
-                                        </Select>
+                                        {programmes?.length ? (
+                                            <EventCombobox
+                                                programmes={programmes}
+                                                value={form.data.programme_id}
+                                                onChange={(v) => form.setData('programme_id', v)}
+                                                programmesWithVenue={programmesWithVenue}
+                                                editingProgrammeId={editing?.programme_id ?? null}
+                                            />
+                                        ) : (
+                                            <div className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                                                No record found, try adding events first.
+                                            </div>
+                                        )}
+
                                         {form.errors.programme_id ? (
                                             <div className="text-xs text-red-600">{form.errors.programme_id}</div>
                                         ) : null}
@@ -608,7 +720,6 @@ export default function VenueManagement(props: PageProps) {
                                         {form.errors.embed_url ? <div className="text-xs text-red-600">{form.errors.embed_url}</div> : null}
                                     </div>
 
-                                    {/* ✅ SWITCH REMOVED FROM EDIT DIALOG (replaced with Select) */}
                                     <div className="space-y-1.5 sm:col-span-2">
                                         <div className="text-sm font-medium">Status</div>
                                         <Select
@@ -677,8 +788,10 @@ export default function VenueManagement(props: PageProps) {
                         <AlertDialogTitle>Delete this venue?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This will permanently delete{' '}
-                            <span className="font-semibold text-slate-900 dark:text-slate-100">{deleteTarget?.name ?? 'this venue'}</span>.
-                            This action cannot be undone.
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                {deleteTarget?.name ?? 'this venue'}
+                            </span>
+                            . This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

@@ -13,18 +13,20 @@ class ParticipantSeeder extends Seeder
      */
     public function run(): void
     {
+        
         $countries = [
-            ['code' => 'BN', 'name' => 'Brunei', 'flag' => '/asean/brunei.jpg'],
-            ['code' => 'KH', 'name' => 'Cambodia', 'flag' => '/asean/cambodia.jpg'],
-            ['code' => 'ID', 'name' => 'Indonesia', 'flag' => '/asean/indonesia.jpg'],
-            ['code' => 'LA', 'name' => 'Laos', 'flag' => '/asean/laos.jpg'],
-            ['code' => 'MY', 'name' => 'Malaysia', 'flag' => '/asean/malaysia.jpg'],
-            ['code' => 'MM', 'name' => 'Myanmar', 'flag' => '/asean/myanmar.jpg'],
-            ['code' => 'PH', 'name' => 'Philippines', 'flag' => '/asean/philippines.jpg'],
-            ['code' => 'SG', 'name' => 'Singapore', 'flag' => '/asean/singapore.jpg'],
-            ['code' => 'TH', 'name' => 'Thailand', 'flag' => '/asean/thailand.jpg'],
-            ['code' => 'VN', 'name' => 'Vietnam', 'flag' => '/asean/vietnam.jpg'],
+            ['code' => 'BRN', 'name' => 'Brunei',       'flag' => '/asean/brunei.jpg'],
+            ['code' => 'KHM', 'name' => 'Cambodia',     'flag' => '/asean/cambodia.jpg'],
+            ['code' => 'IDN', 'name' => 'Indonesia',    'flag' => '/asean/indonesia.jpg'],
+            ['code' => 'LAO', 'name' => 'Laos',         'flag' => '/asean/laos.jpg'],
+            ['code' => 'MYS', 'name' => 'Malaysia',     'flag' => '/asean/malaysia.jpg'],
+            ['code' => 'MMR', 'name' => 'Myanmar',      'flag' => '/asean/myanmar.jpg'],
+            ['code' => 'PHL', 'name' => 'Philippines',  'flag' => '/asean/philippines.jpg'],
+            ['code' => 'SGP', 'name' => 'Singapore',    'flag' => '/asean/singapore.jpg'],
+            ['code' => 'THA', 'name' => 'Thailand',     'flag' => '/asean/thailand.jpg'],
+            ['code' => 'VNM', 'name' => 'Vietnam',      'flag' => '/asean/vietnam.jpg'],
         ];
+
 
         foreach ($countries as $country) {
             Country::updateOrCreate(

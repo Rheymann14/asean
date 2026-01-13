@@ -1546,7 +1546,7 @@ export default function Scanner(props: PageProps) {
                                 </div>
                                 {isEventBlocked ? (
                                     <div className="text-xs font-medium text-red-600 dark:text-red-400">
-                                        Scanning is disabled until the event is ongoing.
+                                        Scanning is disabled until the event starts.
                                     </div>
                                 ) : null}
                             </div>
