@@ -10,14 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -233,14 +226,16 @@ function ScannerIdCardPreview({
 }) {
     const isLandscape = orientation === 'landscape';
 
-    const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
+    // ✅ keep accurate print size, but DON'T force fixed aspect height on screen
     const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]';
+
     const maxW = isLandscape ? 'max-w-[520px]' : 'max-w-[320px] sm:max-w-[360px]';
 
     const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
     const qrSize = isLandscape ? 108 : 160;
 
-    const pad = isLandscape ? 'p-3' : 'p-4 pb-3';
+    // ✅ slightly reduce bottom padding so it feels tighter
+    const pad = isLandscape ? 'px-3 pt-3 pb-2' : 'p-4 pb-3';
     const headerLogo = isLandscape ? 'h-8 w-8' : 'h-9 w-9';
 
     return (
@@ -248,7 +243,6 @@ function ScannerIdCardPreview({
             className={cn(
                 'relative mx-auto w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
                 maxW,
-                aspect,
                 'print:max-w-none',
                 printSize,
             )}
@@ -274,7 +268,7 @@ function ScannerIdCardPreview({
                 <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
             </div>
 
-            <div className={cn('relative flex h-full flex-col', pad)}>
+            <div className={cn('relative flex flex-col', pad)}>
                 {/* Header */}
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2.5">
@@ -294,7 +288,12 @@ function ScannerIdCardPreview({
                         />
 
                         <div className="min-w-0">
-                            <div className={cn('truncate font-semibold tracking-wide text-slate-700 dark:text-slate-200', 'text-[11px]')}>
+                            <div
+                                className={cn(
+                                    'truncate font-semibold tracking-wide text-slate-700 dark:text-slate-200',
+                                    'text-[11px]',
+                                )}
+                            >
                                 ASEAN Philippines 2026
                             </div>
                             <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
@@ -306,10 +305,10 @@ function ScannerIdCardPreview({
 
                 <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-2.5')} />
 
-                {/* Body */}
+                {/* Body (✅ removed flex-1 so container height follows content) */}
                 <div
                     className={cn(
-                        'flex-1 min-h-0',
+                        'min-h-0',
                         isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-3',
                     )}
                 >
@@ -378,7 +377,12 @@ function ScannerIdCardPreview({
                             </div>
                         </div>
 
-                        <div className={cn('text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-1.5' : 'mt-2')}>
+                        <div
+                            className={cn(
+                                'text-[10px] text-slate-500 dark:text-slate-400',
+                                isLandscape ? 'mt-1.5' : 'mt-2',
+                            )}
+                        >
                             Scan QR for attendance verification.
                         </div>
                     </div>
@@ -418,12 +422,19 @@ function ScannerIdCardPreview({
                                 style={{ width: qrSize, height: qrSize }}
                             >
                                 <QrCodeIcon className="h-7 w-7 text-slate-400" />
-                                <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">QR unavailable</div>
+                                <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                                    QR unavailable
+                                </div>
                             </div>
                         )}
 
                         <div className="mt-2 w-full text-center">
-                            <div className={cn('font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[10px]' : 'text-[11px]')}>
+                            <div
+                                className={cn(
+                                    'font-semibold text-slate-900 dark:text-slate-100',
+                                    isLandscape ? 'text-[10px]' : 'text-[11px]',
+                                )}
+                            >
                                 <span
                                     className="line-clamp-2"
                                     title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participant.name}`}
@@ -437,12 +448,229 @@ function ScannerIdCardPreview({
                                 {participant.display_id}
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
     );
+}
+
+/** ✅ Scan sounds (no files needed) */
+function useScanSounds() {
+    const ctxRef = React.useRef<AudioContext | null>(null);
+    const unlockedRef = React.useRef(false);
+
+    const masterRef = React.useRef<GainNode | null>(null);
+    const compRef = React.useRef<DynamicsCompressorNode | null>(null);
+
+    const getCtx = React.useCallback(() => {
+        if (typeof window === 'undefined') return null;
+
+        const AC = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined;
+        if (!AC) return null;
+
+        if (!ctxRef.current) ctxRef.current = new AC();
+        const ctx = ctxRef.current;
+
+        // Master chain (smooth + consistent volume)
+        if (!masterRef.current || !compRef.current) {
+            const comp = ctx.createDynamicsCompressor();
+            comp.threshold.setValueAtTime(-26, ctx.currentTime);
+            comp.knee.setValueAtTime(16, ctx.currentTime);
+            comp.ratio.setValueAtTime(10, ctx.currentTime);
+            comp.attack.setValueAtTime(0.003, ctx.currentTime);
+            comp.release.setValueAtTime(0.12, ctx.currentTime);
+
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.9, ctx.currentTime);
+
+            master.connect(comp);
+            comp.connect(ctx.destination);
+
+            masterRef.current = master;
+            compRef.current = comp;
+        }
+
+        return ctx;
+    }, []);
+
+    const out = React.useCallback(() => {
+        const ctx = getCtx();
+        const master = masterRef.current;
+        if (!ctx || !master) return null;
+        return { ctx, master };
+    }, [getCtx]);
+
+    const unlock = React.useCallback(async () => {
+        const ctx = getCtx();
+        if (!ctx) return;
+
+        try {
+            if (ctx.state === 'suspended') await ctx.resume();
+        } catch {
+            // ignore
+        }
+
+        // iOS/Safari unlock with silent buffer once
+        if (!unlockedRef.current) {
+            try {
+                const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+                const src = ctx.createBufferSource();
+                src.buffer = buffer;
+                src.connect(ctx.destination);
+                src.start(0);
+                unlockedRef.current = true;
+            } catch {
+                // ignore
+            }
+        }
+    }, [getCtx]);
+
+    // Smooth envelope (Apple-ish: soft attack + fast decay)
+    const env = React.useCallback((gain: GainNode, t0: number, dur: number, peak: number) => {
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t0 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    }, []);
+
+    // Tiny “tap” (subtle, makes it feel like a real scanner trigger)
+    const click = React.useCallback(
+        (when = 0, strength = 0.06) => {
+            const o = out();
+            if (!o) return;
+            const { ctx, master } = o;
+            const t0 = ctx.currentTime + when;
+
+            const dur = 0.012;
+            const length = Math.max(1, Math.floor(ctx.sampleRate * dur));
+            const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+
+            const src = ctx.createBufferSource();
+            src.buffer = buffer;
+
+            const hp = ctx.createBiquadFilter();
+            hp.type = 'highpass';
+            hp.frequency.setValueAtTime(1400, t0);
+
+            const g = ctx.createGain();
+            env(g, t0, dur, strength);
+
+            src.connect(hp);
+            hp.connect(g);
+            g.connect(master);
+
+            src.start(t0);
+            src.stop(t0 + dur + 0.02);
+        },
+        [out, env],
+    );
+
+    const tone = React.useCallback(
+        (freq: number, ms: number, when = 0, peak = 0.12, type: OscillatorType = 'sine') => {
+            const o = out();
+            if (!o) return;
+            const { ctx, master } = o;
+
+            const t0 = ctx.currentTime + when;
+            const dur = Math.max(0.04, ms / 1000);
+
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t0);
+
+            // slight “glassy” shimmer via very tiny detune LFO
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.frequency.setValueAtTime(10, t0);
+            lfoGain.gain.setValueAtTime(3, t0); // subtle
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.detune);
+
+            env(g, t0, dur, peak);
+
+            osc.connect(g);
+            g.connect(master);
+
+            lfo.start(t0);
+            osc.start(t0);
+            osc.stop(t0 + dur + 0.03);
+            lfo.stop(t0 + dur + 0.03);
+        },
+        [out, env],
+    );
+
+    const success = React.useCallback(async () => {
+        await unlock();
+
+        // ✅ Apple-like “success”: clean ascending tri-tone (clear but pleasant)
+        // Notes: C6, E6, G6 (major chord)
+        click(0.0, 0.05);
+        tone(1046.5, 75, 0.02, 0.12, 'sine');
+        tone(1318.5, 90, 0.10, 0.11, 'sine');
+        tone(1568.0, 85, 0.19, 0.10, 'sine');
+
+        // tiny sparkle
+        tone(2093.0, 40, 0.28, 0.06, 'triangle');
+    }, [unlock, click, tone]);
+
+    const error = React.useCallback(async () => {
+        await unlock();
+
+        // ✅ Apple-like “error”: soft “nope” downward interval + low thud
+        click(0.0, 0.04);
+
+        // low thud (subtle)
+        tone(110, 120, 0.02, 0.08, 'sine');
+
+        // descending tones (clear rejection, not harsh)
+        tone(659.3, 110, 0.06, 0.13, 'triangle'); // E5
+        tone(523.3, 140, 0.16, 0.12, 'triangle'); // C5
+    }, [unlock, click, tone]);
+
+    React.useEffect(() => {
+        return () => {
+            try {
+                ctxRef.current?.close?.();
+            } catch {
+                // ignore
+            }
+            ctxRef.current = null;
+            masterRef.current = null;
+            compRef.current = null;
+        };
+    }, []);
+
+    return { unlock, success, error };
+}
+
+/* =========================
+   ✅ QR "alignment highlight"
+   - Uses BarcodeDetector if available
+   - Draws detected QR outline on canvas overlay
+   - Turns frame green when centered/aligned
+========================= */
+
+type DetectedBarcode = {
+    boundingBox?: DOMRectReadOnly;
+    cornerPoints?: Array<{ x: number; y: number }>;
+};
+
+function getCoverTransform(containerW: number, containerH: number, mediaW: number, mediaH: number) {
+    // object-fit: cover mapping
+    const scale = Math.max(containerW / mediaW, containerH / mediaH);
+    const renderW = mediaW * scale;
+    const renderH = mediaH * scale;
+    const offsetX = (containerW - renderW) / 2;
+    const offsetY = (containerH - renderH) / 2;
+    return { scale, offsetX, offsetY };
+}
+
+function clamp(n: number, min: number, max: number) {
+    return Math.min(max, Math.max(min, n));
 }
 
 export default function Scanner(props: PageProps) {
@@ -478,6 +706,20 @@ export default function Scanner(props: PageProps) {
     const lockRef = React.useRef(false);
     const isScanningRef = React.useRef(false);
 
+    // ✅ sounds
+    const sounds = useScanSounds();
+
+    // ✅ alignment / detection UI
+    const [qrAim, setQrAim] = React.useState<'idle' | 'searching' | 'detected' | 'aligned'>('idle');
+    const qrAimRef = React.useRef(qrAim);
+
+    const scanBoxRef = React.useRef<HTMLDivElement | null>(null);
+    const overlayCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
+
+    React.useEffect(() => {
+        qrAimRef.current = qrAim;
+    }, [qrAim]);
+
     React.useEffect(() => {
         let mounted = true;
 
@@ -509,10 +751,6 @@ export default function Scanner(props: PageProps) {
         return () => stopScan();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    React.useEffect(() => {
-        resultOpenRef.current = resultOpen;
-    }, [resultOpen]);
 
     React.useEffect(() => {
         resultOpenRef.current = resultOpen;
@@ -565,6 +803,214 @@ export default function Scanner(props: PageProps) {
         };
     }, [result?.qr_data_url, result?.participant?.qr_payload, result?.participant?.qr_token]);
 
+    // ✅ keep overlay canvas crisp
+    React.useEffect(() => {
+        const host = scanBoxRef.current;
+        const canvas = overlayCanvasRef.current;
+        if (!host || !canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const resize = () => {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = host.getBoundingClientRect();
+            canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+            canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+            canvas.style.width = `${rect.width}px`;
+            canvas.style.height = `${rect.height}px`;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+            ctx.clearRect(0, 0, rect.width, rect.height);
+        };
+
+        resize();
+
+        const ro = new ResizeObserver(() => resize());
+        ro.observe(host);
+
+        return () => ro.disconnect();
+    }, []);
+
+    // ✅ live QR detect highlight (BarcodeDetector)
+    React.useEffect(() => {
+        const host = scanBoxRef.current;
+        const video = videoRef.current;
+        const canvas = overlayCanvasRef.current;
+
+        if (!isScanning || !host || !video || !canvas) {
+            // clear overlay when not scanning
+            const ctx = canvas?.getContext('2d');
+            if (ctx && host) {
+                const r = host.getBoundingClientRect();
+                ctx.clearRect(0, 0, r.width, r.height);
+            }
+            setQrAim((s) => (s === 'idle' ? s : 'idle'));
+            return;
+        }
+
+        const AnyWindow = window as any;
+        const Detector = AnyWindow.BarcodeDetector as
+            | (new (opts: { formats: string[] }) => { detect: (src: any) => Promise<DetectedBarcode[]> })
+            | undefined;
+
+        // Fallback: not supported (e.g. some Safari)
+        if (!Detector) {
+            setQrAim('searching');
+            return;
+        }
+
+        const detector = new Detector({ formats: ['qr_code'] });
+
+        let stopped = false;
+        let lastAim: typeof qrAimRef.current = 'idle';
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const draw = (barcodes: DetectedBarcode[]) => {
+            const rect = host.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // frame area (matches your inset-6)
+            const frameX = 24;
+            const frameY = 24;
+            const frameW = w - 48;
+            const frameH = h - 48;
+
+            // subtle dim outside frame
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.16)';
+            ctx.fillRect(0, 0, w, h);
+            ctx.clearRect(frameX, frameY, frameW, frameH);
+            ctx.restore();
+
+            // if video not ready, just show searching
+            const vw = video.videoWidth || 0;
+            const vh = video.videoHeight || 0;
+            if (!vw || !vh) {
+                return { aim: 'searching' as const };
+            }
+
+            const { scale, offsetX, offsetY } = getCoverTransform(w, h, vw, vh);
+            const mapPoint = (p: { x: number; y: number }) => ({
+                x: p.x * scale + offsetX,
+                y: p.y * scale + offsetY,
+            });
+
+            // choose best barcode (largest area)
+            let best: { points: { x: number; y: number }[]; cx: number; cy: number; area: number } | null = null;
+
+            for (const b of barcodes) {
+                const pts = b.cornerPoints?.length ? b.cornerPoints : null;
+
+                if (pts && pts.length >= 4) {
+                    const mp = pts.map(mapPoint);
+                    const xs = mp.map((p) => p.x);
+                    const ys = mp.map((p) => p.y);
+                    const minX = Math.min(...xs);
+                    const maxX = Math.max(...xs);
+                    const minY = Math.min(...ys);
+                    const maxY = Math.max(...ys);
+
+                    const area = (maxX - minX) * (maxY - minY);
+                    const cx = (minX + maxX) / 2;
+                    const cy = (minY + maxY) / 2;
+
+                    if (!best || area > best.area) best = { points: mp, cx, cy, area };
+                    continue;
+                }
+
+                const bb = b.boundingBox;
+                if (bb) {
+                    const x1 = bb.x * scale + offsetX;
+                    const y1 = bb.y * scale + offsetY;
+                    const x2 = (bb.x + bb.width) * scale + offsetX;
+                    const y2 = (bb.y + bb.height) * scale + offsetY;
+
+                    const points = [
+                        { x: x1, y: y1 },
+                        { x: x2, y: y1 },
+                        { x: x2, y: y2 },
+                        { x: x1, y: y2 },
+                    ];
+                    const area = (x2 - x1) * (y2 - y1);
+                    const cx = (x1 + x2) / 2;
+                    const cy = (y1 + y2) / 2;
+
+                    if (!best || area > best.area) best = { points, cx, cy, area };
+                }
+            }
+
+            if (!best) return { aim: 'searching' as const };
+
+            const margin = 14;
+            const inFrame =
+                best.cx > frameX + margin &&
+                best.cx < frameX + frameW - margin &&
+                best.cy > frameY + margin &&
+                best.cy < frameY + frameH - margin;
+
+            const aim = inFrame ? ('aligned' as const) : ('detected' as const);
+
+            // draw polygon/box
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = aim === 'aligned' ? 'rgba(16,185,129,0.95)' : 'rgba(56,189,248,0.95)';
+            ctx.shadowColor = aim === 'aligned' ? 'rgba(16,185,129,0.55)' : 'rgba(56,189,248,0.45)';
+            ctx.shadowBlur = 18;
+
+            ctx.beginPath();
+            best.points.forEach((p, idx) => {
+                const x = clamp(p.x, 0, w);
+                const y = clamp(p.y, 0, h);
+                if (idx === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+
+            return { aim };
+        };
+
+        const tick = async () => {
+            if (stopped) return;
+
+            try {
+                if (video.readyState < 2) {
+                    setTimeout(tick, 140);
+                    return;
+                }
+
+                const barcodes = await detector.detect(video);
+                if (stopped) return;
+
+                const { aim } = draw(barcodes);
+
+                if (aim !== lastAim) {
+                    lastAim = aim;
+                    setQrAim(aim);
+                }
+            } catch {
+                // ignore and continue
+            } finally {
+                if (!stopped) setTimeout(tick, 140);
+            }
+        };
+
+        setQrAim('searching');
+        tick();
+
+        return () => {
+            stopped = true;
+            const r = host.getBoundingClientRect();
+            ctx.clearRect(0, 0, r.width, r.height);
+        };
+    }, [isScanning]);
+
     function vibrateSuccess() {
         if (navigator.vibrate) navigator.vibrate([40, 40, 90]);
     }
@@ -582,18 +1028,32 @@ export default function Scanner(props: PageProps) {
         video.srcObject = null;
     }
 
-    function openResultDialog(data: ScanResponse) {
+    /** ✅ dialog + sound + vibration */
+    async function openResultDialog(data: ScanResponse) {
         setResult(data);
         setStatus(data.ok ? 'success' : 'error');
         setResultOpen(true);
         setIsScanning(false);
         isScanningRef.current = false;
+        setQrAim('idle');
+
+        if (data.ok) {
+            vibrateSuccess();
+            sounds.success();
+        } else {
+            vibrateError();
+            sounds.error();
+        }
     }
+
+    const selectedEvent = selectedEventId ? events.find((e) => String(e.id) === selectedEventId) : null;
+    const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, nowTs) : undefined;
+    const isEventBlocked = !!selectedEventPhase && selectedEventPhase !== 'ongoing';
 
     function ensureEventSelected() {
         if (!selectedEventId) {
             const data = { ok: false, message: 'Please select an event before scanning.' } as ScanResponse;
-            if (!resultOpenRef.current) openResultDialog(data);
+            if (!resultOpenRef.current) void openResultDialog(data);
             return false;
         }
         if (selectedEventPhase && selectedEventPhase !== 'ongoing') {
@@ -604,7 +1064,7 @@ export default function Scanner(props: PageProps) {
                         ? 'This event has not started yet. Scanning will open once it is ongoing.'
                         : 'This event is no longer open for scanning.',
             } as ScanResponse;
-            if (!resultOpenRef.current) openResultDialog(data);
+            if (!resultOpenRef.current) void openResultDialog(data);
             return false;
         }
         return true;
@@ -614,12 +1074,16 @@ export default function Scanner(props: PageProps) {
         if (!ensureEventSelected()) return;
         if (!videoRef.current) return;
 
+        // ✅ unlock sound on a user gesture
+        await sounds.unlock();
+
         setCameraError(null);
         setResult(null);
         setStatus('scanning');
         setIsScanning(true);
         isScanningRef.current = true;
         lockRef.current = false;
+        setQrAim('searching');
 
         try {
             stopScan();
@@ -654,6 +1118,7 @@ export default function Scanner(props: PageProps) {
                         setStatus('error');
                         setIsScanning(false);
                         isScanningRef.current = false;
+                        setQrAim('idle');
                     }
                 },
             );
@@ -669,6 +1134,7 @@ export default function Scanner(props: PageProps) {
             setCameraError(msg);
             setStatus('error');
             setIsScanning(false);
+            setQrAim('idle');
         }
     }
 
@@ -685,6 +1151,7 @@ export default function Scanner(props: PageProps) {
 
         setIsScanning(false);
         isScanningRef.current = false;
+        setQrAim('idle');
         setStatus((s) => (s === 'scanning' ? 'idle' : s));
     }
 
@@ -712,14 +1179,10 @@ export default function Scanner(props: PageProps) {
 
             const data = (await res.json()) as ScanResponse;
 
-            openResultDialog(data);
-
-            if (data.ok) vibrateSuccess();
-            else vibrateError();
+            await openResultDialog(data); // ✅ plays sound + vibrates
         } catch {
             const data = { ok: false, message: 'Network/server error. Please try again.' } as ScanResponse;
-            openResultDialog(data);
-            vibrateError();
+            await openResultDialog(data); // ✅ error sound + vibrate
         }
     }
 
@@ -728,14 +1191,11 @@ export default function Scanner(props: PageProps) {
         setStatus('idle');
         setQrPreview(null);
         setQrPreviewLoading(false);
+        setQrAim('idle');
 
         setResultOpen(false);
         startScan();
     }
-
-    const selectedEvent = selectedEventId ? events.find((e) => String(e.id) === selectedEventId) : null;
-    const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, nowTs) : undefined;
-    const isEventBlocked = !!selectedEventPhase && selectedEventPhase !== 'ongoing';
 
     const filteredEvents = React.useMemo(() => {
         return events.map((event) => ({
@@ -829,7 +1289,9 @@ export default function Scanner(props: PageProps) {
                                             <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                                 {result.ok ? 'Verified' : 'Not Allowed'}
                                             </div>
-                                            <div className="mt-0.5 text-xs text-slate-700 dark:text-slate-300">{result.message}</div>
+                                            <div className="mt-0.5 text-xs text-slate-700 dark:text-slate-300">
+                                                {result.message}
+                                            </div>
                                             {result.scanned_at ? (
                                                 <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                                     Scanned at: {fmtDateTime(result.scanned_at)}
@@ -878,7 +1340,9 @@ export default function Scanner(props: PageProps) {
                                                             ) : null}
                                                             <span className="truncate">
                                                                 {result.participant.country ?? '—'}
-                                                                {result.participant.user_type ? ` • ${result.participant.user_type}` : ''}
+                                                                {result.participant.user_type
+                                                                    ? ` • ${result.participant.user_type}`
+                                                                    : ''}
                                                             </span>
                                                         </div>
                                                     ) : null}
@@ -894,7 +1358,9 @@ export default function Scanner(props: PageProps) {
 
                                             {result.checked_in_event ? (
                                                 <div className="text-right">
-                                                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">Checked-in:</div>
+                                                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                                                        Checked-in:
+                                                    </div>
                                                     <div className="mt-1 text-xs font-semibold text-slate-900 dark:text-slate-100">
                                                         {result.checked_in_event.title}
                                                     </div>
@@ -974,7 +1440,9 @@ export default function Scanner(props: PageProps) {
 
                     <div className="flex itemss items-start justify-between gap-3">
                         <div>
-                            <div className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">QR Scanner</div>
+                            <div className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                                QR Scanner
+                            </div>
                             <div className="text-sm text-slate-600 dark:text-slate-400">
                                 Scan participant QR to verify attendance.
                             </div>
@@ -1090,6 +1558,7 @@ export default function Scanner(props: PageProps) {
 
                 <div className="relative flex-1 px-4 py-4">
                     <div
+                        ref={scanBoxRef}
                         className={cn(
                             'relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-800 dark:bg-slate-900/30',
                             'aspect-[3/4] w-full',
@@ -1098,14 +1567,88 @@ export default function Scanner(props: PageProps) {
                         <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
 
                         <div className="pointer-events-none absolute inset-0">
+                            {/* ✅ crisp overlay canvas for QR highlight */}
+                            <canvas ref={overlayCanvasRef} className="absolute inset-0 h-full w-full" />
+
+                            {/* ✅ frame border that changes when QR is detected/aligned */}
+                            <div
+                                className={cn(
+                                    'absolute inset-6 rounded-[28px] border-2 transition-all duration-200',
+                                    qrAim === 'aligned'
+                                        ? 'border-emerald-300/90 shadow-[0_0_0_1px_rgba(16,185,129,0.25),0_0_30px_rgba(16,185,129,0.35)]'
+                                        : qrAim === 'detected'
+                                          ? 'border-sky-200/70 shadow-[0_0_26px_rgba(56,189,248,0.25)]'
+                                          : 'border-white/30',
+                                )}
+                            />
+
                             <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_30%,rgba(255,255,255,0.10),transparent_55%)]" />
                             <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/20 to-transparent" />
                             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/25 to-transparent" />
 
-                            <div className="absolute left-6 top-6 h-8 w-8 rounded-tl-2xl border-l-4 border-t-4 border-white/80" />
-                            <div className="absolute right-6 top-6 h-8 w-8 rounded-tr-2xl border-r-4 border-t-4 border-white/80" />
-                            <div className="absolute left-6 bottom-6 h-8 w-8 rounded-bl-2xl border-b-4 border-l-4 border-white/80" />
-                            <div className="absolute right-6 bottom-6 h-8 w-8 rounded-br-2xl border-b-4 border-r-4 border-white/80" />
+                            {/* ✅ corner guides (color reacts too) */}
+                            <div
+                                className={cn(
+                                    'absolute left-6 top-6 h-8 w-8 rounded-tl-2xl border-l-4 border-t-4 transition-colors',
+                                    qrAim === 'aligned'
+                                        ? 'border-emerald-200'
+                                        : qrAim === 'detected'
+                                          ? 'border-sky-200'
+                                          : 'border-white/80',
+                                )}
+                            />
+                            <div
+                                className={cn(
+                                    'absolute right-6 top-6 h-8 w-8 rounded-tr-2xl border-r-4 border-t-4 transition-colors',
+                                    qrAim === 'aligned'
+                                        ? 'border-emerald-200'
+                                        : qrAim === 'detected'
+                                          ? 'border-sky-200'
+                                          : 'border-white/80',
+                                )}
+                            />
+                            <div
+                                className={cn(
+                                    'absolute left-6 bottom-6 h-8 w-8 rounded-bl-2xl border-b-4 border-l-4 transition-colors',
+                                    qrAim === 'aligned'
+                                        ? 'border-emerald-200'
+                                        : qrAim === 'detected'
+                                          ? 'border-sky-200'
+                                          : 'border-white/80',
+                                )}
+                            />
+                            <div
+                                className={cn(
+                                    'absolute right-6 bottom-6 h-8 w-8 rounded-br-2xl border-b-4 border-r-4 transition-colors',
+                                    qrAim === 'aligned'
+                                        ? 'border-emerald-200'
+                                        : qrAim === 'detected'
+                                          ? 'border-sky-200'
+                                          : 'border-white/80',
+                                )}
+                            />
+
+                            {/* ✅ hint pill */}
+                            {isScanning ? (
+                                <div className="absolute left-1/2 top-4 -translate-x-1/2">
+                                    <div
+                                        className={cn(
+                                            'rounded-full px-3 py-1 text-xs font-semibold text-white backdrop-blur',
+                                            qrAim === 'aligned'
+                                                ? 'bg-emerald-600/55'
+                                                : qrAim === 'detected'
+                                                  ? 'bg-sky-600/50'
+                                                  : 'bg-black/35',
+                                        )}
+                                    >
+                                        {qrAim === 'aligned'
+                                            ? 'QR detected • Hold steady'
+                                            : qrAim === 'detected'
+                                              ? 'QR detected • Center it'
+                                              : 'Searching for QR…'}
+                                    </div>
+                                </div>
+                            ) : null}
 
                             {isScanning ? (
                                 <div className="absolute inset-x-6 top-10">
@@ -1183,7 +1726,11 @@ export default function Scanner(props: PageProps) {
                                 </Button>
                             )}
 
-                            <Button onClick={() => setShowManual((v) => !v)} variant="outline" className="h-11 rounded-2xl">
+                            <Button
+                                onClick={() => setShowManual((v) => !v)}
+                                variant="outline"
+                                className="h-11 rounded-2xl"
+                            >
                                 <Keyboard className="mr-2 h-4 w-4" />
                                 Manual
                             </Button>
@@ -1191,7 +1738,9 @@ export default function Scanner(props: PageProps) {
 
                         {showManual ? (
                             <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">Enter Participant ID</div>
+                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                                    Enter Participant ID
+                                </div>
                                 <div className="mt-2 flex gap-2">
                                     <Input
                                         value={manualCode}
@@ -1200,7 +1749,12 @@ export default function Scanner(props: PageProps) {
                                         className="h-11 rounded-2xl"
                                     />
                                     <Button
-                                        onClick={() => manualCode.trim() && verifyCode(manualCode.trim())}
+                                        onClick={async () => {
+                                            const code = manualCode.trim();
+                                            if (!code) return;
+                                            await sounds.unlock();
+                                            verifyCode(code);
+                                        }}
                                         className={cn('h-11 rounded-2xl', PRIMARY_BTN)}
                                         disabled={isEventBlocked}
                                     >
