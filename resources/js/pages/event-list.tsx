@@ -262,7 +262,7 @@ function EventGrid({
                                         </p>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center justify-end gap-2">
                                         {hasPdf ? (
                                             <Button
                                                 asChild
@@ -388,7 +388,7 @@ function AttendanceGrid({
                                         </p>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center justify-end gap-2">
                                         {hasPdf ? (
                                             <Button
                                                 asChild
@@ -405,10 +405,14 @@ function AttendanceGrid({
                                         <Button
                                             type="button"
                                             size="sm"
-                                            variant={hasAttendance ? 'outline' : 'destructive'}
+                                            variant={hasAttendance ? 'default' : 'destructive'}
                                             disabled={hasAttendance}
                                             onClick={() => onLeave(event.id)}
-                                            className={cn('h-8 px-3 text-xs shadow-sm', hasAttendance && 'opacity-70')}
+                                            className={cn(
+                                                'h-8 px-3 text-xs shadow-sm',
+                                                hasAttendance &&
+                                                    'bg-emerald-600 text-white hover:bg-emerald-600 focus-visible:ring-emerald-400',
+                                            )}
                                         >
                                             {hasAttendance ? 'Checked in' : 'Leave'}
                                         </Button>
