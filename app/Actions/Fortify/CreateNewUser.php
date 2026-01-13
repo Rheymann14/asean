@@ -30,10 +30,12 @@ class CreateNewUser implements CreatesNewUsers
             'contact_number' => ['required', 'string', 'max:30'],
             'country_id' => ['required', 'integer', 'exists:countries,id'],
             'user_type_id' => ['required', 'integer', 'exists:user_types,id'],
+            'programme_ids' => ['nullable', 'array'],
+            'programme_ids.*' => ['integer', 'exists:programmes,id'],
             'password' => $this->passwordRules(),
         ])->validate();
 
-        return User::create([
+        $user = User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'contact_number' => $input['contact_number'],
@@ -41,5 +43,12 @@ class CreateNewUser implements CreatesNewUsers
             'country_id' => $input['country_id'],
             'user_type_id' => $input['user_type_id'],
         ]);
+
+        $programmeIds = $input['programme_ids'] ?? [];
+        if (! empty($programmeIds)) {
+            $user->joinedProgrammes()->sync($programmeIds);
+        }
+
+        return $user;
     }
 }
