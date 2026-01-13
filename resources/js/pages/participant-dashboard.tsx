@@ -307,18 +307,6 @@ function IdCardPreview({
                             </div>
                         )}
 
-                        <div className="mt-2 w-full text-center">
-                            <div className={cn('font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[10px]' : 'text-[11px]')}>
-                                <span className="line-clamp-2" title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participant.name}`}>
-                                    {participant.country?.code?.toUpperCase() ?? ''}
-                                    {participant.country?.code ? ' • ' : ''}
-                                    {participant.name}
-                                </span>
-                            </div>
-                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', 'text-[10px]')}>
-                                {participant.display_id}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
