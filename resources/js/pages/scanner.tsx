@@ -139,6 +139,13 @@ function normalizePngDataUrl(v?: string | null) {
     return null;
 }
 
+function getFlagSrc(countryCode?: string | null, countryFlagUrl?: string | null) {
+    if (countryFlagUrl) return countryFlagUrl;
+    const code = (countryCode || '').toLowerCase().trim();
+    if (!code) return null;
+    return `/asean/${code}.png`;
+}
+
 function resolveEventPhase(event: EventRow, now: number) {
     if (event.phase) return event.phase;
     if (event.is_active === false) return 'closed';
@@ -411,21 +418,6 @@ function ScannerIdCardPreview({
                             </div>
                         )}
 
-                        <div className="mt-2 w-full text-center">
-                            <div className={cn('font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[10px]' : 'text-[11px]')}>
-                                <span
-                                    className="line-clamp-2"
-                                    title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participant.name}`}
-                                >
-                                    {participant.country?.code?.toUpperCase() ?? ''}
-                                    {participant.country?.code ? ' • ' : ''}
-                                    {participant.name}
-                                </span>
-                            </div>
-                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', 'text-[10px]')}>
-                                {participant.display_id}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -445,7 +437,6 @@ export default function Scanner(props: PageProps) {
     const [deviceId, setDeviceId] = React.useState<string>('');
     const [cameraError, setCameraError] = React.useState<string | null>(null);
 
-    const [lastCode, setLastCode] = React.useState<string>('');
     const [manualCode, setManualCode] = React.useState('');
     const [showManual, setShowManual] = React.useState(false);
 
@@ -453,7 +444,7 @@ export default function Scanner(props: PageProps) {
 
     // ✅ dialog for BOTH success and error
     const [resultOpen, setResultOpen] = React.useState(false);
-    const rescanOnCloseRef = React.useRef(false);
+    const resultOpenRef = React.useRef(false);
 
     // ✅ QR preview that never becomes "undefined"
     const [qrPreview, setQrPreview] = React.useState<string | null>(null);
@@ -499,19 +490,17 @@ export default function Scanner(props: PageProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ✅ when dialog closes, auto scan again
     React.useEffect(() => {
-        if (!resultOpen && rescanOnCloseRef.current) {
-            rescanOnCloseRef.current = false;
-            scanAgain();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        resultOpenRef.current = resultOpen;
+    }, [resultOpen]);
+
+    React.useEffect(() => {
+        resultOpenRef.current = resultOpen;
     }, [resultOpen]);
 
     // ✅ Build QR image for ID card:
     // 1) use backend qr_data_url if provided
     // 2) else generate from participant.qr_payload / participant.qr_token
-    // 3) else fallback to lastCode
     React.useEffect(() => {
         let alive = true;
 
@@ -525,10 +514,7 @@ export default function Scanner(props: PageProps) {
                 return;
             }
 
-            const payload =
-                (p?.qr_payload ?? '').trim() ||
-                (p?.qr_token ?? '').trim() ||
-                (lastCode ?? '').trim();
+            const payload = (p?.qr_payload ?? '').trim() || (p?.qr_token ?? '').trim();
 
             if (!payload) {
                 setQrPreview(null);
@@ -557,7 +543,7 @@ export default function Scanner(props: PageProps) {
         return () => {
             alive = false;
         };
-    }, [result?.qr_data_url, result?.participant?.qr_payload, result?.participant?.qr_token, lastCode]);
+    }, [result?.qr_data_url, result?.participant?.qr_payload, result?.participant?.qr_token]);
 
     function vibrateSuccess() {
         if (navigator.vibrate) navigator.vibrate([40, 40, 90]);
@@ -576,12 +562,29 @@ export default function Scanner(props: PageProps) {
         video.srcObject = null;
     }
 
+    function openResultDialog(data: ScanResponse) {
+        setResult(data);
+        setStatus(data.ok ? 'success' : 'error');
+        setResultOpen(true);
+        setIsScanning(false);
+        isScanningRef.current = false;
+    }
+
     function ensureEventSelected() {
         if (!selectedEventId) {
             const data = { ok: false, message: 'Please select an event before scanning.' } as ScanResponse;
-            setResult(data);
-            setStatus('error');
-            setResultOpen(true);
+            if (!resultOpenRef.current) openResultDialog(data);
+            return false;
+        }
+        if (selectedEventPhase && selectedEventPhase !== 'ongoing') {
+            const data = {
+                ok: false,
+                message:
+                    selectedEventPhase === 'upcoming'
+                        ? 'This event has not started yet. Scanning will open once it is ongoing.'
+                        : 'This event is no longer open for scanning.',
+            } as ScanResponse;
+            if (!resultOpenRef.current) openResultDialog(data);
             return false;
         }
         return true;
@@ -593,7 +596,6 @@ export default function Scanner(props: PageProps) {
 
         setCameraError(null);
         setResult(null);
-        setLastCode('');
         setStatus('scanning');
         setIsScanning(true);
         isScanningRef.current = true;
@@ -620,7 +622,6 @@ export default function Scanner(props: PageProps) {
                         if (lockRef.current) return;
                         lockRef.current = true;
 
-                        setLastCode(text);
                         stopScan();
                         await verifyCode(text);
 
@@ -670,9 +671,6 @@ export default function Scanner(props: PageProps) {
     async function verifyCode(code: string) {
         if (!ensureEventSelected()) return;
 
-        // ✅ also fixes manual verify QR fallback
-        setLastCode(code);
-
         setStatus('verifying');
         setResult(null);
 
@@ -694,24 +692,19 @@ export default function Scanner(props: PageProps) {
 
             const data = (await res.json()) as ScanResponse;
 
-            setResult(data);
-            setStatus(data.ok ? 'success' : 'error');
-            setResultOpen(true);
+            openResultDialog(data);
 
             if (data.ok) vibrateSuccess();
             else vibrateError();
         } catch {
             const data = { ok: false, message: 'Network/server error. Please try again.' } as ScanResponse;
-            setResult(data);
-            setStatus('error');
-            setResultOpen(true);
+            openResultDialog(data);
             vibrateError();
         }
     }
 
     function scanAgain() {
         setResult(null);
-        setLastCode('');
         setStatus('idle');
         setQrPreview(null);
         setQrPreviewLoading(false);
@@ -722,6 +715,7 @@ export default function Scanner(props: PageProps) {
 
     const selectedEvent = selectedEventId ? events.find((e) => String(e.id) === selectedEventId) : null;
     const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, nowTs) : undefined;
+    const isEventBlocked = !!selectedEventPhase && selectedEventPhase !== 'ongoing';
 
     const filteredEvents = React.useMemo(() => {
         return events.map((event) => ({
@@ -730,12 +724,12 @@ export default function Scanner(props: PageProps) {
         }));
     }, [events, nowTs]);
 
-    // ✅ build ID-card participant shape (no undefined)
+    // ✅ build ID-card participant shape (match virtual ID content)
     const cardParticipant = React.useMemo(() => {
         const p = result?.participant;
         if (!p) return null;
 
-        const displayId = (p.display_id ?? '').toString().trim() || String(p.id);
+        const displayId = (p.display_id ?? '').toString().trim() || '—';
 
         return {
             name: p.full_name,
@@ -747,7 +741,7 @@ export default function Scanner(props: PageProps) {
         };
     }, [result?.participant]);
 
-    const flagSrc = result?.participant?.country_flag_url ?? null;
+    const flagSrc = getFlagSrc(result?.participant?.country_code, result?.participant?.country_flag_url);
     const qrDataUrl = qrPreview;
 
     const dialogTone = result?.ok ? 'success' : 'danger';
@@ -757,14 +751,8 @@ export default function Scanner(props: PageProps) {
             <Head title="Scanner" />
 
             {/* ✅ RESULT DIALOG (Success + Error) */}
-            <Dialog
-                open={resultOpen}
-                onOpenChange={(open) => {
-                    if (!open) rescanOnCloseRef.current = true;
-                    setResultOpen(open);
-                }}
-            >
-                <DialogContent className="max-w-md rounded-3xl p-0">
+            <Dialog open={resultOpen} onOpenChange={setResultOpen}>
+                <DialogContent className="max-w-md overflow-hidden rounded-3xl bg-white p-0 dark:bg-slate-950">
                     <div className="max-h-[85vh] overflow-y-auto p-5">
                         <DialogHeader className="space-y-1">
                             <DialogTitle className="flex items-center gap-2 text-base">
@@ -939,8 +927,8 @@ export default function Scanner(props: PageProps) {
                     <DialogFooter className="border-t border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950">
                         <Button
                             onClick={() => {
-                                rescanOnCloseRef.current = true;
                                 setResultOpen(false);
+                                scanAgain();
                             }}
                             className={cn(
                                 'h-11 w-full rounded-2xl',
@@ -1063,9 +1051,16 @@ export default function Scanner(props: PageProps) {
                         </Popover>
 
                         {selectedEvent ? (
-                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <CalendarDays className="h-4 w-4" />
-                                <span>{fmtDate(selectedEvent.starts_at) ?? '—'}</span>
+                            <div className="flex flex-col gap-1 text-xs text-slate-500">
+                                <div className="flex items-center gap-2">
+                                    <CalendarDays className="h-4 w-4" />
+                                    <span>{fmtDate(selectedEvent.starts_at) ?? '—'}</span>
+                                </div>
+                                {isEventBlocked ? (
+                                    <div className="text-xs font-medium text-red-600 dark:text-red-400">
+                                        Scanning is disabled until the event is ongoing.
+                                    </div>
+                                ) : null}
                             </div>
                         ) : null}
                     </div>
@@ -1122,6 +1117,18 @@ export default function Scanner(props: PageProps) {
                                 </div>
                             </div>
                         ) : null}
+
+                        {status === 'verifying' && !resultOpen ? (
+                            <div className="absolute inset-0 grid place-items-center p-6 text-center">
+                                <div className="rounded-3xl bg-black/45 px-5 py-4 text-white backdrop-blur">
+                                    <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-white/15">
+                                        <RefreshCcw className="h-6 w-6 animate-spin" />
+                                    </div>
+                                    <div className="mt-2 text-sm font-semibold">Verifying…</div>
+                                    <div className="mt-1 text-xs text-white/80">Checking participant & registration.</div>
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
 
                     <div className="mt-4 grid gap-2">
@@ -1142,7 +1149,11 @@ export default function Scanner(props: PageProps) {
 
                         <div className="grid grid-cols-2 gap-2">
                             {!isScanning ? (
-                                <Button onClick={startScan} className={cn('h-11 rounded-2xl', PRIMARY_BTN)}>
+                                <Button
+                                    onClick={startScan}
+                                    className={cn('h-11 rounded-2xl', PRIMARY_BTN)}
+                                    disabled={isEventBlocked}
+                                >
                                     <Camera className="mr-2 h-4 w-4" />
                                     Start Scanning
                                 </Button>
@@ -1171,6 +1182,7 @@ export default function Scanner(props: PageProps) {
                                     <Button
                                         onClick={() => manualCode.trim() && verifyCode(manualCode.trim())}
                                         className={cn('h-11 rounded-2xl', PRIMARY_BTN)}
+                                        disabled={isEventBlocked}
                                     >
                                         Verify
                                     </Button>
@@ -1181,21 +1193,7 @@ export default function Scanner(props: PageProps) {
                 </div>
 
                 <div className="border-t border-slate-200 bg-white px-4 py-4 dark:border-slate-800 dark:bg-slate-950">
-                    {status === 'verifying' ? (
-                        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/30">
-                            <div className="flex items-center gap-3">
-                                <div className="grid size-10 place-items-center rounded-2xl bg-[#00359c]/10 text-[#00359c] dark:bg-[#00359c]/15">
-                                    <RefreshCcw className="h-5 w-5 animate-spin" />
-                                </div>
-                                <div>
-                                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Verifying…</div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400">Checking participant & registration.</div>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center text-xs text-slate-500">Tip: Select an event then scan participant QR.</div>
-                    )}
+                    <div className="text-center text-xs text-slate-500">Tip: Select an event then scan participant QR.</div>
                 </div>
             </div>
 
