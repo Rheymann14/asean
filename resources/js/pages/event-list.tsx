@@ -643,6 +643,19 @@ export default function EventList({ programmes = [], joined_programme_ids = [] }
                                         {counts.closed}
                                     </Badge>
                                 </TabsTrigger>
+                                <TabsTrigger value="join" className="gap-2">
+                                    Join
+                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                                        {counts.ongoing}
+                                    </Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="missed" className="gap-2">
+                                    Missed
+                                    <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                                        {counts.ongoing}
+                                    </Badge>
+                                </TabsTrigger>
+
                             </TabsList>
 
                             <div className="relative w-full md:w-72">

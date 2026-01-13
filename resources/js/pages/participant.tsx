@@ -314,16 +314,12 @@ function EmptyState({
     );
 }
 
-function FlagThumb({
-    country,
-    size = 20,
-    eager = false,
-}: {
-    country: Country;
-    size?: number;
-    eager?: boolean;
-}) {
-    const candidates = React.useMemo(() => buildFlagCandidates(country.code, country.name, country.flag_url), [country.code, country.name, country.flag_url]);
+function FlagThumb({ country, size = 20, eager = false }: { country: Country; size?: number; eager?: boolean }) {
+    const candidates = React.useMemo(() => buildFlagCandidates(country.code, country.name, country.flag_url), [
+        country.code,
+        country.name,
+        country.flag_url,
+    ]);
     const candidateKey = React.useMemo(() => candidates.join('|'), [candidates]);
     const [ok, setOk] = React.useState(true);
     const [idx, setIdx] = React.useState(0);
@@ -356,9 +352,7 @@ function FlagThumb({
                     }}
                 />
             ) : (
-                <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
-                    {country.code}
-                </span>
+                <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">{country.code}</span>
             )}
         </div>
     );
@@ -401,6 +395,12 @@ function isChedParticipant(p: ParticipantRow) {
     return isChedUserType(p.user_type);
 }
 
+/**
+ * ✅ UPDATED:
+ * - removes extra bottom space in landscape by stretching + pushing scan line to bottom (mt-auto)
+ * - makes participant details larger in landscape
+ * - makes QR panel fill height (h-full)
+ */
 function ParticipantIdPrintCard({
     participant,
     qrDataUrl,
@@ -412,263 +412,273 @@ function ParticipantIdPrintCard({
 }) {
     const isLandscape = orientation === 'landscape';
 
+    // ✅ final physical print sizes
+    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]';
+
     /**
-     * ✅ STANDARD PVC PRINT SIZES
-     * Landscape (credit card): 3.37in W × 2.125in H
-     * Portrait (big ID):       3.46in W × 5.51in H
+     * ✅ IMPORTANT:
+     * To be EXACTLY like participant-dashboard.tsx (Virtual ID),
+     * we render at the same “design width” then SCALE DOWN in print.
+     *
+     * Landscape Virtual ID is designed around max-w-[520px].
+     * Portrait Virtual ID is designed around max-w-[360px].
      */
-    const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
+    const designWrap = isLandscape ? 'w-[520px] aspect-[3.37/2.125]' : 'w-[360px] aspect-[3.46/5.51]';
 
-    const printSize = isLandscape
-        ? 'print:w-[3.37in] print:h-[2.125in]'
-        : 'print:w-[3.46in] print:h-[5.51in]';
+    // CSS px/in ≈ 96. These scale factors keep final printed size correct.
+    const printScale = isLandscape ? 'print:scale-[0.6222]' : 'print:scale-[0.9227]'; // 3.37in*96/520, 3.46in*96/360
 
-    // same tuning as dashboard
-    const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
-    const qrSize = isLandscape ? 108 : 180;
+    // ✅ changed
+    const pad = isLandscape ? 'px-4 pt-3 pb-2' : 'p-4';
+    const qrPanelWidth = isLandscape ? 'w-[200px]' : '';
+    const qrSize = isLandscape ? 160 : 200;
 
-    const pad = isLandscape ? 'p-3' : 'p-5';
-    const headerLogo = isLandscape ? 'h-8 w-8' : 'h-10 w-10';
+    const qrImgPad = isLandscape ? 'p-1.5' : 'p-2';
+    const qrPanelPad = isLandscape ? 'p-1' : 'p-3';
+
+    const headerLogo = isLandscape ? 'h-8 w-8' : 'h-9 w-9';
 
     const flagSrc = getFlagSrc(participant.country);
     const name = participant.full_name || '—';
     const displayId = participant.display_id ?? '—';
 
-    const rawName = (name ?? '').trim();
-
-    /**
-     * ✅ Landscape: keep typical names on ONE LINE (no surname dropping)
-     * - If name is very long, allow 2 lines but smaller font
-     */
-    const nameClass = (() => {
-        const len = rawName.length;
-
-        if (isLandscape) {
-            const oneLine = len <= 24; // “Rheymann Cuartocruz” stays single line
-
-            const size =
-                len > 40 ? 'text-[11px] leading-[14px]' :
-                    len > 32 ? 'text-[12px] leading-[15px]' :
-                        'text-[13px] leading-[16px]'; // slightly smaller than text-sm
-
-            return cn(
-                size,
-                oneLine ? 'whitespace-nowrap truncate' : 'break-words line-clamp-2'
-            );
-        }
-
-        // Portrait: big ID can safely use 2 lines
-        const size =
-            len > 44 ? 'text-[16px] leading-[21px]' :
-                len > 36 ? 'text-[18px] leading-[23px]' :
-                    'text-xl leading-7';
-
-        return cn(size, 'break-words line-clamp-2');
-    })();
-
     return (
         <div
             className={cn(
-                'id-print-card relative mx-auto w-full max-w-[520px] overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
-                'box-border',
-                aspect,
-                'print:max-w-none',
+                // this wrapper is the "real" printed size
+                'id-print-card relative overflow-hidden',
                 printSize,
             )}
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >
-            {/* Background */}
-            <div aria-hidden className="absolute inset-0">
-                <img
-                    src="/img/bg.png"
-                    alt=""
-                    className={cn(
-                        'absolute inset-0 h-full w-full object-cover',
-                        // ✅ slightly darker + higher contrast
-                        'filter brightness-80 contrast-150 saturate-200',
-                        // ✅ keep dark mode readable
-                        'dark:brightness-80 dark:contrast-110',
-                        isLandscape ? 'opacity-100' : 'opacity-100',
-                    )}
-                    draggable={false}
-                    loading="eager"
-                    decoding="async"
-                />
-
-                {/* (optional) tiny dark veil for extra punch */}
-                <div className="absolute inset-0 bg-black/10 dark:bg-black/15" />
-
-                <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
-                <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
-            </div>
-
-
-            <div className={cn('relative flex h-full flex-col', pad)}>
-                {/* Header */}
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2.5">
+            {/* This inner card is EXACTLY the Virtual ID layout, scaled down for print */}
+            <div
+                className={cn(
+                    'relative',
+                    designWrap,
+                    // in print: pin top-left + scale, so it does NOT reflow
+                    'print:absolute print:left-0 print:top-0 print:origin-top-left',
+                    printScale,
+                )}
+            >
+                <div className="relative h-full w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
+                    {/* Background */}
+                    <div aria-hidden className="absolute inset-0">
                         <img
-                            src="/img/asean_logo.svg"
-                            alt="ASEAN"
-                            className={cn('object-contain', headerLogo, 'print:drop-shadow-none')}
+                            src="/img/bg.png"
+                            alt=""
+                            className={cn(
+                                'absolute inset-0 h-full w-full object-cover',
+                                'filter brightness-80 contrast-150 saturate-200',
+                                'dark:brightness-80 dark:contrast-110',
+                                isLandscape ? 'opacity-100 dark:opacity-35' : 'opacity-100 dark:opacity-30',
+                            )}
                             draggable={false}
                             loading="eager"
                             decoding="async"
                         />
 
-                        <img
-                            src="/img/bagong_pilipinas.svg"
-                            alt="Bagong Pilipinas"
-                            className={cn('object-contain', headerLogo, 'print:drop-shadow-none')}
-                            draggable={false}
-                            loading="eager"
-                            decoding="async"
-                        />
-
-                        <div className="min-w-0">
-                            <div
-                                className={cn(
-                                    'truncate font-semibold tracking-wide text-slate-700 dark:text-slate-200',
-                                    isLandscape ? 'text-[11px]' : 'text-xs',
-                                )}
-                            >
-                                ASEAN Philippines 2026
-                            </div>
-                            <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
-                                Participant Identification
-                            </div>
-                        </div>
+                        <div className="absolute inset-0 bg-black/10 dark:bg-black/15" />
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
+                        <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
                     </div>
-                </div>
 
-                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-4')} />
+                    <div className={cn('relative flex h-full flex-col', pad)}>
+                        {/* Header */}
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                                <img
+                                    src="/img/asean_logo.svg"
+                                    alt="ASEAN"
+                                    className={cn('object-contain drop-shadow-sm', headerLogo)}
+                                    draggable={false}
+                                    loading="eager"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/img/bagong_pilipinas.svg"
+                                    alt="Bagong Pilipinas"
+                                    className={cn('object-contain drop-shadow-sm', headerLogo)}
+                                    draggable={false}
+                                    loading="eager"
+                                    decoding="async"
+                                />
 
-                {/* Body */}
-                <div
-                    className={cn(
-                        'flex-1',
-                        isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-4',
-                    )}
-                >
-                    {/* LEFT INFO */}
-                    <div className="min-w-0">
-                        <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Participant
+                                <div className="min-w-0">
+                                    <div
+                                        className={cn(
+                                            'truncate font-semibold tracking-wide text-slate-700 dark:text-slate-200',
+                                            'text-[11px]',
+                                        )}
+                                    >
+                                        ASEAN Philippines 2026
+                                    </div>
+                                    <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
+                                        Participant Identification
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
+                        <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-3')} />
+
+                        {/* Body */}
                         <div
                             className={cn(
-                                'mt-0.5 font-semibold tracking-tight text-slate-900 dark:text-slate-100',
-                                nameClass
+                                'flex-1',
+                                isLandscape ? 'grid grid-cols-[1fr_200px] items-stretch gap-3' : 'flex flex-col gap-3',
                             )}
-                            title={rawName}
                         >
-                            {rawName || '—'}
-                        </div>
-
-                        <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-3')}>
-                            <div
-                                className={cn(
-                                    'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
-                                    isLandscape ? 'h-9 w-9' : 'h-10 w-10',
-                                )}
-                            >
-                                {flagSrc ? (
-                                    <img
-                                        src={flagSrc}
-                                        alt={participant.country?.name ?? 'Country flag'}
-                                        className="h-full w-full object-cover"
-                                        draggable={false}
-                                        loading="lazy"
-                                        onError={(e) => {
-                                            (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                        }}
-                                    />
-                                ) : null}
-                            </div>
-
-                            <div className="min-w-0">
-                                <div className={cn('truncate font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[12px]' : 'text-sm')}>
-                                    {participant.country?.name ?? '—'}
+                            {/* LEFT INFO */}
+                            <div className="min-w-0 flex h-full flex-col">
+                                <div
+                                    className={cn(
+                                        'font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400',
+                                        isLandscape ? 'text-[13px]' : 'text-[10px]',
+                                    )}
+                                >
+                                    Participant
                                 </div>
-                                {participant.country?.code ? (
-                                    <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                                        {participant.country.code.toUpperCase()}
+
+                                <div
+                                    className={cn(
+                                        'mt-0.5 break-words font-semibold tracking-tight text-slate-900 dark:text-slate-100 line-clamp-2',
+                                        isLandscape ? 'text-[20px] leading-[18px]' : 'text-lg leading-6',
+                                    )}
+                                    title={name}
+                                >
+                                    {name}
+                                </div>
+
+                                <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-2.5')}>
+                                    <div
+                                        className={cn(
+                                            'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
+                                            isLandscape ? 'h-15 w-15' : 'h-9 w-9',
+                                        )}
+                                    >
+                                        {flagSrc ? (
+                                            <img
+                                                src={flagSrc}
+                                                alt={participant.country?.name ?? 'Country flag'}
+                                                className="h-full w-full object-cover"
+                                                draggable={false}
+                                                loading="eager"
+                                                decoding="async"
+                                                onError={(e) => {
+                                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+                                        ) : null}
                                     </div>
-                                ) : null}
-                            </div>
-                        </div>
 
-                        <div className={cn(isLandscape ? 'mt-2' : 'mt-4')}>
-                            <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                Participant ID
+                                    <div className="min-w-0">
+                                        <div
+                                            className={cn(
+                                                'truncate font-semibold text-slate-900 dark:text-slate-100',
+                                                isLandscape ? 'text-[18px]' : 'text-[12px]',
+                                            )}
+                                        >
+                                            {participant.country?.name ?? '—'}
+                                        </div>
+
+                                        {participant.country?.code ? (
+                                            <div
+                                                className={cn(
+                                                    'font-medium text-slate-500 dark:text-slate-400',
+                                                    isLandscape ? 'text-[15px]' : 'text-[11px]',
+                                                )}
+                                            >
+                                                {participant.country.code.toUpperCase()}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+
+                                <div className={cn(isLandscape ? 'mt-2' : 'mt-3')}>
+                                    <div className="text-[13px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        Participant ID
+                                    </div>
+
+                                    <div
+                                        className={cn(
+                                            'mt-1 inline-flex max-w-full whitespace-normal break-words rounded-2xl border border-slate-200/70 bg-white/80 font-mono text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
+                                            isLandscape ? 'px-3 py-1.5 text-[16px] leading-4' : 'px-2.5 py-1.5 text-[11px] leading-4',
+                                        )}
+                                    >
+                                        {displayId}
+                                    </div>
+                                </div>
+
+                                {/* ✅ push to bottom in landscape (removes the “big empty bottom”) */}
+                                <div
+                                    className={cn(
+                                        'text-slate-500 dark:text-slate-400',
+                                        isLandscape ? 'mt-auto pt-1 text-[10px]' : 'mt-2 text-[10px]',
+                                    )}
+                                >
+                                    Scan QR for attendance verification.
+                                </div>
                             </div>
 
+                            {/* RIGHT QR */}
                             <div
                                 className={cn(
-                                    'mt-1 inline-flex max-w-full whitespace-normal break-words rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono font-semibold text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
-                                    isLandscape ? 'text-[10px] leading-4' : 'text-sm leading-5',
+                                    'flex h-full flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
+                                    qrPanelWidth,
+                                    qrPanelPad,
                                 )}
                             >
-                                {displayId}
+                                <div
+                                    className={cn(
+                                        'inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200',
+                                        isLandscape ? 'mb-1 text-[10px]' : 'mb-1.5 text-[11px]',
+                                    )}
+                                >
+                                    <QrCodeIcon className={cn(isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
+                                    QR Code
+                                </div>
+
+                                {qrDataUrl ? (
+                                    <img
+                                        src={qrDataUrl}
+                                        alt="Participant QR code"
+                                        className={cn('rounded-2xl bg-white object-contain', qrImgPad)}
+                                        style={{ width: qrSize, height: qrSize }}
+                                        draggable={false}
+                                    />
+                                ) : (
+                                    <div
+                                        className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30"
+                                        style={{ width: qrSize, height: qrSize }}
+                                    >
+                                        <QrCodeIcon className="h-7 w-7 text-slate-400" />
+                                        <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">QR unavailable</div>
+                                    </div>
+                                )}
+
+                                <div className="mt-2 w-full text-center">
+                                    <div
+                                        className={cn(
+                                            'font-semibold text-slate-900 dark:text-slate-100',
+                                            isLandscape ? 'text-[10px]' : 'text-[11px]',
+                                        )}
+                                    >
+                                        <span className="line-clamp-2" title={`${participant.country?.code?.toUpperCase() ?? ''} • ${name}`}>
+                                            {participant.country?.code?.toUpperCase() ?? ''}
+                                            {participant.country?.code ? ' • ' : ''}
+                                            {name}
+                                        </span>
+                                    </div>
+                                    <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', 'text-[10px]')}>
+                                        {displayId}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className={cn('text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-1.5' : 'mt-4')}>
-                            Scan QR for attendance verification.
-                        </div>
+                        {/* Footer omitted (matches dashboard virtual ID) */}
                     </div>
-
-                    {/* RIGHT QR */}
-                    <div
-                        className={cn(
-                            'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
-                            qrPanelWidth,
-                            isLandscape ? 'p-2.5' : 'p-4',
-                        )}
-                    >
-                        <div className={cn('inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200', isLandscape ? 'mb-1 text-[10px]' : 'mb-2 text-xs')}>
-                            <QrCodeIcon className={cn(isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
-                            QR Code
-                        </div>
-
-                        {qrDataUrl ? (
-                            <img
-                                src={qrDataUrl}
-                                alt="Participant QR code"
-                                className="rounded-2xl bg-white p-2 object-contain"
-                                style={{ width: qrSize, height: qrSize }}
-                                draggable={false}
-                            />
-                        ) : (
-                            <div
-                                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30"
-                                style={{ width: qrSize, height: qrSize }}
-                            >
-                                <QrCodeIcon className="h-7 w-7 text-slate-400" />
-                                <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">QR unavailable</div>
-                            </div>
-                        )}
-
-                        <div className="mt-2 w-full text-center">
-                            <div className={cn('font-semibold text-slate-900 dark:text-slate-100', isLandscape ? 'text-[10px] leading-3.5' : 'text-xs')}>
-                                <span className="line-clamp-2" title={`${participant.country?.code?.toUpperCase() ?? ''} • ${name}`}>
-                                    {participant.country?.code?.toUpperCase() ?? ''}
-                                    {participant.country?.code ? ' • ' : ''}
-                                    {name}
-                                </span>
-                            </div>
-                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', isLandscape ? 'text-[10px] leading-3.5' : 'text-[11px] leading-4')}>
-                                {displayId}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className={cn('flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-2' : 'mt-4')}>
-                    <span>Keep this ID for event entry</span>
-                    <span className="font-medium">ASEAN PH 2026</span>
                 </div>
             </div>
         </div>
@@ -970,9 +980,7 @@ export default function ParticipantPage(props: PageProps) {
 
     React.useEffect(() => {
         let active = true;
-        const pending = filteredParticipants.filter(
-            (p) => !isChedParticipant(p) && p.qr_payload && !qrCacheRef.current[p.id],
-        );
+        const pending = filteredParticipants.filter((p) => !isChedParticipant(p) && p.qr_payload && !qrCacheRef.current[p.id]);
 
         if (pending.length === 0) return undefined;
 
@@ -1163,8 +1171,8 @@ export default function ParticipantPage(props: PageProps) {
             kind === 'participant'
                 ? ENDPOINTS.participants.destroy(id)
                 : kind === 'country'
-                    ? ENDPOINTS.countries.destroy(id)
-                    : ENDPOINTS.userTypes.destroy(id);
+                  ? ENDPOINTS.countries.destroy(id)
+                  : ENDPOINTS.userTypes.destroy(id);
 
         router.delete(destroyUrl, {
             preserveScroll: true,
@@ -1362,8 +1370,6 @@ export default function ParticipantPage(props: PageProps) {
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="space-y-2">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-
-
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                                 <Users className="h-5 w-5 text-[#00359c]" />
@@ -1398,7 +1404,6 @@ export default function ParticipantPage(props: PageProps) {
 
                     <Separator className="bg-slate-200/70 dark:bg-slate-800" />
                 </div>
-
 
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
                     <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
@@ -1438,12 +1443,16 @@ export default function ParticipantPage(props: PageProps) {
                                                     <SelectItem key={c.id} value={String(c.id)}>
                                                         <div className="flex items-center gap-2">
                                                             <div className="grid size-5 place-items-center overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                                <FlagImage code={c.code} name={c.name} preferredSrc={c.flag_url} className="h-full w-full object-cover" />
+                                                                <FlagImage
+                                                                    code={c.code}
+                                                                    name={c.name}
+                                                                    preferredSrc={c.flag_url}
+                                                                    className="h-full w-full object-cover"
+                                                                />
                                                             </div>
                                                             <span>{c.name}</span>
                                                         </div>
                                                     </SelectItem>
-
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -1476,10 +1485,7 @@ export default function ParticipantPage(props: PageProps) {
                                 </div>
 
                                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300">
-                                    <div>
-                                        {selectedParticipantsPrintable.length} selected for ID printing
-
-                                    </div>
+                                    <div>{selectedParticipantsPrintable.length} selected for ID printing</div>
                                     <div className="flex flex-wrap gap-2">
                                         <Button
                                             type="button"
@@ -1494,7 +1500,6 @@ export default function ParticipantPage(props: PageProps) {
                                             )}
                                         >
                                             <Printer className="mr-2 h-4 w-4" />
-
                                             Print IDs (Portrait)
                                         </Button>
 
@@ -1503,7 +1508,6 @@ export default function ParticipantPage(props: PageProps) {
                                             size="sm"
                                             onClick={() => requestPrintIds('landscape')}
                                             disabled={selectedParticipantsPrintable.length === 0}
-
                                             className={cn(
                                                 'rounded-xl',
                                                 'bg-emerald-600 text-white hover:bg-emerald-700',
@@ -1512,11 +1516,9 @@ export default function ParticipantPage(props: PageProps) {
                                             )}
                                         >
                                             <Printer className="mr-2 h-4 w-4" />
-
                                             Print IDs (Landscape)
                                         </Button>
                                     </div>
-
                                 </div>
                             </CardHeader>
 
@@ -1526,7 +1528,6 @@ export default function ParticipantPage(props: PageProps) {
                                         icon={<Users className="h-5 w-5" />}
                                         title="No participants found"
                                         subtitle="Try adjusting your search or filters, or add a new participant."
-
                                     />
                                 ) : (
                                     <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -1546,7 +1547,6 @@ export default function ParticipantPage(props: PageProps) {
                                                         </div>
                                                     </TableHead>
                                                     <TableHead>Email</TableHead>
-                                                    {/* <TableHead className="w-[200px]">Contact Number</TableHead> */}
                                                     <TableHead className="w-[200px]">User Type</TableHead>
                                                     <TableHead className="w-[140px]">Status</TableHead>
                                                     <TableHead className="w-[140px]">Created</TableHead>
@@ -1567,7 +1567,6 @@ export default function ParticipantPage(props: PageProps) {
                                                                     : 'hover:bg-slate-50 dark:hover:bg-slate-900/40',
                                                             )}
                                                         >
-
                                                             <TableCell className="text-slate-700 dark:text-slate-300">
                                                                 {p.country ? (
                                                                     <div className="flex items-center gap-2">
@@ -1601,28 +1600,23 @@ export default function ParticipantPage(props: PageProps) {
                                                                     />
 
                                                                     <div>
-                                                                        <div className="text-xs text-slate-500">
-                                                                            {isChed ? '(N/A - CHED)' : 'Participant ID'}
-                                                                        </div>
+                                                                        <div className="text-xs text-slate-500">{isChed ? '(N/A - CHED)' : 'Participant ID'}</div>
 
                                                                         <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                                                                            {isChed ? '' : (p.display_id ?? '—')}
+                                                                            {isChed ? '' : p.display_id ?? '—'}
                                                                         </div>
                                                                     </div>
                                                                 </div>
                                                             </TableCell>
 
                                                             <TableCell className="text-slate-700 dark:text-slate-300">{p.email}</TableCell>
-                                                            {/* <TableCell className="text-slate-700 dark:text-slate-300">{p.contact_number ?? '—'}</TableCell> */}
                                                             <TableCell className="text-slate-700 dark:text-slate-300">{p.user_type?.name ?? '—'}</TableCell>
 
                                                             <TableCell>
                                                                 <StatusBadge active={p.is_active} />
                                                             </TableCell>
 
-                                                            <TableCell className="text-slate-700 dark:text-slate-300">
-                                                                {formatDateSafe(p.created_at)}
-                                                            </TableCell>
+                                                            <TableCell className="text-slate-700 dark:text-slate-300">{formatDateSafe(p.created_at)}</TableCell>
 
                                                             <TableCell className="text-right">
                                                                 <DropdownMenu>
@@ -1662,7 +1656,6 @@ export default function ParticipantPage(props: PageProps) {
                                                     );
                                                 })}
                                             </TableBody>
-
                                         </Table>
                                     </div>
                                 )}
@@ -1765,7 +1758,12 @@ export default function ParticipantPage(props: PageProps) {
 
                                     <div className="relative w-full sm:w-[320px]">
                                         <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                                        <Input value={userTypeQuery} onChange={(e) => setUserTypeQuery(e.target.value)} placeholder="Search user type..." className="pl-9" />
+                                        <Input
+                                            value={userTypeQuery}
+                                            onChange={(e) => setUserTypeQuery(e.target.value)}
+                                            placeholder="Search user type..."
+                                            className="pl-9"
+                                        />
                                     </div>
                                 </div>
 
@@ -1855,7 +1853,9 @@ export default function ParticipantPage(props: PageProps) {
                                                 </div>
                                             )}
                                             <div>
-                                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{programmeParticipant.full_name}</div>
+                                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                    {programmeParticipant.full_name}
+                                                </div>
                                                 <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                                                     {programmeParticipant.email} • {programmeParticipant.user_type?.name ?? '—'}
                                                 </div>
@@ -1935,7 +1935,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                         size="sm"
                                                                         variant={isJoined ? 'outline' : 'default'}
                                                                         className={cn(
-                                                                            'ml-auto h-8 rounded-xl px-3 text-[11px]', // ✅ pushes to right
+                                                                            'ml-auto h-8 rounded-xl px-3 text-[11px]',
                                                                             isJoined
                                                                                 ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 dark:border-red-500/40 dark:hover:bg-red-500/10'
                                                                                 : PRIMARY_BTN,
@@ -2001,7 +2001,6 @@ export default function ParticipantPage(props: PageProps) {
                                                                         </>
                                                                     ) : null}
                                                                 </div>
-
                                                             </div>
                                                         </div>
                                                     </Card>
@@ -2039,7 +2038,9 @@ export default function ParticipantPage(props: PageProps) {
                                     onChange={(e) => participantForm.setData('full_name', e.target.value)}
                                     placeholder="e.g. Juan Dela Cruz"
                                 />
-                                {participantForm.errors.full_name ? <div className="text-xs text-red-600">{participantForm.errors.full_name}</div> : null}
+                                {participantForm.errors.full_name ? (
+                                    <div className="text-xs text-red-600">{participantForm.errors.full_name}</div>
+                                ) : null}
                             </div>
 
                             <div className="space-y-1.5 sm:col-span-2">
@@ -2086,7 +2087,6 @@ export default function ParticipantPage(props: PageProps) {
                                                         <span>{c.name}</span>
                                                     </div>
                                                 </SelectItem>
-
                                             ))}
                                     </SelectContent>
                                 </Select>
@@ -2115,7 +2115,9 @@ export default function ParticipantPage(props: PageProps) {
                             <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
                                 <div className="space-y-0.5">
                                     <div className="text-sm font-medium">Active</div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400">Inactive users will not appear in active selection lists.</div>
+                                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                                        Inactive users will not appear in active selection lists.
+                                    </div>
                                 </div>
                                 <Switch checked={participantForm.data.is_active} onCheckedChange={(v) => participantForm.setData('is_active', !!v)} />
                             </div>
@@ -2184,13 +2186,15 @@ export default function ParticipantPage(props: PageProps) {
 
                                     <div className="w-full space-y-1.5">
                                         <Input type="file" accept="image/*" onChange={handleCountryFlagChange} />
-                                        {/* Inertia errors can be string/array; keep it simple */}
-                                        {(countryForm.errors as any).flag ? <div className="text-xs text-red-600">{(countryForm.errors as any).flag}</div> : null}
-                                        <div className="text-xs text-slate-600 dark:text-slate-400">Uploading a new file will replace the current flag.</div>
+                                        {(countryForm.errors as any).flag ? (
+                                            <div className="text-xs text-red-600">{(countryForm.errors as any).flag}</div>
+                                        ) : null}
+                                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                                            Uploading a new file will replace the current flag.
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
                         </div>
 
                         <DialogFooter className="gap-2 sm:gap-0">
@@ -2217,14 +2221,20 @@ export default function ParticipantPage(props: PageProps) {
                         <div className="grid gap-3">
                             <div className="space-y-1.5">
                                 <div className="text-sm font-medium">Name</div>
-                                <Input value={userTypeForm.data.name} onChange={(e) => userTypeForm.setData('name', e.target.value)} placeholder="e.g. Staff" />
+                                <Input
+                                    value={userTypeForm.data.name}
+                                    onChange={(e) => userTypeForm.setData('name', e.target.value)}
+                                    placeholder="e.g. Staff"
+                                />
                                 {userTypeForm.errors.name ? <div className="text-xs text-red-600">{userTypeForm.errors.name}</div> : null}
                             </div>
 
                             <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 dark:border-slate-800">
                                 <div className="space-y-0.5">
                                     <div className="text-sm font-medium">Active</div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400">Inactive types will not be selectable in participant forms.</div>
+                                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                                        Inactive types will not be selectable in participant forms.
+                                    </div>
                                 </div>
                                 <Switch checked={userTypeForm.data.is_active} onCheckedChange={(v) => userTypeForm.setData('is_active', !!v)} />
                             </div>
@@ -2268,9 +2278,7 @@ export default function ParticipantPage(props: PageProps) {
                     const pageSize = printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm';
 
                     // ✅ Fixed columns (predictable layout)
-                    const gridCols = printOrientation === 'landscape'
-                        ? 'repeat(3, 3.37in)'  // credit-card landscape
-                        : 'repeat(2, 3.46in)'; // big portrait (2 across on A4 portrait)
+                    const gridCols = printOrientation === 'landscape' ? 'repeat(3, 3.37in)' : 'repeat(2, 3.46in)';
 
                     // ✅ Safe spacing so 2 rows of portrait won’t overflow
                     const gap = '0.12in';

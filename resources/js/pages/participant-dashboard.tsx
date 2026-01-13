@@ -115,11 +115,10 @@ function IdCardPreview({
     const maxW = isLandscape ? 'max-w-[520px]' : 'max-w-[320px] sm:max-w-[360px]';
 
     const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
-    // ✅ reduce portrait QR size so the card height is less visually heavy
     const qrSize = isLandscape ? 108 : 160;
 
     // ✅ tighten padding + typography a bit
-    const pad = isLandscape ? 'p-3' : 'p-4';
+    const pad = isLandscape ? 'p-3' : 'p-4 pb-3'; // ✅ slightly less bottom padding in portrait
     const headerLogo = isLandscape ? 'h-8 w-8' : 'h-9 w-9';
 
     return (
@@ -139,11 +138,8 @@ function IdCardPreview({
                     alt=""
                     className={cn(
                         'absolute inset-0 h-full w-full object-cover',
-                        // ✅ slightly darker + higher contrast
                         'filter brightness-80 contrast-150 saturate-200',
-                        // ✅ keep dark mode readable
                         'dark:brightness-80 dark:contrast-110',
-                        // ✅ keep your original opacity behavior
                         isLandscape ? 'opacity-100 dark:opacity-35' : 'opacity-100 dark:opacity-30',
                     )}
                     draggable={false}
@@ -151,13 +147,10 @@ function IdCardPreview({
                     decoding="async"
                 />
 
-                {/* ✅ tiny dark veil for extra punch */}
                 <div className="absolute inset-0 bg-black/10 dark:bg-black/15" />
-
                 <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
                 <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
             </div>
-
 
             <div className={cn('relative flex h-full flex-col', pad)}>
                 {/* Header */}
@@ -182,7 +175,7 @@ function IdCardPreview({
                             <div
                                 className={cn(
                                     'truncate font-semibold tracking-wide text-slate-700 dark:text-slate-200',
-                                    isLandscape ? 'text-[11px]' : 'text-[11px]',
+                                    'text-[11px]',
                                 )}
                             >
                                 ASEAN Philippines 2026
@@ -194,13 +187,15 @@ function IdCardPreview({
                     </div>
                 </div>
 
-                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-3')} />
+                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-2.5')} />
 
                 {/* Body */}
                 <div
                     className={cn(
-                        'flex-1',
-                        isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-3',
+                        'flex-1 min-h-0', // ✅ important so flex children can position correctly
+                        isLandscape
+                            ? 'grid grid-cols-[1fr_150px] items-start gap-3'
+                            : 'flex flex-col gap-3', // portrait stays column
                     )}
                 >
                     {/* LEFT INFO */}
@@ -224,7 +219,7 @@ function IdCardPreview({
                             <div
                                 className={cn(
                                     'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
-                                    isLandscape ? 'h-9 w-9' : 'h-9 w-9',
+                                    'h-9 w-9',
                                 )}
                             >
                                 {flagSrc ? (
@@ -242,12 +237,7 @@ function IdCardPreview({
                             </div>
 
                             <div className="min-w-0">
-                                <div
-                                    className={cn(
-                                        'truncate font-semibold text-slate-900 dark:text-slate-100',
-                                        isLandscape ? 'text-[12px]' : 'text-[12px]',
-                                    )}
-                                >
+                                <div className="truncate text-[12px] font-semibold text-slate-900 dark:text-slate-100">
                                     {participant.country?.name ?? '—'}
                                 </div>
                                 {participant.country?.code ? (
@@ -284,6 +274,7 @@ function IdCardPreview({
                             'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
                             qrPanelWidth,
                             isLandscape ? 'p-2.5' : 'p-3',
+                            !isLandscape && 'mt-auto', // ✅ THIS removes the big empty space below in portrait
                         )}
                     >
                         <div
@@ -324,22 +315,17 @@ function IdCardPreview({
                                     {participant.name}
                                 </span>
                             </div>
-                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', isLandscape ? 'text-[10px]' : 'text-[10px]')}>
+                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', 'text-[10px]')}>
                                 {participant.display_id}
                             </div>
                         </div>
                     </div>
                 </div>
-
-                {/* Footer */}
-                {/* <div className={cn('mt-3 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400')}>
-                    <span>Keep this ID for event entry</span>
-                    <span className="font-medium">ASEAN PH 2026</span>
-                </div> */}
             </div>
         </div>
     );
 }
+
 
 export default function ParticipantDashboard({ participant }: PageProps) {
     const flagSrc = getFlagSrc(participant.country);
