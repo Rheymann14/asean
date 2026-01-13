@@ -54,6 +54,7 @@ type RegisterProps = {
 };
 
 export default function Register({ countries, registrantTypes, programmes, status }: RegisterProps) {
+    const formRef = React.useRef<HTMLFormElement>(null);
     const [countryOpen, setCountryOpen] = React.useState(false);
     const [typeOpen, setTypeOpen] = React.useState(false);
     const [programmeOpen, setProgrammeOpen] = React.useState(false);
@@ -97,11 +98,21 @@ export default function Register({ countries, registrantTypes, programmes, statu
         return `${selectedProgrammes.length} events selected`;
     }, [selectedProgrammes]);
 
+    const resetFormState = React.useCallback(() => {
+        formRef.current?.reset();
+        setCountry('');
+        setRegistrantType('');
+        setProgrammeIds([]);
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+    }, [setCountry, setProgrammeIds, setRegistrantType]);
+
     React.useEffect(() => {
         if (status === 'registered') {
             setSuccessOpen(true);
+            resetFormState();
         }
-    }, [status]);
+    }, [resetFormState, status]);
 
     const inputClass =
         'h-11 rounded-xl border-slate-200 bg-white shadow-[inset_0_1px_2px_rgba(2,6,23,0.06)] ' +
@@ -153,11 +164,15 @@ export default function Register({ countries, registrantTypes, programmes, statu
             </div>
 
             <Form
+                ref={formRef}
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"
-                onSuccess={() => setSuccessOpen(true)}
+                onSuccess={() => {
+                    resetFormState();
+                    setSuccessOpen(true);
+                }}
             >
                 {({ processing, errors }) => {
                     const err = errors as Record<string, string | undefined>;
@@ -437,8 +452,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                                         className={cn(
                                                                             'mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md border',
                                                                             isSelected
-                                                                                ? 'border-[#0033A0] bg-[#0033A0]/10 text-[#0033A0]'
-                                                                                : 'border-slate-200 text-transparent'
+                                                                                ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
+                                                                                : 'border-slate-200 bg-white text-transparent'
                                                                         )}
                                                                     >
                                                                         <Check className="h-3.5 w-3.5" />
@@ -448,6 +463,12 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                                             <span className="font-medium text-slate-700">
                                                                                 {item.title}
                                                                             </span>
+                                                                            {isSelected && (
+                                                                                <Badge className="bg-emerald-500 text-white">
+                                                                                    <Check className="h-3 w-3" />
+                                                                                    Selected
+                                                                                </Badge>
+                                                                            )}
                                                                             <Badge
                                                                                 variant="secondary"
                                                                                 className="bg-slate-100 text-slate-600"
@@ -580,12 +601,10 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0033A0] text-white shadow-lg shadow-[#0033A0]/20">
                                             <CheckCircle2 className="h-7 w-7" />
                                         </div>
-                                        <DialogTitle className="text-xl text-slate-800">
-                                            Successfully registered
-                                        </DialogTitle>
+                                        <DialogTitle className="text-xl text-slate-800">You’re all set! 🎉</DialogTitle>
                                         <DialogDescription className="text-sm text-slate-600">
-                                            Please check your provided email for account info. We will send your
-                                            credentials once SMTP is enabled.
+                                            Thanks for signing up! ✨ Please check your provided email for account info.
+                                            We’ll send your credentials as soon as SMTP is enabled.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter className="sm:justify-center">
