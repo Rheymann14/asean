@@ -494,6 +494,10 @@ export default function Scanner(props: PageProps) {
         resultOpenRef.current = resultOpen;
     }, [resultOpen]);
 
+    React.useEffect(() => {
+        resultOpenRef.current = resultOpen;
+    }, [resultOpen]);
+
     // ✅ Build QR image for ID card:
     // 1) use backend qr_data_url if provided
     // 2) else generate from participant.qr_payload / participant.qr_token
