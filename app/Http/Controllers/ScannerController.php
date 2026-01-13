@@ -106,8 +106,12 @@ class ScannerController extends Controller
             'participant' => [
                 'id' => $participant->id,
                 'full_name' => $participant->name,
+                'display_id' => $participant->display_id,
+                'qr_payload' => $participant->qr_payload,
+                'qr_token' => $participant->qr_token,
                 'email' => $participant->email,
                 'country' => $participant->country?->name,
+                'country_code' => $participant->country?->code,
                 'country_flag_url' => $participant->country?->flag_url,
                 'user_type' => $participant->userType?->name,
                 'is_verified' => (bool) $participant->email_verified_at,
