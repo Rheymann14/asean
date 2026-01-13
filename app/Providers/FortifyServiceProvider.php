@@ -5,10 +5,12 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\Country;
+use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -98,7 +100,11 @@ class FortifyServiceProvider extends ServiceProvider
             return new class implements RegisterResponse {
                 public function toResponse($request)
                 {
-                    return redirect('/participant-dashboard');
+                    Auth::guard('web')->logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return redirect('/register')->with('status', 'registered');
                 }
             };
         });
@@ -128,7 +134,7 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
+        Fortify::registerView(fn (Request $request) => Inertia::render('auth/register', [
             'countries' => Country::query()
                 ->where('is_active', true)
                 ->orderBy('name')
@@ -150,6 +156,18 @@ class FortifyServiceProvider extends ServiceProvider
                     'name' => $type->name,
                     'slug' => $type->slug,
                 ]),
+            'programmes' => Programme::query()
+                ->where('is_active', true)
+                ->latest('starts_at')
+                ->get()
+                ->map(fn (Programme $programme) => [
+                    'id' => $programme->id,
+                    'title' => $programme->title,
+                    'description' => $programme->description,
+                    'starts_at' => $programme->starts_at?->toISOString(),
+                    'ends_at' => $programme->ends_at?->toISOString(),
+                ]),
+            'status' => $request->session()->get('status'),
         ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));

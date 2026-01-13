@@ -1,12 +1,21 @@
 import * as React from 'react';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import { Form, Head, Link, router, useRemember } from '@inertiajs/react';
+import { Form, Head, Link, useRemember } from '@inertiajs/react';
 
 import { cn } from '@/lib/utils';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -14,7 +23,7 @@ import RegisterLayout from '@/layouts/register-layout';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { Check, ChevronsUpDown, Eye, EyeOff, Info } from 'lucide-react';
+import { CalendarRange, Check, CheckCircle2, ChevronsUpDown, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 type CountryOption = {
     id: number;
@@ -29,19 +38,33 @@ type RegistrantTypeOption = {
     slug: string;
 };
 
+type ProgrammeOption = {
+    id: number;
+    title: string;
+    description: string | null;
+    starts_at?: string | null;
+    ends_at?: string | null;
+};
+
 type RegisterProps = {
     countries: CountryOption[];
     registrantTypes: RegistrantTypeOption[];
+    programmes: ProgrammeOption[];
+    status?: string | null;
 };
 
-export default function Register({ countries, registrantTypes }: RegisterProps) {
+export default function Register({ countries, registrantTypes, programmes, status }: RegisterProps) {
+    const formRef = React.useRef<HTMLFormElement>(null);
     const [countryOpen, setCountryOpen] = React.useState(false);
     const [typeOpen, setTypeOpen] = React.useState(false);
+    const [programmeOpen, setProgrammeOpen] = React.useState(false);
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+    const [successOpen, setSuccessOpen] = React.useState(false);
 
     const [country, setCountry] = useRemember<string>('', 'register.country');
     const [registrantType, setRegistrantType] = useRemember<string>('', 'register.registrant_type');
+    const [programmeIds, setProgrammeIds] = useRemember<string[]>([], 'register.programme_ids');
 
     const selectedCountry = React.useMemo(
         () => countries.find((c) => String(c.id) === country) ?? null,
@@ -58,6 +81,39 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
         [registrantType, filteredRegistrantTypes]
     );
 
+    const selectedProgrammes = React.useMemo(
+        () => programmes.filter((programme) => programmeIds.includes(String(programme.id))),
+        [programmeIds, programmes]
+    );
+
+    const formattedProgrammeLabel = React.useMemo(() => {
+        if (!selectedProgrammes.length) {
+            return 'Select events to join…';
+        }
+
+        if (selectedProgrammes.length === 1) {
+            return selectedProgrammes[0].title;
+        }
+
+        return `${selectedProgrammes.length} events selected`;
+    }, [selectedProgrammes]);
+
+    const resetFormState = React.useCallback(() => {
+        formRef.current?.reset();
+        setCountry('');
+        setRegistrantType('');
+        setProgrammeIds([]);
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+    }, [setCountry, setProgrammeIds, setRegistrantType]);
+
+    React.useEffect(() => {
+        if (status === 'registered') {
+            setSuccessOpen(true);
+            resetFormState();
+        }
+    }, [resetFormState, status]);
+
     const inputClass =
         'h-11 rounded-xl border-slate-200 bg-white shadow-[inset_0_1px_2px_rgba(2,6,23,0.06)] ' +
         'focus-visible:ring-2 focus-visible:ring-[#0033A0]/20';
@@ -66,6 +122,18 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
         'h-11 w-full justify-between rounded-xl border border-slate-200 bg-white px-3 ' +
         'shadow-[inset_0_1px_2px_rgba(2,6,23,0.06)] hover:bg-white ' +
         'focus-visible:ring-2 focus-visible:ring-[#0033A0]/20';
+
+    const formatProgrammeDate = (value?: string | null) => {
+        if (!value) {
+            return 'TBA';
+        }
+
+        return new Date(value).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+    };
 
     return (
         <RegisterLayout>
@@ -96,11 +164,15 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
             </div>
 
             <Form
+                ref={formRef}
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"
-                onSuccess={() => router.visit('/participant-dashboard')}
+                onSuccess={() => {
+                    resetFormState();
+                    setSuccessOpen(true);
+                }}
             >
                 {({ processing, errors }) => {
                     const err = errors as Record<string, string | undefined>;
@@ -323,6 +395,124 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                         <InputError message={err.user_type_id ?? err.registrant_type} />
                                     </div>
 
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="programme_ids">Select events to join</Label>
+                                        {programmeIds.map((id) => (
+                                            <input key={id} type="hidden" name="programme_ids[]" value={id} />
+                                        ))}
+
+                                        <Popover open={programmeOpen} onOpenChange={setProgrammeOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={programmeOpen}
+                                                    className={comboboxTriggerClass}
+                                                    tabIndex={6}
+                                                >
+                                                    <span className="flex min-w-0 items-center gap-2">
+                                                        <Sparkles className="h-4 w-4 text-[#0033A0]" />
+                                                        <span className="truncate text-left">
+                                                            {formattedProgrammeLabel}
+                                                        </span>
+                                                    </span>
+                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+
+                                            <PopoverContent
+                                                className="w-[--radix-popover-trigger-width] p-0"
+                                                align="start"
+                                            >
+                                                <Command>
+                                                    <CommandInput placeholder="Search events…" />
+                                                    <CommandEmpty>No events found.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {programmes.map((item) => {
+                                                            const isSelected = programmeIds.includes(String(item.id));
+                                                            return (
+                                                                <CommandItem
+                                                                    key={item.id}
+                                                                    value={`${item.title} ${item.description ?? ''}`}
+                                                                    onSelect={() => {
+                                                                        setProgrammeIds((prev) => {
+                                                                            const next = new Set(prev);
+                                                                            if (next.has(String(item.id))) {
+                                                                                next.delete(String(item.id));
+                                                                            } else {
+                                                                                next.add(String(item.id));
+                                                                            }
+                                                                            return Array.from(next);
+                                                                        });
+                                                                    }}
+                                                                    className="items-start gap-3"
+                                                                >
+                                                                    <span
+                                                                        className={cn(
+                                                                            'mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md border',
+                                                                            isSelected
+                                                                                ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
+                                                                                : 'border-slate-200 bg-white text-transparent'
+                                                                        )}
+                                                                    >
+                                                                        <Check className="h-3.5 w-3.5" />
+                                                                    </span>
+                                                                    <div className="flex-1 space-y-2">
+                                                                        <div className="flex flex-wrap items-center gap-2">
+                                                                            <span className="font-medium text-slate-700">
+                                                                                {item.title}
+                                                                            </span>
+                                                                            {isSelected && (
+                                                                                <Badge className="bg-emerald-500 text-white">
+                                                                                    <Check className="h-3 w-3" />
+                                                                                    Selected
+                                                                                </Badge>
+                                                                            )}
+                                                                            <Badge
+                                                                                variant="secondary"
+                                                                                className="bg-slate-100 text-slate-600"
+                                                                            >
+                                                                                <CalendarRange className="h-3 w-3" />
+                                                                                {formatProgrammeDate(item.starts_at)}
+                                                                            </Badge>
+                                                                            <Badge
+                                                                                variant="outline"
+                                                                                className="border-slate-200 text-slate-500"
+                                                                            >
+                                                                                Ends {formatProgrammeDate(item.ends_at)}
+                                                                            </Badge>
+                                                                        </div>
+                                                                        {item.description && (
+                                                                            <p className="text-sm text-slate-500">
+                                                                                {item.description}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </CommandItem>
+                                                            );
+                                                        })}
+                                                    </CommandGroup>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        <InputError message={err.programme_ids ?? err['programme_ids.0']} />
+                                        {selectedProgrammes.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedProgrammes.map((programme) => (
+                                                    <Badge
+                                                        key={programme.id}
+                                                        variant="secondary"
+                                                        className="bg-[#0033A0]/10 text-[#0033A0]"
+                                                    >
+                                                        {programme.title}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="grid gap-5 sm:grid-cols-2">
                                         <div className="grid gap-2">
                                             <Label htmlFor="password">Password</Label>
@@ -331,7 +521,7 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                                     id="password"
                                                     type={showPassword ? 'text' : 'password'}
                                                     required
-                                                    tabIndex={6}
+                                                    tabIndex={7}
                                                     autoComplete="new-password"
                                                     name="password"
                                                     placeholder="Password"
@@ -360,7 +550,7 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                                     id="password_confirmation"
                                                     type={showConfirmPassword ? 'text' : 'password'}
                                                     required
-                                                    tabIndex={7}
+                                                    tabIndex={8}
                                                     autoComplete="new-password"
                                                     name="password_confirmation"
                                                     placeholder="Confirm password"
@@ -390,7 +580,7 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                     <Button
                                         type="submit"
                                         className="mt-1 h-11 w-full rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86]"
-                                        tabIndex={8}
+                                        tabIndex={9}
                                         data-test="register-user-button"
                                     >
                                         {processing && <Spinner />}
@@ -398,14 +588,36 @@ export default function Register({ countries, registrantTypes }: RegisterProps) 
                                     </Button>
                                     <div className="mt-8 text-center text-sm text-muted-foreground">
                                         Already have an account?{' '}
-                                        <TextLink href={login()} tabIndex={9}>
+                                        <TextLink href={login()} tabIndex={10}>
                                             Log in
                                         </TextLink>
                                     </div>
                                 </div>
                             </div>
 
-
+                            <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+                                <DialogContent className="max-w-md rounded-2xl border-none bg-gradient-to-br from-[#E8F0FF] via-white to-[#F5FBFF]">
+                                    <DialogHeader className="items-center text-center">
+                                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0033A0] text-white shadow-lg shadow-[#0033A0]/20">
+                                            <CheckCircle2 className="h-7 w-7" />
+                                        </div>
+                                        <DialogTitle className="text-xl text-slate-800">You’re all set! 🎉</DialogTitle>
+                                        <DialogDescription className="text-sm text-slate-600">
+                                            Thanks for signing up! ✨ Please check your provided email for account info.
+                                            We’ll send your credentials as soon as SMTP is enabled.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter className="sm:justify-center">
+                                        <Button
+                                            type="button"
+                                            className="rounded-full bg-[#0033A0] px-6 text-white hover:bg-[#002b86]"
+                                            onClick={() => setSuccessOpen(false)}
+                                        >
+                                            Got it
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </>
                     );
                 }}
