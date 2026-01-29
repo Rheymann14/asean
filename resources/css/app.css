@@ -227,6 +227,7 @@
   animation: pulse54012 500ms ease infinite alternate 250ms;
 }
 
+
 @keyframes pulse54012 {
   from {
     opacity: 0;

@@ -13,18 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
-import {
-    Copy,
-    Download,
-    Flag,
-    Mail,
-    Phone,
-    QrCode as QrCodeIcon,
-    Smartphone,
-    IdCard,
-    User2,
-
-} from 'lucide-react';
+import { Copy, Download, Flag, Mail, Phone, QrCode as QrCodeIcon, Smartphone, IdCard, User2 } from 'lucide-react';
 
 type Country = {
     code: string;
@@ -88,6 +77,12 @@ function InfoRow({
     );
 }
 
+/**
+ * ✅ Mobile fix (no QR cutting):
+ * - DO NOT force aspect ratio on xs (mobile). Landscape gets too short and clips content.
+ * - Keep aspect ratio on sm+ only.
+ * - Make inner wrapper h-auto on xs so content defines height.
+ */
 function IdCardPreview({
     participant,
     flagSrc,
@@ -103,29 +98,34 @@ function IdCardPreview({
 }) {
     const isLandscape = orientation === 'landscape';
 
-    // ✅ correct ID aspect ratios
-    const aspect = isLandscape ? 'aspect-[3.37/2.125]' : 'aspect-[3.46/5.51]';
+    // ✅ aspect ratio ONLY on sm+ (mobile uses natural height to avoid clipping)
+    const aspect = isLandscape ? 'sm:aspect-[3.37/2.125]' : 'sm:aspect-[3.46/5.51]';
 
     // ✅ print sizes (keep accurate)
-    const printSize = isLandscape
-        ? 'print:w-[3.37in] print:h-[2.125in]'
-        : 'print:w-[3.46in] print:h-[5.51in]';
+    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]';
 
-    // ✅ screen preview sizing (THIS fixes “portrait too big”)
-    const maxW = isLandscape ? 'max-w-[520px]' : 'max-w-[320px] sm:max-w-[360px]';
+    // ✅ screen preview sizing
+    const maxW = isLandscape ? 'max-w-[98vw] sm:max-w-[520px]' : 'max-w-[94vw] sm:max-w-[360px]';
 
-    const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
-    const qrSize = isLandscape ? 108 : 160;
+    // ✅ landscape QR panel column smaller on mobile
+    const qrPanelWidth = isLandscape ? 'w-[120px] sm:w-[150px]' : '';
 
-    // ✅ tighten padding + typography a bit
-    const pad = isLandscape ? 'p-3' : 'p-4 pb-3'; // ✅ slightly less bottom padding in portrait
-    const headerLogo = isLandscape ? 'h-8 w-8' : 'h-9 w-9';
+    // ✅ QR size responsive (smaller on mobile)
+    const qrBoxClass = isLandscape
+        ? 'w-[84px] h-[84px] sm:w-[108px] sm:h-[108px]'
+        : 'w-[128px] h-[128px] sm:w-[160px] sm:h-[160px]';
+
+    // ✅ tighten padding + typography on xs
+    const pad = isLandscape ? 'p-2 sm:p-3' : 'p-3 pb-2 sm:p-4 sm:pb-3';
+    const headerLogo = isLandscape ? 'h-7 w-7 sm:h-8 sm:w-8' : 'h-7 w-7 sm:h-9 sm:w-9';
 
     return (
         <div
             className={cn(
                 'relative mx-auto w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
                 maxW,
+                // ✅ critical: allow natural height on mobile
+                'aspect-auto',
                 aspect,
                 'print:max-w-none',
                 printSize,
@@ -152,7 +152,7 @@ function IdCardPreview({
                 <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
             </div>
 
-            <div className={cn('relative flex h-full flex-col', pad)}>
+            <div className={cn('relative flex h-auto flex-col sm:h-full', pad)}>
                 {/* Header */}
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2.5">
@@ -172,12 +172,7 @@ function IdCardPreview({
                         />
 
                         <div className="min-w-0">
-                            <div
-                                className={cn(
-                                    'truncate font-semibold tracking-wide text-slate-700 dark:text-slate-200',
-                                    'text-[11px]',
-                                )}
-                            >
+                            <div className="truncate text-[11px] font-semibold tracking-wide text-slate-700 dark:text-slate-200">
                                 ASEAN Philippines 2026
                             </div>
                             <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
@@ -187,15 +182,17 @@ function IdCardPreview({
                     </div>
                 </div>
 
-                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-2.5')} />
+                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-2 sm:my-2.5')} />
 
                 {/* Body */}
                 <div
                     className={cn(
-                        'flex-1 min-h-0', // ✅ important so flex children can position correctly
+                        'min-h-0',
+                        // ✅ only use flex fill on sm+ when aspect is enforced
+                        'sm:flex-1',
                         isLandscape
-                            ? 'grid grid-cols-[1fr_150px] items-start gap-3'
-                            : 'flex flex-col gap-3', // portrait stays column
+                            ? 'grid grid-cols-[1fr_120px] gap-2.5 sm:grid-cols-[1fr_150px] sm:gap-3'
+                            : 'flex flex-col gap-2.5 sm:gap-3',
                     )}
                 >
                     {/* LEFT INFO */}
@@ -207,7 +204,7 @@ function IdCardPreview({
                         <div
                             className={cn(
                                 'mt-0.5 break-words font-semibold tracking-tight text-slate-900 dark:text-slate-100',
-                                isLandscape ? 'text-sm leading-4' : 'text-lg leading-6',
+                                isLandscape ? 'text-[13px] leading-4 sm:text-sm' : 'text-base leading-5 sm:text-lg sm:leading-6',
                                 'line-clamp-2',
                             )}
                             title={participant.name}
@@ -215,11 +212,11 @@ function IdCardPreview({
                             {participant.name}
                         </div>
 
-                        <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-2.5')}>
+                        <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-1.5 sm:mt-2' : 'mt-2 sm:mt-2.5')}>
                             <div
                                 className={cn(
                                     'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
-                                    'h-9 w-9',
+                                    'h-8 w-8 sm:h-9 sm:w-9',
                                 )}
                             >
                                 {flagSrc ? (
@@ -248,7 +245,7 @@ function IdCardPreview({
                             </div>
                         </div>
 
-                        <div className={cn(isLandscape ? 'mt-2' : 'mt-3')}>
+                        <div className={cn(isLandscape ? 'mt-1.5 sm:mt-2' : 'mt-2 sm:mt-3')}>
                             <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                 Participant ID
                             </div>
@@ -263,7 +260,7 @@ function IdCardPreview({
                             </div>
                         </div>
 
-                        <div className={cn('text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-1.5' : 'mt-2')}>
+                        <div className={cn('text-[10px] text-slate-500 dark:text-slate-400', isLandscape ? 'mt-1' : 'mt-1.5 sm:mt-2')}>
                             Scan QR for attendance verification.
                         </div>
                     </div>
@@ -273,14 +270,15 @@ function IdCardPreview({
                         className={cn(
                             'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
                             qrPanelWidth,
-                            isLandscape ? 'p-2.5' : 'p-3',
-                            !isLandscape && 'mt-auto', // ✅ THIS removes the big empty space below in portrait
+                            isLandscape ? 'p-2 sm:p-2.5' : 'p-2.5 sm:p-3',
+                            // ✅ only push to bottom on larger screens; on mobile it can cause clipping
+                            !isLandscape && 'sm:mt-auto',
                         )}
                     >
                         <div
                             className={cn(
                                 'inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200',
-                                isLandscape ? 'mb-1 text-[10px]' : 'mb-1.5 text-[11px]',
+                                isLandscape ? 'mb-1 text-[10px]' : 'mb-1 text-[11px] sm:mb-1.5',
                             )}
                         >
                             <QrCodeIcon className={cn(isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
@@ -288,19 +286,20 @@ function IdCardPreview({
                         </div>
 
                         {loading ? (
-                            <Skeleton className="rounded-2xl" style={{ width: qrSize, height: qrSize }} />
+                            <Skeleton className={cn('rounded-2xl', qrBoxClass)} />
                         ) : qrDataUrl ? (
                             <img
                                 src={qrDataUrl}
                                 alt="Participant QR code"
-                                className="rounded-2xl bg-white p-2 object-contain"
-                                style={{ width: qrSize, height: qrSize }}
+                                className={cn('rounded-2xl bg-white p-2 object-contain', qrBoxClass)}
                                 draggable={false}
                             />
                         ) : (
                             <div
-                                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30"
-                                style={{ width: qrSize, height: qrSize }}
+                                className={cn(
+                                    'flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30',
+                                    qrBoxClass,
+                                )}
                             >
                                 <QrCodeIcon className="h-7 w-7 text-slate-400" />
                                 <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">QR unavailable</div>
@@ -315,7 +314,7 @@ function IdCardPreview({
                                     {participant.name}
                                 </span>
                             </div>
-                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', 'text-[10px]')}>
+                            <div className="mt-1 break-words font-mono text-[10px] text-slate-500 dark:text-slate-400">
                                 {participant.display_id}
                             </div>
                         </div>
@@ -325,7 +324,6 @@ function IdCardPreview({
         </div>
     );
 }
-
 
 export default function ParticipantDashboard({ participant }: PageProps) {
     const flagSrc = getFlagSrc(participant.country);
@@ -476,7 +474,6 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                         </div>
 
                         <CardContent className="space-y-4 p-4 sm:p-5">
-                            {/* ✅ narrower right column so it doesn't eat space */}
                             <div className="grid gap-5 lg:grid-cols-[1fr_460px]">
                                 {/* LEFT: Details */}
                                 <div className="space-y-3">
@@ -573,7 +570,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                     ) : null}
                                 </div>
 
-                                {/* RIGHT: Virtual ID (compact + scroll frame) */}
+                                {/* RIGHT: Virtual ID */}
                                 <div className="space-y-3 lg:sticky lg:top-6">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
@@ -582,13 +579,9 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 Use this virtual ID card for attendance verification.
                                             </div>
                                         </div>
-
-
-
                                     </div>
 
                                     <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-3 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
-                                        {/* Controls row (compact) */}
                                         <div className="flex items-center justify-between gap-2">
                                             <Tabs value={orientation} onValueChange={(v) => setOrientation(v as 'portrait' | 'landscape')}>
                                                 <TabsList className="rounded-2xl bg-white/70 p-1 dark:bg-slate-950/40">
@@ -617,31 +610,15 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                     </TabsTrigger>
                                                 </TabsList>
                                             </Tabs>
-
-                                            {/* <Badge
-                                                variant="secondary"
-                                                role="button"
-                                                tabIndex={0}
-                                                onClick={() => setPreviewOpen(true)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' || e.key === ' ') setPreviewOpen(true);
-                                                }}
-                                                className="rounded-full cursor-pointer select-none transition-colors hover:bg-[#00359c]/10 hover:text-[#00359c] dark:hover:bg-[#00359c]/20 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00359c]/30"
-                                            >
-                                                <QrCodeIcon className="mr-1 h-4 w-4" />
-                                                Preview
-                                            </Badge> */}
-
                                         </div>
 
                                         <Separator className="my-3 bg-slate-200/70 dark:bg-white/10" />
 
-                                        {/* ✅ fixed-height frame so portrait won't push page */}
                                         <div
                                             className={cn(
                                                 'rounded-2xl border border-slate-200/70 bg-white/70 p-2 shadow-sm dark:border-white/10 dark:bg-slate-950/30',
-                                                orientation === 'portrait' ? 'max-h-[520px]' : 'max-h-[340px]',
-                                                'overflow-auto',
+                                                'overflow-visible sm:overflow-auto sm:[-webkit-overflow-scrolling:touch]',
+                                                orientation === 'portrait' ? 'sm:max-h-[520px]' : 'sm:max-h-[340px]',
                                             )}
                                         >
                                             <IdCardPreview
@@ -659,14 +636,11 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                     </Card>
                 </div>
 
-                {/* ✅ Large Preview Dialog (only when user wants full size) */}
                 <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
                     <DialogContent className="max-w-[900px]">
                         <DialogHeader>
                             <DialogTitle>Virtual ID (Large Preview)</DialogTitle>
-                            <DialogDescription>
-
-                            </DialogDescription>
+                            <DialogDescription />
                         </DialogHeader>
 
                         <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-white/10 dark:bg-slate-950/40">

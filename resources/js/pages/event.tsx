@@ -598,7 +598,7 @@ export default function Programme({ programmes = [] }: PageProps) {
             <PublicLayout navActive="/event">
                 <section className="relative isolate mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
                     {/* background */}
-                    <div
+                    {/* <div
                         aria-hidden
                         className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-950/60 dark:to-slate-950"
                     />
@@ -613,7 +613,7 @@ export default function Programme({ programmes = [] }: PageProps) {
                     <div
                         aria-hidden
                         className="pointer-events-none absolute inset-0 -z-10 opacity-[0.35] [background:radial-gradient(1200px_circle_at_20%_0%,rgba(0,51,160,0.12),transparent_55%),radial-gradient(900px_circle_at_90%_20%,rgba(252,209,22,0.16),transparent_55%)]"
-                    />
+                    /> */}
 
                     {/* header */}
                     <div className="mx-auto max-w-3xl text-center">

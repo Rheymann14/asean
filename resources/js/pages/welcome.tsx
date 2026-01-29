@@ -17,7 +17,8 @@ import {
     useScroll,
     useTransform,
 } from 'framer-motion';
-import { ArrowRight, CheckCircle2, MessageCircle, Star, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, MessageCircle, Star, X, FlaskConical } from 'lucide-react';
+
 import * as React from 'react';
 
 // --- TYPES ---
@@ -166,6 +167,16 @@ function HeroStickyParallax() {
     const targetRef = React.useRef<HTMLDivElement>(null);
     const shouldReduceMotion = useReducedMotion();
 
+    const [betaDismissed, setBetaDismissed] = React.useState(false);
+
+    React.useEffect(() => {
+        try {
+            setBetaDismissed(window.localStorage.getItem(BETA_STORAGE_KEY) === '1');
+        } catch {
+            setBetaDismissed(false);
+        }
+    }, []);
+
     const { scrollYProgress } = useScroll({
         target: targetRef,
         offset: ['start start', 'end end'],
@@ -191,8 +202,35 @@ function HeroStickyParallax() {
     return (
         // ✅ clip only X to avoid horizontal scrollbar; allow Y to be visible
         <section ref={targetRef} className="relative h-[250vh] overflow-x-clip">
+
+
+
             {/* ✅ remove overflow-hidden here so flags/logo won't be cut */}
-            <div className="sticky top-0 flex min-h-[100svh] flex-col items-center justify-center px-4 pt-24 pb-12 overflow-visible">
+            <div className="sticky top-0 relative flex min-h-[100svh] flex-col items-center justify-center px-4 pt-24 pb-12 overflow-visible">
+                {/* ✅ stays visible while HERO is sticky (won’t scroll away) */}
+                <div className="pointer-events-none absolute left-1/2 top-16 z-[70] w-[calc(100%-1rem)] -translate-x-1/2 sm:top-20 sm:w-auto">
+                    <div className="flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+                        {/* ✅ show the small amber pill only AFTER the big notice is dismissed (prevents duplicate) */}
+                        {betaDismissed && (
+                            <div
+                                className={cn(
+                                    'inline-flex w-full items-center justify-center gap-2',
+                                    'rounded-full border border-amber-300/70 bg-amber-50/85 shadow-sm ring-1 ring-amber-200/40 backdrop-blur',
+                                    'px-3 py-2 text-[10px] font-extrabold tracking-[0.22em] text-amber-800',
+                                    'sm:w-auto sm:px-4 sm:text-[11px] sm:tracking-[0.24em]',
+                                )}
+                            >
+                                <span className="relative inline-flex h-2 w-2 shrink-0">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                                </span>
+
+                                <span className="truncate sm:whitespace-nowrap">ONGOING BETA TESTING</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <div className="relative flex w-full max-w-7xl flex-col items-center justify-center">
                     {/* ✅ give more vertical room for flags that move up/down */}
                     <div className="relative flex h-[420px] w-full items-center justify-center sm:h-[520px]">
@@ -700,8 +738,79 @@ function ThreeDImageRing({
  * MAIN PAGE
  * --------------------------------------------------------------------------
  */
+const BETA_STORAGE_KEY = 'asean_beta_testing_dismissed_v1';
 
 export default function Welcome({ canRegister = true }: { canRegister?: boolean }) {
+
+
+
+    function BetaTestingNotice({ onOpenFeedback }: { onOpenFeedback: () => void }) {
+        const shouldReduceMotion = useReducedMotion();
+
+        const [open, setOpen] = React.useState<boolean>(() => {
+            if (typeof window === 'undefined') return true;
+            return window.localStorage.getItem(BETA_STORAGE_KEY) !== '1';
+        });
+
+        const dismiss = React.useCallback(() => {
+            setOpen(false);
+            try {
+                window.localStorage.setItem(BETA_STORAGE_KEY, '1');
+            } catch {
+                // ignore storage errors
+            }
+        }, []);
+
+        return (
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -10, scale: 0.98 }}
+                        animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.98 }}
+                        transition={{ duration: 0.22, ease: easeOut }}
+                        className="fixed left-1/2 top-[86px] z-[80] -translate-x-1/2 px-3 sm:top-[98px]"
+                    >
+                        <div className="flex max-w-[92vw] items-center gap-2 rounded-full border border-amber-300/70 bg-white/85 px-3 py-2 shadow-lg ring-1 ring-amber-200/40 backdrop-blur">
+                            {/* ping dot */}
+                            <span className="relative inline-flex h-2 w-2">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                            </span>
+
+                            <FlaskConical className="h-4 w-4 text-amber-700" />
+
+                            <span className="whitespace-nowrap text-[10px] font-extrabold tracking-[0.28em] text-amber-800">
+                                ONGOING BETA TESTING
+                            </span>
+
+                            <span className="hidden whitespace-nowrap text-[11px] font-medium text-amber-900/70 sm:inline">
+                                Expect minor changes.
+                            </span>
+
+                            <Button
+                                type="button"
+                                onClick={onOpenFeedback}
+                                className="ml-1 h-8 rounded-full bg-amber-500/15 px-3 text-[10px] font-extrabold tracking-[0.24em] text-amber-900 shadow-none hover:bg-amber-500/20"
+                            >
+                                FEEDBACK <ArrowRight className="ml-1 h-4 w-4" />
+                            </Button>
+
+                            <button
+                                type="button"
+                                onClick={dismiss}
+                                className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-full transition hover:bg-black/5"
+                                aria-label="Dismiss beta notice"
+                            >
+                                <X className="h-4 w-4 text-amber-900/70" />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        );
+    }
+
     const [selectedLeader, setSelectedLeader] = React.useState<LeadershipItem | null>(null);
     const [modalOpen, setModalOpen] = React.useState(false);
 
@@ -874,6 +983,8 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                     </div>
                 }
             >
+
+                <BetaTestingNotice onOpenFeedback={() => setFeedbackOpen(true)} />
                 {/* 1. HERO */}
                 <HeroStickyParallax />
 

@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import { Form, Head, Link, useRemember } from '@inertiajs/react';
-
+import { Form, Head, Link, router, useRemember } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -22,7 +21,14 @@ import { Spinner } from '@/components/ui/spinner';
 import RegisterLayout from '@/layouts/register-layout';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
 import { CalendarRange, Check, CheckCircle2, ChevronsUpDown, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 type CountryOption = {
@@ -54,7 +60,8 @@ type RegisterProps = {
 };
 
 export default function Register({ countries, registrantTypes, programmes, status }: RegisterProps) {
-    const formRef = React.useRef<HTMLFormElement>(null);
+    const [formKey, setFormKey] = React.useState(0);
+
     const [countryOpen, setCountryOpen] = React.useState(false);
     const [typeOpen, setTypeOpen] = React.useState(false);
     const [programmeOpen, setProgrammeOpen] = React.useState(false);
@@ -99,7 +106,9 @@ export default function Register({ countries, registrantTypes, programmes, statu
     }, [selectedProgrammes]);
 
     const resetFormState = React.useCallback(() => {
-        formRef.current?.reset();
+        // Force remount to clear uncontrolled inputs
+        setFormKey((k) => k + 1);
+
         setCountry('');
         setRegistrantType('');
         setProgrammeIds([]);
@@ -164,7 +173,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
             </div>
 
             <Form
-                ref={formRef}
+                key={formKey}
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
@@ -174,6 +183,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                     setSuccessOpen(true);
                 }}
             >
+
                 {({ processing, errors }) => {
                     const err = errors as Record<string, string | undefined>;
 
@@ -319,7 +329,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             autoComplete="tel"
                                             name="contact_number"
                                             inputMode="numeric"
-                                           
+
                                             placeholder="e.g. 09123456789"
                                             className={inputClass}
                                             onInput={(event) => {
@@ -422,79 +432,101 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </PopoverTrigger>
 
                                             <PopoverContent
-                                                className="w-[--radix-popover-trigger-width] p-0"
                                                 align="start"
+                                                sideOffset={8}
+                                                className={cn(
+                                                    'p-0',
+                                                    // ✅ responsive width: never exceed viewport, and keep it compact on desktop
+                                                    'w-[min(calc(100vw-1.5rem),var(--radix-popover-trigger-width))]',
+                                                    'sm:w-[520px]'
+                                                )}
                                             >
-                                                <Command>
+                                                <Command className="overflow-hidden rounded-xl">
                                                     <CommandInput placeholder="Search events…" />
+
                                                     <CommandEmpty>No events found.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {programmes.map((item) => {
-                                                            const isSelected = programmeIds.includes(String(item.id));
-                                                            return (
-                                                                <CommandItem
-                                                                    key={item.id}
-                                                                    value={`${item.title} ${item.description ?? ''}`}
-                                                                    onSelect={() => {
-                                                                        setProgrammeIds((prev) => {
-                                                                            const next = new Set(prev);
-                                                                            if (next.has(String(item.id))) {
-                                                                                next.delete(String(item.id));
-                                                                            } else {
-                                                                                next.add(String(item.id));
-                                                                            }
-                                                                            return Array.from(next);
-                                                                        });
-                                                                    }}
-                                                                    className="items-start gap-3"
-                                                                >
-                                                                    <span
-                                                                        className={cn(
-                                                                            'mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md border',
-                                                                            isSelected
-                                                                                ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
-                                                                                : 'border-slate-200 bg-white text-transparent'
-                                                                        )}
+
+                                                    {/* ✅ scrollable list (mobile friendly) */}
+                                                    <CommandList className="max-h-[320px] overflow-auto sm:max-h-[380px]">
+                                                        <CommandGroup>
+                                                            {programmes.map((item) => {
+                                                                const isSelected = programmeIds.includes(String(item.id));
+
+                                                                return (
+                                                                    <CommandItem
+                                                                        key={item.id}
+                                                                        value={`${item.title} ${item.description ?? ''}`}
+                                                                        onSelect={() => {
+                                                                            setProgrammeIds((prev) => {
+                                                                                const next = new Set(prev);
+                                                                                const id = String(item.id);
+
+                                                                                if (next.has(id)) next.delete(id);
+                                                                                else next.add(id);
+
+                                                                                return Array.from(next);
+                                                                            });
+                                                                        }}
+                                                                        className="items-start gap-3"
                                                                     >
-                                                                        <Check className="h-3.5 w-3.5" />
-                                                                    </span>
-                                                                    <div className="flex-1 space-y-2">
-                                                                        <div className="flex flex-wrap items-center gap-2">
-                                                                            <span className="font-medium text-slate-700">
-                                                                                {item.title}
-                                                                            </span>
-                                                                            {isSelected && (
-                                                                                <Badge className="bg-emerald-500 text-white">
-                                                                                    <Check className="h-3 w-3" />
-                                                                                    Selected
-                                                                                </Badge>
+                                                                        {/* ✅ show check ONLY when selected */}
+                                                                        <span
+                                                                            className={cn(
+                                                                                'mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
+                                                                                isSelected
+                                                                                    ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
+                                                                                    : 'border-slate-200 bg-white'
                                                                             )}
-                                                                            <Badge
-                                                                                variant="secondary"
-                                                                                className="bg-slate-100 text-slate-600"
-                                                                            >
-                                                                                <CalendarRange className="h-3 w-3" />
-                                                                                {formatProgrammeDate(item.starts_at)}
-                                                                            </Badge>
-                                                                            <Badge
-                                                                                variant="outline"
-                                                                                className="border-slate-200 text-slate-500"
-                                                                            >
-                                                                                Ends {formatProgrammeDate(item.ends_at)}
-                                                                            </Badge>
+                                                                        >
+                                                                            {isSelected ? <Check className="h-3.5 w-3.5" /> : null}
+                                                                        </span>
+
+                                                                        <div className="min-w-0 flex-1 space-y-2">
+                                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                                <span className="min-w-0 truncate font-medium text-slate-700">
+                                                                                    {item.title}
+                                                                                </span>
+
+                                                                                <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+                                                                                    <CalendarRange className="h-3 w-3" />
+                                                                                    {formatProgrammeDate(item.starts_at)}
+                                                                                </Badge>
+
+                                                                                <Badge variant="outline" className="border-slate-200 text-slate-500">
+                                                                                    Ends {formatProgrammeDate(item.ends_at)}
+                                                                                </Badge>
+                                                                            </div>
+
+                                                                            {item.description && (
+                                                                                <p className="text-sm text-slate-500 break-words">
+                                                                                    {item.description}
+                                                                                </p>
+                                                                            )}
                                                                         </div>
-                                                                        {item.description && (
-                                                                            <p className="text-sm text-slate-500">
-                                                                                {item.description}
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
-                                                                </CommandItem>
-                                                            );
-                                                        })}
-                                                    </CommandGroup>
+                                                                    </CommandItem>
+                                                                );
+                                                            })}
+                                                        </CommandGroup>
+                                                    </CommandList>
+
+                                                    {/* ✅ tiny footer so users can close on mobile easily */}
+                                                    <div className="flex items-center justify-between border-t bg-white/70 px-3 py-2">
+                                                        <p className="text-xs text-slate-500">
+                                                            {programmeIds.length ? `${programmeIds.length} selected` : 'Select one or more events'}
+                                                        </p>
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            className="h-8 rounded-lg px-2 text-xs"
+                                                            onClick={() => setProgrammeOpen(false)}
+                                                        >
+                                                            Done
+                                                        </Button>
+                                                    </div>
                                                 </Command>
                                             </PopoverContent>
+
                                         </Popover>
 
                                         <InputError message={err.programme_ids ?? err['programme_ids.0']} />
@@ -601,17 +633,23 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0033A0] text-white shadow-lg shadow-[#0033A0]/20">
                                             <CheckCircle2 className="h-7 w-7" />
                                         </div>
+
                                         <DialogTitle className="text-xl text-slate-800">You’re all set! 🎉</DialogTitle>
+
                                         <DialogDescription className="text-sm text-slate-600">
-                                            Thanks for signing up! ✨ Please check your provided email for account info.
-                                            We’ll send your credentials as soon as SMTP is enabled.
+                                            Thanks for signing up! ✨ You can now try logging in using the email you provided.
+
                                         </DialogDescription>
                                     </DialogHeader>
+
                                     <DialogFooter className="sm:justify-center">
                                         <Button
                                             type="button"
                                             className="rounded-full bg-[#0033A0] px-6 text-white hover:bg-[#002b86]"
-                                            onClick={() => setSuccessOpen(false)}
+                                            onClick={() => {
+                                                setSuccessOpen(false);
+                                                router.visit(login());
+                                            }}
                                         >
                                             Got it
                                         </Button>
