@@ -361,25 +361,32 @@ export default function Dashboard() {
                                             <span>All countries</span>
                                         </CommandItem>
 
-                                        {countries.map((c) => (
-                                            <CommandItem
-                                                key={c.id}
-                                                value={String(c.id)}
-                                                onSelect={() => {
-                                                    setCountry(String(c.id));
-                                                    setOpen(false);
-                                                }}
-                                                className="gap-2"
-                                            >
-                                                <span className="inline-flex size-4 items-center justify-center">
-                                                    {country === String(c.id) ? <Check className="size-4" /> : null}
-                                                </span>
-                                                {getFlagSrc(c) ? (
-                                                    <img src={getFlagSrc(c) ?? ''} alt="" className="size-5 rounded-full object-cover" />
-                                                ) : null}
-                                                <span className="truncate">{c.name}</span>
-                                            </CommandItem>
-                                        ))}
+                                        {countries.map((c) => {
+                                            const participantCount = countryStats?.[String(c.id)]?.participants ?? 0;
+
+                                            return (
+                                                <CommandItem
+                                                    key={c.id}
+                                                    value={String(c.id)}
+                                                    onSelect={() => {
+                                                        setCountry(String(c.id));
+                                                        setOpen(false);
+                                                    }}
+                                                    className="gap-2"
+                                                >
+                                                    <span className="inline-flex size-4 items-center justify-center">
+                                                        {country === String(c.id) ? <Check className="size-4" /> : null}
+                                                    </span>
+                                                    {getFlagSrc(c) ? (
+                                                        <img src={getFlagSrc(c) ?? ''} alt="" className="size-5 rounded-full object-cover" />
+                                                    ) : null}
+                                                    <span className="truncate">{c.name}</span>
+                                                    <Badge variant="secondary" className="ml-auto rounded-full text-[11px]">
+                                                        {participantCount.toLocaleString()}
+                                                    </Badge>
+                                                </CommandItem>
+                                            );
+                                        })}
                                     </CommandGroup>
                                 </Command>
                             </PopoverContent>
