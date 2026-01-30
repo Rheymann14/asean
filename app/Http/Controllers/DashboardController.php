@@ -107,17 +107,40 @@ class DashboardController extends Controller
             ->get()
             ->groupBy('programme_id');
 
+        $joinedRows = DB::table('participant_programmes')
+            ->join('users', 'participant_programmes.user_id', '=', 'users.id')
+            ->where('users.is_active', true)
+            ->tap($excludeChed)
+            ->select(
+                'participant_programmes.programme_id',
+                'users.country_id',
+                DB::raw('count(*) as total')
+            )
+            ->groupBy('participant_programmes.programme_id', 'users.country_id')
+            ->get()
+            ->groupBy('programme_id');
+
         $events = Programme::query()
             ->orderBy('starts_at')
             ->get()
-            ->map(function (Programme $programme) use ($attendances) {
+            ->map(function (Programme $programme) use ($attendances, $joinedRows) {
                 $records = $attendances->get($programme->id, collect());
+                $joinedForProgramme = $joinedRows->get($programme->id, collect());
+                $joinedByCountry = $joinedForProgramme
+                    ->filter(fn ($row) => $row->country_id !== null)
+                    ->mapWithKeys(fn ($row) => [
+                        (string) $row->country_id => (int) $row->total,
+                    ])
+                    ->all();
+                $joinedTotal = (int) $joinedForProgramme->sum('total');
 
                 return [
                     'id' => $programme->id,
                     'title' => $programme->title,
                     'starts_at' => $programme->starts_at?->toISOString(),
                     'attendance_count' => $records->count(),
+                    'joined_count' => $joinedTotal,
+                    'joined_by_country' => $joinedByCountry,
                     'participants' => $records
                         ->map(function (ParticipantAttendance $attendance) {
                             $participant = $attendance->participant;
