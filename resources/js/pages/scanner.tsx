@@ -1209,7 +1209,8 @@ export default function Scanner(props: PageProps) {
         const p = result?.participant;
         if (!p) return null;
 
-        const displayId = (p.display_id ?? '').toString().trim() || '—';
+        const displayId =
+            (p.display_id ?? '').toString().trim() || (p.id ? String(p.id).trim() : '') || '—';
 
         return {
             name: p.full_name,
@@ -1319,6 +1320,17 @@ export default function Scanner(props: PageProps) {
                                                 </div>
 
                                                 <div className="mt-2 grid gap-1 text-xs text-slate-600 dark:text-slate-400">
+                                                    {result.participant.display_id || result.participant.id ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <QrCodeIcon className="h-4 w-4" />
+                                                            <span className="truncate">
+                                                                ID:{' '}
+                                                                {(result.participant.display_id ?? '')
+                                                                    .toString()
+                                                                    .trim() || String(result.participant.id)}
+                                                            </span>
+                                                        </div>
+                                                    ) : null}
                                                     {result.participant.email ? (
                                                         <div className="flex items-center gap-2">
                                                             <Mail className="h-4 w-4" />
