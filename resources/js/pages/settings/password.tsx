@@ -5,13 +5,14 @@ import SettingsLayout from '@/layouts/settings/layout';
 import { type BreadcrumbItem } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Form, Head } from '@inertiajs/react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/user-password';
+import { Eye, EyeOff } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -23,6 +24,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Password() {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
+
+    const [showCurrent, setShowCurrent] = useState(false);
+    const [showNew, setShowNew] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -40,11 +45,7 @@ export default function Password() {
                         options={{
                             preserveScroll: true,
                         }}
-                        resetOnError={[
-                            'password',
-                            'password_confirmation',
-                            'current_password',
-                        ]}
+                        resetOnError={['password', 'password_confirmation', 'current_password']}
                         resetOnSuccess
                         onError={(errors) => {
                             if (errors.password) {
@@ -59,68 +60,109 @@ export default function Password() {
                     >
                         {({ errors, processing, recentlySuccessful }) => (
                             <>
+                                {/* CURRENT PASSWORD */}
                                 <div className="grid gap-2">
-                                    <Label htmlFor="current_password">
-                                        Current password
-                                    </Label>
+                                    <Label htmlFor="current_password">Current password</Label>
 
-                                    <Input
-                                        id="current_password"
-                                        ref={currentPasswordInput}
-                                        name="current_password"
-                                        type="password"
-                                        className="mt-1 block w-full"
-                                        autoComplete="current-password"
-                                        placeholder="Current password"
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="current_password"
+                                            ref={currentPasswordInput}
+                                            name="current_password"
+                                            type={showCurrent ? 'text' : 'password'}
+                                            className="mt-1 block w-full pr-10"
+                                            autoComplete="current-password"
+                                            placeholder="Current password"
+                                        />
 
-                                    <InputError
-                                        message={errors.current_password}
-                                    />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setShowCurrent((v) => !v)}
+                                            className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            aria-label={showCurrent ? 'Hide current password' : 'Show current password'}
+                                        >
+                                            {showCurrent ? (
+                                                <Eye className="h-4 w-4" />
+                                            ) : (
+                                                <EyeOff className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
+
+                                    <InputError message={errors.current_password} />
                                 </div>
 
+                                {/* NEW PASSWORD */}
                                 <div className="grid gap-2">
-                                    <Label htmlFor="password">
-                                        New password
-                                    </Label>
+                                    <Label htmlFor="password">New password</Label>
 
-                                    <Input
-                                        id="password"
-                                        ref={passwordInput}
-                                        name="password"
-                                        type="password"
-                                        className="mt-1 block w-full"
-                                        autoComplete="new-password"
-                                        placeholder="New password"
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="password"
+                                            ref={passwordInput}
+                                            name="password"
+                                            type={showNew ? 'text' : 'password'}
+                                            className="mt-1 block w-full pr-10"
+                                            autoComplete="new-password"
+                                            placeholder="New password"
+                                        />
+
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setShowNew((v) => !v)}
+                                            className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            aria-label={showNew ? 'Hide new password' : 'Show new password'}
+                                        >
+                                            {showNew ? (
+                                                <Eye className="h-4 w-4" />
+                                            ) : (
+                                                <EyeOff className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
 
                                     <InputError message={errors.password} />
                                 </div>
 
+                                {/* CONFIRM PASSWORD */}
                                 <div className="grid gap-2">
-                                    <Label htmlFor="password_confirmation">
-                                        Confirm password
-                                    </Label>
+                                    <Label htmlFor="password_confirmation">Confirm password</Label>
 
-                                    <Input
-                                        id="password_confirmation"
-                                        name="password_confirmation"
-                                        type="password"
-                                        className="mt-1 block w-full"
-                                        autoComplete="new-password"
-                                        placeholder="Confirm password"
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="password_confirmation"
+                                            name="password_confirmation"
+                                            type={showConfirm ? 'text' : 'password'}
+                                            className="mt-1 block w-full pr-10"
+                                            autoComplete="new-password"
+                                            placeholder="Confirm password"
+                                        />
 
-                                    <InputError
-                                        message={errors.password_confirmation}
-                                    />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setShowConfirm((v) => !v)}
+                                            className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                                        >
+                                            {showConfirm ? (
+                                                <Eye className="h-4 w-4" />
+                                            ) : (
+                                                <EyeOff className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </div>
+
+                                    <InputError message={errors.password_confirmation} />
                                 </div>
 
                                 <div className="flex items-center gap-4">
-                                    <Button
-                                        disabled={processing}
-                                        data-test="update-password-button"
-                                    >
+                                    <Button disabled={processing} data-test="update-password-button">
                                         Save password
                                     </Button>
 
@@ -131,9 +173,7 @@ export default function Password() {
                                         leave="transition ease-in-out"
                                         leaveTo="opacity-0"
                                     >
-                                        <p className="text-sm text-neutral-600">
-                                            Saved
-                                        </p>
+                                        <p className="text-sm text-neutral-600">Saved</p>
                                     </Transition>
                                 </div>
                             </>
