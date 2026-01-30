@@ -1205,21 +1205,24 @@ export default function Scanner(props: PageProps) {
     }, [events, nowTs]);
 
     // ✅ build ID-card participant shape (match virtual ID content)
+    const participantDisplayId = React.useMemo(() => {
+        const displayId = (result?.participant?.display_id ?? '').toString().trim();
+        return displayId || null;
+    }, [result?.participant?.display_id]);
+
     const cardParticipant = React.useMemo(() => {
         const p = result?.participant;
         if (!p) return null;
 
-        const displayId = (p.display_id ?? '').toString().trim() || '—';
-
         return {
             name: p.full_name,
-            display_id: displayId,
+            display_id: participantDisplayId ?? '—',
             country: {
                 name: p.country ?? null,
                 code: p.country_code ?? null,
             },
         };
-    }, [result?.participant]);
+    }, [participantDisplayId, result?.participant]);
 
     const flagSrc = getFlagSrc(result?.participant?.country_code, result?.participant?.country_flag_url);
     const qrDataUrl = qrPreview;
@@ -1319,6 +1322,12 @@ export default function Scanner(props: PageProps) {
                                                 </div>
 
                                                 <div className="mt-2 grid gap-1 text-xs text-slate-600 dark:text-slate-400">
+                                                    {participantDisplayId ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <QrCodeIcon className="h-4 w-4" />
+                                                            <span className="truncate">ID: {participantDisplayId}</span>
+                                                        </div>
+                                                    ) : null}
                                                     {result.participant.email ? (
                                                         <div className="flex items-center gap-2">
                                                             <Mail className="h-4 w-4" />
@@ -1368,42 +1377,15 @@ export default function Scanner(props: PageProps) {
                                             ) : null}
                                         </div>
 
-                                        <div className="mt-4">
-                                            <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                                                Registered Events
+                                        {selectedEvent ? (
+                                            <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
+                                                <ExternalLink className="h-4 w-4" />
+                                                Checking in for:{' '}
+                                                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                                    {selectedEvent.title}
+                                                </span>
                                             </div>
-
-                                            <div className="mt-2 flex flex-wrap gap-2">
-                                                {result.registered_events?.length ? (
-                                                    result.registered_events.map((e) => (
-                                                        <span
-                                                            key={e.id}
-                                                            className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-200"
-                                                        >
-                                                            <CalendarDays className="h-3.5 w-3.5 text-slate-500" />
-                                                            {e.title}
-                                                            {e.starts_at ? (
-                                                                <span className="text-[11px] font-medium text-slate-500">
-                                                                    • {fmtDate(e.starts_at)}
-                                                                </span>
-                                                            ) : null}
-                                                        </span>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-xs text-slate-500">No events found.</span>
-                                                )}
-                                            </div>
-
-                                            {selectedEvent ? (
-                                                <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-                                                    <ExternalLink className="h-4 w-4" />
-                                                    Checking in for:{' '}
-                                                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                                        {selectedEvent.title}
-                                                    </span>
-                                                </div>
-                                            ) : null}
-                                        </div>
+                                        ) : null}
                                     </div>
                                 ) : null}
                             </div>
