@@ -25,6 +25,7 @@ import {
     Cell,
     BarChart,
     Bar,
+    LabelList,
 } from 'recharts';
 
 import { Check, ChevronsUpDown, Users, CalendarFold, QrCode, Filter, House, Star } from 'lucide-react';
@@ -55,6 +56,8 @@ type DashboardEvent = {
     title: string;
     starts_at: string | null;
     attendance_count: number;
+    joined_count: number;
+    joined_by_country: Record<string, number>;
     participants: EventParticipant[];
 };
 
@@ -201,7 +204,7 @@ export default function Dashboard() {
                 ...event,
                 participants: filtered,
                 attendance: countryId ? filtered.length : event.attendance_count,
-                joined: filtered.length,
+                joined: countryId ? event.joined_by_country?.[String(countryId)] ?? 0 : event.joined_count,
             };
         });
     }, [events, countryId]);
@@ -225,7 +228,7 @@ export default function Dashboard() {
             return [{ name: 'No events yet', joined: 0 }];
         }
 
-        return eventsByJoined;
+        return eventsByJoined.slice(0, 20);
     }, [attendanceByEvent]);
 
     const joinedChartHeight = React.useMemo(() => {
@@ -535,7 +538,13 @@ export default function Dashboard() {
                                                     );
                                                 }}
                                             />
-                                            <Bar dataKey="joined" fill={CHART_PRIMARY} radius={[0, 6, 6, 0]} />
+                                            <Bar dataKey="joined" fill={CHART_PRIMARY} radius={[0, 6, 6, 0]}>
+                                                <LabelList
+                                                    dataKey="joined"
+                                                    position="right"
+                                                    className="fill-muted-foreground text-[10px]"
+                                                />
+                                            </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
