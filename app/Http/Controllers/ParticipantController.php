@@ -155,6 +155,7 @@ class ParticipantController extends Controller
             'country_id' => ['nullable', 'exists:countries,id'],
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'is_active' => ['sometimes', 'boolean'],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8'],
         ]);
 
         $wasActive = (bool) $participant->is_active;
@@ -182,6 +183,10 @@ class ParticipantController extends Controller
 
         if (array_key_exists('is_active', $validated)) {
             $updates['is_active'] = $validated['is_active'];
+        }
+
+        if (array_key_exists('password', $validated) && $validated['password'] !== null) {
+            $updates['password'] = $validated['password'];
         }
 
         $participant->update($updates);
