@@ -12,7 +12,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 
-import { ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
+import {
+    ResponsiveContainer,
+    Tooltip,
+    CartesianGrid,
+    XAxis,
+    YAxis,
+    AreaChart,
+    Area,
+    PieChart,
+    Pie,
+    Cell,
+    BarChart,
+    Bar,
+} from 'recharts';
 
 import { Check, ChevronsUpDown, Users, CalendarFold, QrCode, Filter, House, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -188,6 +201,7 @@ export default function Dashboard() {
                 ...event,
                 participants: filtered,
                 attendance: countryId ? filtered.length : event.attendance_count,
+                joined: filtered.length,
             };
         });
     }, [events, countryId]);
@@ -197,6 +211,17 @@ export default function Dashboard() {
     }, [attendanceByEvent]);
 
     const maxScanned = React.useMemo(() => Math.max(1, ...topEventsRows.map((x) => x.attendance)), [topEventsRows]);
+
+    const joinedByEvent = React.useMemo(() => {
+        return attendanceByEvent
+            .slice()
+            .sort((a, b) => b.joined - a.joined)
+            .slice(0, 8)
+            .map((event) => ({
+                name: event.title,
+                joined: event.joined,
+            }));
+    }, [attendanceByEvent]);
 
     const chartLineData = React.useMemo(() => {
         return lineData.map((item) => ({
@@ -384,7 +409,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Charts */}
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className="grid gap-3 lg:grid-cols-3">
                     {/* Scan Trend (Area) - no gradient */}
                     <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
                         <CardHeader className="p-4 pb-2">
@@ -435,6 +460,49 @@ export default function Dashboard() {
                                         activeDot={{ r: 4, stroke: CHART_ACCENT, fill: 'white' }}
                                     />
                                 </AreaChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
+                        <CardHeader className="p-4 pb-2">
+                            <div className="space-y-0.5">
+                                <CardTitle className="text-sm">Participants Joined by Event</CardTitle>
+                                <div className="text-xs text-muted-foreground">Top events by registrations</div>
+                            </div>
+                        </CardHeader>
+
+                        <CardContent className="h-[210px] p-4 pt-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={joinedByEvent} margin={{ top: 10, right: 10, left: -12, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                                    <XAxis
+                                        dataKey="name"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        className="text-[11px]"
+                                        interval={0}
+                                        tickFormatter={(value: string) => (value.length > 10 ? `${value.slice(0, 10)}…` : value)}
+                                    />
+                                    <YAxis tickLine={false} axisLine={false} className="text-[11px]" />
+                                    <Tooltip
+                                        content={({ active, payload, label }: any) => {
+                                            if (!active || !payload?.length) return null;
+                                            return (
+                                                <div className="rounded-xl border bg-background/95 px-3 py-2 text-xs shadow-sm backdrop-blur">
+                                                    <div className="font-medium text-foreground">{String(label ?? '')}</div>
+                                                    <div className="mt-1 text-muted-foreground">
+                                                        <span className="font-semibold text-foreground">
+                                                            {Number(payload[0]?.value ?? 0).toLocaleString()}
+                                                        </span>{' '}
+                                                        joined
+                                                    </div>
+                                                </div>
+                                            );
+                                        }}
+                                    />
+                                    <Bar dataKey="joined" fill={CHART_PRIMARY} radius={[6, 6, 0, 0]} />
+                                </BarChart>
                             </ResponsiveContainer>
                         </CardContent>
                     </Card>
@@ -525,6 +593,7 @@ export default function Dashboard() {
                                             <th className="w-10 px-4 py-2 text-left font-semibold">#</th>
                                             <th className="px-2 py-2 text-left font-semibold">Event</th>
                                             <th className="w-24 px-2 py-2 text-left font-semibold">Date</th>
+                                            <th className="w-24 px-2 py-2 text-right font-semibold">Joined</th>
                                             <th className="w-28 px-4 py-2 text-right font-semibold">Attendance</th>
                                         </tr>
                                     </thead>
@@ -562,6 +631,10 @@ export default function Dashboard() {
 
                                                     <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
                                                         {formatShortDate(ev.starts_at)}
+                                                    </td>
+
+                                                    <td className="px-2 py-2 align-top text-right text-muted-foreground">
+                                                        {ev.joined.toLocaleString()}
                                                     </td>
 
                                                     <td className="px-4 py-2 align-top text-right">
