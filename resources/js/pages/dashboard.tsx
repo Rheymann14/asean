@@ -296,9 +296,17 @@ export default function Dashboard() {
                                         ) : null}
                                         <span className="max-w-[170px] truncate font-medium">{current.name}</span>
                                     </span>
+                                    <Badge variant="secondary" className="rounded-full text-[11px]">
+                                        {filteredParticipants.toLocaleString()} participants
+                                    </Badge>
                                 </span>
                             ) : (
-                                <>Showing for all countries</>
+                                <span className="inline-flex items-center gap-2">
+                                    Showing for all countries
+                                    <Badge variant="secondary" className="rounded-full text-[11px]">
+                                        {filteredParticipants.toLocaleString()} participants
+                                    </Badge>
+                                </span>
                             )}
                         </div>
                     </div>
