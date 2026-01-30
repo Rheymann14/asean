@@ -14,6 +14,7 @@ use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\VenueController;
 use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\TableAssignmentController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -74,6 +75,13 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
 
         Route::get('event-management', [ProgrammeController::class, 'index'])->name('event-management');
         Route::resource('programmes', ProgrammeController::class)->only(['store', 'update', 'destroy']);
+
+        Route::get('table-assignment', [TableAssignmentController::class, 'index'])->name('table-assignment');
+        Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
+        Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');
+        Route::post('table-assignment/assignments', [TableAssignmentController::class, 'storeAssignments'])->name('table-assignment.assignments.store');
+        Route::delete('table-assignment/assignments/{participantTableAssignment}', [TableAssignmentController::class, 'destroyAssignment'])
+            ->name('table-assignment.assignments.destroy');
 
         Route::get('scanner', [ScannerController::class, 'index'])->name('scanner');
         Route::post('scanner/scan', [ScannerController::class, 'scan'])->name('scanner.scan');
