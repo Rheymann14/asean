@@ -213,13 +213,19 @@ export default function Dashboard() {
     const maxScanned = React.useMemo(() => Math.max(1, ...topEventsRows.map((x) => x.attendance)), [topEventsRows]);
 
     const joinedByEvent = React.useMemo(() => {
-        return attendanceByEvent
+        const eventsByJoined = attendanceByEvent
             .slice()
             .sort((a, b) => b.joined - a.joined)
             .map((event) => ({
                 name: event.title,
                 joined: event.joined,
             }));
+
+        if (!eventsByJoined.length) {
+            return [{ name: 'No events yet', joined: 0 }];
+        }
+
+        return eventsByJoined;
     }, [attendanceByEvent]);
 
     const joinedChartHeight = React.useMemo(() => {
@@ -614,57 +620,70 @@ export default function Dashboard() {
                                     </thead>
 
                                     <tbody className="divide-y">
-                                        {topEventsRows.map((ev, idx) => {
-                                            const pct = Math.max(0, Math.min(100, Math.round((ev.attendance / maxScanned) * 100)));
+                                        {topEventsRows.length ? (
+                                            topEventsRows.map((ev, idx) => {
+                                                const pct = Math.max(
+                                                    0,
+                                                    Math.min(100, Math.round((ev.attendance / maxScanned) * 100)),
+                                                );
 
-                                            return (
-                                                <tr key={ev.id} className="hover:bg-muted/40">
-                                                    {/* ✅ removed dots after number */}
-                                                    <td className="px-4 py-2 align-top">
-                                                        <span className="font-semibold text-foreground">{idx + 1}</span>
-                                                    </td>
+                                                return (
+                                                    <tr key={ev.id} className="hover:bg-muted/40">
+                                                        {/* ✅ removed dots after number */}
+                                                        <td className="px-4 py-2 align-top">
+                                                            <span className="font-semibold text-foreground">{idx + 1}</span>
+                                                        </td>
 
-                                                    <td className="px-2 py-2">
-                                                        <div className="min-w-0">
-                                                            <div className="truncate font-medium text-foreground" title={ev.title}>
-                                                                {ev.title}
+                                                        <td className="px-2 py-2">
+                                                            <div className="min-w-0">
+                                                                <div className="truncate font-medium text-foreground" title={ev.title}>
+                                                                    {ev.title}
+                                                                </div>
+
+                                                                {/* ✅ subtle solid indicator bar (NO gradient) */}
+                                                                <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+                                                                    <div
+                                                                        className="h-1.5 rounded-full"
+                                                                        style={{
+                                                                            width: `${pct}%`,
+                                                                            backgroundColor: CHART_PRIMARY,
+                                                                            opacity: 0.9,
+                                                                        }}
+                                                                    />
+                                                                </div>
                                                             </div>
+                                                        </td>
 
-                                                            {/* ✅ subtle solid indicator bar (NO gradient) */}
-                                                            <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
-                                                                <div
-                                                                    className="h-1.5 rounded-full"
-                                                                    style={{
-                                                                        width: `${pct}%`,
-                                                                        backgroundColor: CHART_PRIMARY,
-                                                                        opacity: 0.9,
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </td>
+                                                        <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
+                                                            {formatShortDate(ev.starts_at)}
+                                                        </td>
 
-                                                    <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
-                                                        {formatShortDate(ev.starts_at)}
-                                                    </td>
+                                                        <td className="px-2 py-2 align-top text-right text-muted-foreground">
+                                                            {ev.joined.toLocaleString()}
+                                                        </td>
 
-                                                    <td className="px-2 py-2 align-top text-right text-muted-foreground">
-                                                        {ev.joined.toLocaleString()}
-                                                    </td>
-
-                                                    <td className="px-4 py-2 align-top text-right">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-7 px-2 text-xs font-semibold text-foreground"
-                                                            onClick={() => openAttendance(ev)}
-                                                        >
-                                                            {ev.attendance.toLocaleString()}
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                                        <td className="px-4 py-2 align-top text-right">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 px-2 text-xs font-semibold text-foreground"
+                                                                onClick={() => openAttendance(ev)}
+                                                            >
+                                                                {ev.attendance.toLocaleString()}
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td className="px-4 py-2 text-muted-foreground">—</td>
+                                                <td className="px-2 py-2 text-muted-foreground">No events yet.</td>
+                                                <td className="px-2 py-2 text-muted-foreground">—</td>
+                                                <td className="px-2 py-2 text-right text-muted-foreground">0</td>
+                                                <td className="px-4 py-2 text-right text-muted-foreground">0</td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
