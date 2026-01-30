@@ -13,7 +13,7 @@ import {
 import { dashboard, participant, issuancesManagement, contactDetails, venueManagement, scanner } from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ScrollText, User, Users, Building2, MapPin, ScanLine, House, CalendarDays } from 'lucide-react';
+import { ScrollText, User, Users, Building2, MapPin, ScanLine, House, CalendarDays, Table } from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -34,6 +34,11 @@ export function AppSidebar() {
                   title: 'Participant',
                   href: participant(),
                   icon: Users,
+              },
+              {
+                  title: 'Table Assignment',
+                  href: '/table-assignment',
+                  icon: Table,
               },
               {
                   title: 'Venue',

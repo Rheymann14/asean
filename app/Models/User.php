@@ -10,12 +10,14 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 
 use App\Models\Country;
 use App\Models\UserType;
 use App\Models\Issuance;
 use App\Models\Programme;
+use App\Models\ParticipantTableAssignment;
 
 class User extends Authenticatable
 {
@@ -103,5 +105,10 @@ class User extends Authenticatable
     public function joinedProgrammes(): BelongsToMany
     {
         return $this->belongsToMany(Programme::class, 'participant_programmes')->withTimestamps();
+    }
+
+    public function tableAssignment(): HasOne
+    {
+        return $this->hasOne(ParticipantTableAssignment::class);
     }
 }
