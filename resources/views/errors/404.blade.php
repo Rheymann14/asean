@@ -86,7 +86,7 @@
             <img class="logo" src="{{ asset('img/asean_banner_logo.png') }}" alt="ASEAN Philippines 2026 logo">
             <h1>404</h1>
             <p>Page not found.</p>
-            <a class="btn" href="{{ url('/') }}">Return to homepage</a>
+            <a class="btn" href="javascript:history.back()">Go back</a>
         </main>
     </body>
 </html>
