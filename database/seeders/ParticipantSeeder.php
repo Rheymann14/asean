@@ -25,6 +25,7 @@ class ParticipantSeeder extends Seeder
             ['code' => 'SGP', 'name' => 'Singapore',    'flag' => '/asean/singapore.jpg'],
             ['code' => 'THA', 'name' => 'Thailand',     'flag' => '/asean/thailand.jpg'],
             ['code' => 'VNM', 'name' => 'Vietnam',      'flag' => '/asean/vietnam.jpg'],
+            ['code' => 'TLS', 'name' => 'Timor-Leste',  'flag' => '/asean/timor-leste.jpg'],
         ];
 
 

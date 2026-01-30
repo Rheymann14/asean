@@ -37,6 +37,7 @@ const ASEAN_FLAGS = [
     { name: 'Cambodia', src: '/asean/cambodia.jpg' },
     { name: 'Singapore', src: '/asean/singapore.jpg' },
     { name: 'Vietnam', src: '/asean/vietnam.jpg' },
+    { name: 'Timor-Leste', src: '/asean/timor-leste.jpg' },
 ] as const;
 
 // ✅ Leadership items (realistic titles + descriptions)
@@ -99,9 +100,30 @@ const LEADERSHIP_ITEMS: LeadershipItem[] = [
     // },
 ];
 
+
 // Split flags for left/right groups
 const LEFT_FLAGS = ASEAN_FLAGS.slice(0, 5);
-const RIGHT_FLAGS = ASEAN_FLAGS.slice(5, 10);
+const RIGHT_FLAGS = ASEAN_FLAGS.slice(5, 10); // ✅ only 5 flags on the right (exclude Timor-Leste)
+const TIMOR_FLAG = ASEAN_FLAGS[10]; // ✅ Timor-Leste
+
+function useMediaQuery(query: string) {
+    const [matches, setMatches] = React.useState(false);
+
+    React.useEffect(() => {
+        const mq = window.matchMedia(query);
+        const onChange = () => setMatches(mq.matches);
+
+        onChange();
+        mq.addEventListener?.('change', onChange);
+        return () => mq.removeEventListener?.('change', onChange);
+    }, [query]);
+
+    return matches;
+}
+
+
+
+
 
 /**
  * --------------------------------------------------------------------------
@@ -109,34 +131,71 @@ const RIGHT_FLAGS = ASEAN_FLAGS.slice(5, 10);
  * --------------------------------------------------------------------------
  */
 
+type FlagTarget = { x: number; y: number; r?: number };
+
 function FlyingFlag({
     flag,
     index,
     side,
     progress,
+    target,          // ✅ allow fixed target (mobile rows)
+    size = 'lg',      // ✅ small flags on mobile
 }: {
     flag: FlagItem;
     index: number;
-    side: 'left' | 'right';
+    side: 'left' | 'right' | 'center';
     progress: MotionValue<number>;
+    target?: FlagTarget;
+    size?: 'sm' | 'lg';
 }) {
+    const LEFT_X = [-280, -620, -380, -540, -460];
+    const LEFT_Y = [-140, 40, 120, -100, 0];
+    const LEFT_R = [-12, 5, -8, 10, -4];
+
+    const RIGHT_X = [280, 620, 380, 540, 460];
+    const RIGHT_Y = [-140, 40, 120, -100, 0];
+    const RIGHT_R = [12, -5, 8, -10, 4];
+
+    const CENTER_X = 0;
+    const CENTER_Y = -180;
+    const CENTER_R = 0;
+
+    // ✅ if target provided, use it (mobile rows)
     const targetX =
-        side === 'left'
-            ? [-280, -620, -380, -540, -460][index]
-            : [280, 620, 380, 540, 460][index];
+        target?.x ??
+        (side === 'left'
+            ? (LEFT_X[index] ?? LEFT_X[LEFT_X.length - 1])
+            : side === 'right'
+              ? (RIGHT_X[index] ?? RIGHT_X[RIGHT_X.length - 1])
+              : CENTER_X);
 
-    const targetY = [-140, 40, 120, -100, 0][index];
+    const targetY =
+        target?.y ??
+        (side === 'left'
+            ? (LEFT_Y[index] ?? 0)
+            : side === 'right'
+              ? (RIGHT_Y[index] ?? 0)
+              : CENTER_Y);
 
-    const targetRotate =
-        side === 'left'
-            ? [-12, 5, -8, 10, -4][index]
-            : [12, -5, 8, -10, 4][index];
+    const targetR =
+        target?.r ??
+        (side === 'left'
+            ? (LEFT_R[index] ?? 0)
+            : side === 'right'
+              ? (RIGHT_R[index] ?? 0)
+              : CENTER_R);
 
     const x = useTransform(progress, [0, 0.6], [0, targetX]);
     const y = useTransform(progress, [0, 0.6], [0, targetY]);
-    const rotate = useTransform(progress, [0, 0.6], [0, targetRotate]);
+    const rotate = useTransform(progress, [0, 0.6], [0, targetR]);
     const opacity = useTransform(progress, [0, 0.05, 0.2], [0, 0, 1]);
-    const scale = useTransform(progress, [0, 0.3], [0.4, 0.8]);
+
+    const scale = useTransform(progress, [0, 0.3], [0.45, target ? 1 : side === 'center' ? 0.9 : 0.8]);
+
+    const sizeClass =
+        size === 'sm'
+            ? 'w-12 sm:w-32 md:w-36' // ✅ small on mobile
+            : 'w-24 sm:w-32 md:w-36';
 
     return (
         <motion.div
@@ -146,12 +205,11 @@ function FlyingFlag({
                 rotate,
                 scale,
                 opacity,
-                // ✅ avoid dynamic tailwind classes (production-safe)
-                zIndex: (5 - index) * 10,
+                zIndex: target ? 65 : side === 'center' ? 65 : (5 - index) * 10,
             }}
-            className="absolute transition-all duration-300 hover:z-50 hover:scale-100"
+            className="absolute pointer-events-none sm:pointer-events-auto transition-transform duration-300 sm:hover:z-50 sm:hover:scale-100"
         >
-            <div className="w-24 overflow-hidden rounded-lg shadow-2xl ring-1 ring-white/60 sm:w-32 md:w-36">
+            <div className={`${sizeClass} overflow-hidden rounded-lg shadow-2xl ring-1 ring-white/60`}>
                 <img
                     src={flag.src}
                     alt={flag.name}
@@ -163,9 +221,35 @@ function FlyingFlag({
     );
 }
 
+
+
+
 function HeroStickyParallax() {
     const targetRef = React.useRef<HTMLDivElement>(null);
     const shouldReduceMotion = useReducedMotion();
+
+
+
+      const isMobile = useMediaQuery('(max-width: 640px)');
+
+
+
+
+    function useMediaQuery(query: string) {
+    const [matches, setMatches] = React.useState(false);
+
+    React.useEffect(() => {
+        const mq = window.matchMedia(query);
+        const onChange = () => setMatches(mq.matches);
+
+        onChange();
+        mq.addEventListener?.('change', onChange);
+        return () => mq.removeEventListener?.('change', onChange);
+    }, [query]);
+
+    return matches;
+}
+
 
     const [betaDismissed, setBetaDismissed] = React.useState(false);
 
@@ -195,9 +279,34 @@ function HeroStickyParallax() {
 
     // keep your logoScale here too
     const logoScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.85]);
+    const timor = React.useMemo(() => ASEAN_FLAGS.find((f) => f.name === 'Timor-Leste'), []);
+    const top5 = React.useMemo(() => {
+        const others = ASEAN_FLAGS.filter((f) => f.name !== 'Timor-Leste');
+        return [others[0], others[1], timor!, others[2], others[3]].filter(Boolean) as FlagItem[];
+    }, [timor]);
 
+  const bottom6 = React.useMemo(() => {
+        const others = ASEAN_FLAGS.filter((f) => f.name !== 'Timor-Leste');
+        return others.slice(4, 10) as FlagItem[]; // 6 flags
+    }, []);
 
+    // ✅ MOBILE positions (tweak numbers if you want tighter/wider)
+    const mobileTopSlots: FlagTarget[] = [
+        { x: -130, y: -130, r: -10 },
+        { x: -65,  y: -140, r: -6  },
+        { x: 0,    y: -150, r: 0   },
+        { x: 65,   y: -140, r: 6   },
+        { x: 130,  y: -130, r: 10  },
+    ];
 
+    const mobileBottomSlots: FlagTarget[] = [
+        { x: -150, y: 140, r: -8 },
+        { x: -90,  y: 155, r: -4 },
+        { x: -30,  y: 145, r: 0  },
+        { x: 30,   y: 145, r: 0  },
+        { x: 90,   y: 155, r: 4  },
+        { x: 150,  y: 140, r: 8  },
+    ];
 
     return (
         // ✅ clip only X to avoid horizontal scrollbar; allow Y to be visible
@@ -233,27 +342,53 @@ function HeroStickyParallax() {
 
                 <div className="relative flex w-full max-w-7xl flex-col items-center justify-center">
                     {/* ✅ give more vertical room for flags that move up/down */}
-                    <div className="relative flex h-[420px] w-full items-center justify-center sm:h-[520px]">
-                        {/* LEFT FLAGS */}
-                        {LEFT_FLAGS.map((flag, i) => (
-                            <FlyingFlag
-                                key={flag.name}
-                                flag={flag}
-                                index={i}
-                                side="left"
-                                progress={scrollYProgress}
-                            />
-                        ))}
-                        {/* RIGHT FLAGS */}
-                        {RIGHT_FLAGS.map((flag, i) => (
-                            <FlyingFlag
-                                key={flag.name}
-                                flag={flag}
-                                index={i}
-                                side="right"
-                                progress={scrollYProgress}
-                            />
-                        ))}
+                    <div className="relative flex h-[300px] w-full items-center justify-center sm:h-[520px]">
+   {isMobile ? (
+                            <>
+                                {/* 5 ABOVE */}
+                                {top5.map((flag, i) => (
+                                    <FlyingFlag
+                                        key={`top-${flag.name}`}
+                                        flag={flag}
+                                        index={i}
+                                        side="center"
+                                        progress={scrollYProgress}
+                                        target={mobileTopSlots[i]}
+                                        size="sm"
+                                    />
+                                ))}
+
+                                {/* 6 BELOW */}
+                                {bottom6.map((flag, i) => (
+                                    <FlyingFlag
+                                        key={`bottom-${flag.name}`}
+                                        flag={flag}
+                                        index={i}
+                                        side="center"
+                                        progress={scrollYProgress}
+                                        target={mobileBottomSlots[i]}
+                                        size="sm"
+                                    />
+                                ))}
+                            </>
+                        ) : (
+                            <>
+                                {/* DESKTOP: keep your original left/right + center Timor */}
+                                {LEFT_FLAGS.map((flag, i) => (
+                                    <FlyingFlag key={flag.name} flag={flag} index={i} side="left" progress={scrollYProgress} />
+                                ))}
+
+                                {RIGHT_FLAGS.map((flag, i) => (
+                                    <FlyingFlag key={flag.name} flag={flag} index={i} side="right" progress={scrollYProgress} />
+                                ))}
+
+                                {TIMOR_FLAG && (
+                                    <FlyingFlag key={TIMOR_FLAG.name} flag={TIMOR_FLAG} index={0} side="center" progress={scrollYProgress} />
+                                )}
+                            </>
+                        )}
+                   
+
 
                         {/* CENTER LOGO */}
                         <motion.div style={{ scale: logoScale }} className="z-[60] w-full max-w-3xl px-4">
