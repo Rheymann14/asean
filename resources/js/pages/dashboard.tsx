@@ -216,12 +216,16 @@ export default function Dashboard() {
         return attendanceByEvent
             .slice()
             .sort((a, b) => b.joined - a.joined)
-            .slice(0, 8)
             .map((event) => ({
                 name: event.title,
                 joined: event.joined,
             }));
     }, [attendanceByEvent]);
+
+    const joinedChartHeight = React.useMemo(() => {
+        const rows = Math.max(1, joinedByEvent.length);
+        return Math.max(210, rows * 28);
+    }, [joinedByEvent.length]);
 
     const chartLineData = React.useMemo(() => {
         return lineData.map((item) => ({
@@ -472,38 +476,49 @@ export default function Dashboard() {
                             </div>
                         </CardHeader>
 
-                        <CardContent className="h-[210px] p-4 pt-2">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={joinedByEvent} margin={{ top: 10, right: 10, left: -12, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                                    <XAxis
-                                        dataKey="name"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        className="text-[11px]"
-                                        interval={0}
-                                        tickFormatter={(value: string) => (value.length > 10 ? `${value.slice(0, 10)}…` : value)}
-                                    />
-                                    <YAxis tickLine={false} axisLine={false} className="text-[11px]" />
-                                    <Tooltip
-                                        content={({ active, payload, label }: any) => {
-                                            if (!active || !payload?.length) return null;
-                                            return (
-                                                <div className="rounded-xl border bg-background/95 px-3 py-2 text-xs shadow-sm backdrop-blur">
-                                                    <div className="font-medium text-foreground">{String(label ?? '')}</div>
-                                                    <div className="mt-1 text-muted-foreground">
-                                                        <span className="font-semibold text-foreground">
-                                                            {Number(payload[0]?.value ?? 0).toLocaleString()}
-                                                        </span>{' '}
-                                                        joined
-                                                    </div>
-                                                </div>
-                                            );
-                                        }}
-                                    />
-                                    <Bar dataKey="joined" fill={CHART_PRIMARY} radius={[6, 6, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                        <CardContent className="p-4 pt-2">
+                            <div className="max-h-[260px] overflow-auto pr-1">
+                                <div style={{ height: joinedChartHeight }} className="min-h-[210px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            data={joinedByEvent}
+                                            layout="vertical"
+                                            margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                                            <XAxis type="number" tickLine={false} axisLine={false} className="text-[11px]" />
+                                            <YAxis
+                                                dataKey="name"
+                                                type="category"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                width={140}
+                                                className="text-[11px]"
+                                                tickFormatter={(value: string) =>
+                                                    value.length > 18 ? `${value.slice(0, 18)}…` : value
+                                                }
+                                            />
+                                            <Tooltip
+                                                content={({ active, payload, label }: any) => {
+                                                    if (!active || !payload?.length) return null;
+                                                    return (
+                                                        <div className="rounded-xl border bg-background/95 px-3 py-2 text-xs shadow-sm backdrop-blur">
+                                                            <div className="font-medium text-foreground">{String(label ?? '')}</div>
+                                                            <div className="mt-1 text-muted-foreground">
+                                                                <span className="font-semibold text-foreground">
+                                                                    {Number(payload[0]?.value ?? 0).toLocaleString()}
+                                                                </span>{' '}
+                                                                joined
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }}
+                                            />
+                                            <Bar dataKey="joined" fill={CHART_PRIMARY} radius={[0, 6, 6, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
 
