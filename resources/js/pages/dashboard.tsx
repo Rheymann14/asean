@@ -55,6 +55,8 @@ type DashboardEvent = {
     title: string;
     starts_at: string | null;
     attendance_count: number;
+    joined_count: number;
+    joined_by_country: Record<string, number>;
     participants: EventParticipant[];
 };
 
@@ -201,7 +203,7 @@ export default function Dashboard() {
                 ...event,
                 participants: filtered,
                 attendance: countryId ? filtered.length : event.attendance_count,
-                joined: filtered.length,
+                joined: countryId ? event.joined_by_country?.[String(countryId)] ?? 0 : event.joined_count,
             };
         });
     }, [events, countryId]);
