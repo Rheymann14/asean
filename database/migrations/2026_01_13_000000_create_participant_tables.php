@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('participant_tables', function (Blueprint $table) {
             $table->id();
-            $table->unsignedInteger('table_number')->unique();
+            $table->string('table_number')->unique();
             $table->unsignedInteger('capacity');
             $table->timestamps();
         });

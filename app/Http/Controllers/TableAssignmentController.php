@@ -107,7 +107,7 @@ class TableAssignmentController extends Controller
     public function storeTable(Request $request)
     {
         $validated = $request->validate([
-            'table_number' => ['required', 'integer', 'min:1', 'unique:participant_tables,table_number'],
+            'table_number' => ['required', 'string', 'max:50', 'unique:participant_tables,table_number'],
             'capacity' => ['required', 'integer', 'min:1'],
         ]);
 

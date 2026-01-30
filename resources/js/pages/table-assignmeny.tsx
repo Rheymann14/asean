@@ -43,7 +43,7 @@ type TableAssignment = {
 
 type TableRow = {
     id: number;
-    table_number: number;
+    table_number: string;
     capacity: number;
     assigned_count: number;
     assignments: TableAssignment[];
@@ -247,13 +247,12 @@ export default function TableAssignmenyPage(props: PageProps) {
                         <CardContent>
                             <form onSubmit={submitTable} className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Table number</label>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Table name</label>
                                     <Input
-                                        type="number"
-                                        min={1}
+                                        type="text"
                                         value={tableForm.data.table_number}
                                         onChange={(e) => tableForm.setData('table_number', e.target.value)}
-                                        placeholder="e.g. 1"
+                                        placeholder="e.g. Table 1"
                                     />
                                     {tableForm.errors.table_number ? (
                                         <p className="text-xs text-rose-500">{tableForm.errors.table_number}</p>
@@ -302,7 +301,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                 ) : (
                                                     tables.map((table) => (
                                                         <SelectItem key={table.id} value={String(table.id)}>
-                                                            Table {table.table_number} ({table.assigned_count}/{table.capacity})
+                                                            {table.table_number} ({table.assigned_count}/{table.capacity})
                                                         </SelectItem>
                                                     ))
                                                 )}
@@ -420,7 +419,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                     <Card key={table.id}>
                                         <CardHeader className="flex flex-row items-start justify-between gap-4">
                                             <div>
-                                                <CardTitle className="text-base">Table {table.table_number}</CardTitle>
+                                                <CardTitle className="text-base">{table.table_number}</CardTitle>
                                                 <CardDescription>
                                                     {table.assigned_count} of {table.capacity} seats occupied
                                                 </CardDescription>
