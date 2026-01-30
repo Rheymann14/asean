@@ -329,7 +329,9 @@ export default function ParticipantDashboard({ participant }: PageProps) {
     const flagSrc = getFlagSrc(participant.country);
     const qrValue = participant.qr_payload;
 
-    const [orientation, setOrientation] = React.useState<'portrait' | 'landscape'>('portrait');
+    // ✅ DEFAULT OPEN = LANDSCAPE
+    const [orientation, setOrientation] = React.useState<'portrait' | 'landscape'>('landscape');
+
     const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
     const [qrLoading, setQrLoading] = React.useState(true);
 
@@ -474,9 +476,17 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                         </div>
 
                         <CardContent className="space-y-4 p-4 sm:p-5">
-                            <div className="grid gap-5 lg:grid-cols-[1fr_460px]">
-                                {/* LEFT: Details */}
-                                <div className="space-y-3">
+                            {/* ✅ FIX: remove “wide middle gap” by using flex split instead of grid-cols-[1fr_460px] */}
+                            <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+                                {/* LEFT: Details (fills remaining width) */}
+                             
+
+                          
+
+                                <div className="mx-auto w-full max-w-6xl">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-4">
+        {/* LEFT: Details */}
+          <div className="min-w-0 flex-1 space-y-3">
                                     <div>
                                         <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Profile Details</div>
                                         <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
@@ -570,8 +580,9 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                     ) : null}
                                 </div>
 
-                                {/* RIGHT: Virtual ID */}
-                                <div className="space-y-3 lg:sticky lg:top-6">
+        {/* RIGHT: Virtual ID */}
+           {/* RIGHT: Virtual ID (fixed width on lg, full width on mobile) */}
+                                <div className="w-full space-y-3 lg:w-[460px] lg:shrink-0 lg:self-start lg:sticky lg:top-6">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Virtual ID</div>
@@ -631,6 +642,8 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                         </div>
                                     </div>
                                 </div>
+    </div>
+</div>
                             </div>
                         </CardContent>
                     </Card>
