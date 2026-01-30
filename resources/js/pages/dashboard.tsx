@@ -12,7 +12,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 
-import { ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
+import {
+    ResponsiveContainer,
+    Tooltip,
+    CartesianGrid,
+    XAxis,
+    YAxis,
+    AreaChart,
+    Area,
+    PieChart,
+    Pie,
+    Cell,
+    BarChart,
+    Bar,
+} from 'recharts';
 
 import { Check, ChevronsUpDown, Users, CalendarFold, QrCode, Filter, House, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -188,6 +201,7 @@ export default function Dashboard() {
                 ...event,
                 participants: filtered,
                 attendance: countryId ? filtered.length : event.attendance_count,
+                joined: filtered.length,
             };
         });
     }, [events, countryId]);
@@ -197,6 +211,27 @@ export default function Dashboard() {
     }, [attendanceByEvent]);
 
     const maxScanned = React.useMemo(() => Math.max(1, ...topEventsRows.map((x) => x.attendance)), [topEventsRows]);
+
+    const joinedByEvent = React.useMemo(() => {
+        const eventsByJoined = attendanceByEvent
+            .slice()
+            .sort((a, b) => b.joined - a.joined)
+            .map((event) => ({
+                name: event.title,
+                joined: event.joined,
+            }));
+
+        if (!eventsByJoined.length) {
+            return [{ name: 'No events yet', joined: 0 }];
+        }
+
+        return eventsByJoined;
+    }, [attendanceByEvent]);
+
+    const joinedChartHeight = React.useMemo(() => {
+        const rows = Math.max(1, joinedByEvent.length);
+        return Math.max(210, rows * 28);
+    }, [joinedByEvent.length]);
 
     const chartLineData = React.useMemo(() => {
         return lineData.map((item) => ({
@@ -261,9 +296,17 @@ export default function Dashboard() {
                                         ) : null}
                                         <span className="max-w-[170px] truncate font-medium">{current.name}</span>
                                     </span>
+                                    <Badge variant="secondary" className="rounded-full text-[11px]">
+                                        {filteredParticipants.toLocaleString()} participants
+                                    </Badge>
                                 </span>
                             ) : (
-                                <>Showing for all countries</>
+                                <span className="inline-flex items-center gap-2">
+                                    Showing for all countries
+                                    <Badge variant="secondary" className="rounded-full text-[11px]">
+                                        {filteredParticipants.toLocaleString()} participants
+                                    </Badge>
+                                </span>
                             )}
                         </div>
                     </div>
@@ -384,7 +427,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Charts */}
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className="grid gap-3 lg:grid-cols-3">
                     {/* Scan Trend (Area) - no gradient */}
                     <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
                         <CardHeader className="p-4 pb-2">
@@ -436,6 +479,60 @@ export default function Dashboard() {
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="rounded-2xl border border-sidebar-border/70 dark:border-sidebar-border">
+                        <CardHeader className="p-4 pb-2">
+                            <div className="space-y-0.5">
+                                <CardTitle className="text-sm">Participants Joined by Event</CardTitle>
+                                <div className="text-xs text-muted-foreground">Top events by registrations</div>
+                            </div>
+                        </CardHeader>
+
+                        <CardContent className="p-4 pt-2">
+                            <div className="max-h-[260px] overflow-auto pr-1">
+                                <div style={{ height: joinedChartHeight }} className="min-h-[210px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            data={joinedByEvent}
+                                            layout="vertical"
+                                            margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                                            <XAxis type="number" tickLine={false} axisLine={false} className="text-[11px]" />
+                                            <YAxis
+                                                dataKey="name"
+                                                type="category"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                width={140}
+                                                className="text-[11px]"
+                                                tickFormatter={(value: string) =>
+                                                    value.length > 18 ? `${value.slice(0, 18)}…` : value
+                                                }
+                                            />
+                                            <Tooltip
+                                                content={({ active, payload, label }: any) => {
+                                                    if (!active || !payload?.length) return null;
+                                                    return (
+                                                        <div className="rounded-xl border bg-background/95 px-3 py-2 text-xs shadow-sm backdrop-blur">
+                                                            <div className="font-medium text-foreground">{String(label ?? '')}</div>
+                                                            <div className="mt-1 text-muted-foreground">
+                                                                <span className="font-semibold text-foreground">
+                                                                    {Number(payload[0]?.value ?? 0).toLocaleString()}
+                                                                </span>{' '}
+                                                                joined
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }}
+                                            />
+                                            <Bar dataKey="joined" fill={CHART_PRIMARY} radius={[0, 6, 6, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -525,58 +622,76 @@ export default function Dashboard() {
                                             <th className="w-10 px-4 py-2 text-left font-semibold">#</th>
                                             <th className="px-2 py-2 text-left font-semibold">Event</th>
                                             <th className="w-24 px-2 py-2 text-left font-semibold">Date</th>
+                                            <th className="w-24 px-2 py-2 text-right font-semibold">Joined</th>
                                             <th className="w-28 px-4 py-2 text-right font-semibold">Attendance</th>
                                         </tr>
                                     </thead>
 
                                     <tbody className="divide-y">
-                                        {topEventsRows.map((ev, idx) => {
-                                            const pct = Math.max(0, Math.min(100, Math.round((ev.attendance / maxScanned) * 100)));
+                                        {topEventsRows.length ? (
+                                            topEventsRows.map((ev, idx) => {
+                                                const pct = Math.max(
+                                                    0,
+                                                    Math.min(100, Math.round((ev.attendance / maxScanned) * 100)),
+                                                );
 
-                                            return (
-                                                <tr key={ev.id} className="hover:bg-muted/40">
-                                                    {/* ✅ removed dots after number */}
-                                                    <td className="px-4 py-2 align-top">
-                                                        <span className="font-semibold text-foreground">{idx + 1}</span>
-                                                    </td>
+                                                return (
+                                                    <tr key={ev.id} className="hover:bg-muted/40">
+                                                        {/* ✅ removed dots after number */}
+                                                        <td className="px-4 py-2 align-top">
+                                                            <span className="font-semibold text-foreground">{idx + 1}</span>
+                                                        </td>
 
-                                                    <td className="px-2 py-2">
-                                                        <div className="min-w-0">
-                                                            <div className="truncate font-medium text-foreground" title={ev.title}>
-                                                                {ev.title}
+                                                        <td className="px-2 py-2">
+                                                            <div className="min-w-0">
+                                                                <div className="truncate font-medium text-foreground" title={ev.title}>
+                                                                    {ev.title}
+                                                                </div>
+
+                                                                {/* ✅ subtle solid indicator bar (NO gradient) */}
+                                                                <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+                                                                    <div
+                                                                        className="h-1.5 rounded-full"
+                                                                        style={{
+                                                                            width: `${pct}%`,
+                                                                            backgroundColor: CHART_PRIMARY,
+                                                                            opacity: 0.9,
+                                                                        }}
+                                                                    />
+                                                                </div>
                                                             </div>
+                                                        </td>
 
-                                                            {/* ✅ subtle solid indicator bar (NO gradient) */}
-                                                            <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
-                                                                <div
-                                                                    className="h-1.5 rounded-full"
-                                                                    style={{
-                                                                        width: `${pct}%`,
-                                                                        backgroundColor: CHART_PRIMARY,
-                                                                        opacity: 0.9,
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </td>
+                                                        <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
+                                                            {formatShortDate(ev.starts_at)}
+                                                        </td>
 
-                                                    <td className="px-2 py-2 align-top whitespace-nowrap text-muted-foreground">
-                                                        {formatShortDate(ev.starts_at)}
-                                                    </td>
+                                                        <td className="px-2 py-2 align-top text-right text-muted-foreground">
+                                                            {ev.joined.toLocaleString()}
+                                                        </td>
 
-                                                    <td className="px-4 py-2 align-top text-right">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-7 px-2 text-xs font-semibold text-foreground"
-                                                            onClick={() => openAttendance(ev)}
-                                                        >
-                                                            {ev.attendance.toLocaleString()}
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                                        <td className="px-4 py-2 align-top text-right">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 px-2 text-xs font-semibold text-foreground"
+                                                                onClick={() => openAttendance(ev)}
+                                                            >
+                                                                {ev.attendance.toLocaleString()}
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td className="px-4 py-2 text-muted-foreground">—</td>
+                                                <td className="px-2 py-2 text-muted-foreground">No events yet.</td>
+                                                <td className="px-2 py-2 text-muted-foreground">—</td>
+                                                <td className="px-2 py-2 text-right text-muted-foreground">0</td>
+                                                <td className="px-4 py-2 text-right text-muted-foreground">0</td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
