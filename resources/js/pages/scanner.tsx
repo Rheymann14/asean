@@ -1205,22 +1205,24 @@ export default function Scanner(props: PageProps) {
     }, [events, nowTs]);
 
     // ✅ build ID-card participant shape (match virtual ID content)
+    const participantDisplayId = React.useMemo(() => {
+        const displayId = (result?.participant?.display_id ?? '').toString().trim();
+        return displayId || null;
+    }, [result?.participant?.display_id]);
+
     const cardParticipant = React.useMemo(() => {
         const p = result?.participant;
         if (!p) return null;
 
-        const displayId =
-            (p.display_id ?? '').toString().trim() || (p.id ? String(p.id).trim() : '') || '—';
-
         return {
             name: p.full_name,
-            display_id: displayId,
+            display_id: participantDisplayId ?? '—',
             country: {
                 name: p.country ?? null,
                 code: p.country_code ?? null,
             },
         };
-    }, [result?.participant]);
+    }, [participantDisplayId, result?.participant]);
 
     const flagSrc = getFlagSrc(result?.participant?.country_code, result?.participant?.country_flag_url);
     const qrDataUrl = qrPreview;
@@ -1320,15 +1322,10 @@ export default function Scanner(props: PageProps) {
                                                 </div>
 
                                                 <div className="mt-2 grid gap-1 text-xs text-slate-600 dark:text-slate-400">
-                                                    {result.participant.display_id || result.participant.id ? (
+                                                    {participantDisplayId ? (
                                                         <div className="flex items-center gap-2">
                                                             <QrCodeIcon className="h-4 w-4" />
-                                                            <span className="truncate">
-                                                                ID:{' '}
-                                                                {(result.participant.display_id ?? '')
-                                                                    .toString()
-                                                                    .trim() || String(result.participant.id)}
-                                                            </span>
+                                                            <span className="truncate">ID: {participantDisplayId}</span>
                                                         </div>
                                                     ) : null}
                                                     {result.participant.email ? (
