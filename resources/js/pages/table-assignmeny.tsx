@@ -227,7 +227,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                     </p>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-[360px,1fr]">
+                <div className="grid gap-6 lg:grid-cols-2">
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">Create Table</CardTitle>
