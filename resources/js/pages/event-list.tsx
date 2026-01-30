@@ -7,10 +7,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { CalendarDays, MapPin, Search } from 'lucide-react';
+import { CalendarDays, ImageOff, MapPin, Search } from 'lucide-react';
 import { toast } from 'sonner';
-
-const FALLBACK_IMAGE = '/img/asean_banner_logo.png';
 
 type ProgrammeRow = {
     id: number;
@@ -49,7 +47,7 @@ type EventItem = {
     startsAt: string;
     endsAt?: string;
     location: string;
-    imageUrl: string;
+    imageUrl?: string | null;
     pdfUrl?: string | null;
     phase: EventPhase;
 };
@@ -60,7 +58,7 @@ const breadcrumbs = [
 ];
 
 function resolveImageUrl(imageUrl?: string | null) {
-    if (!imageUrl) return FALLBACK_IMAGE;
+    if (!imageUrl) return null;
     if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
     return `/event-images/${imageUrl}`;
 }
@@ -186,11 +184,11 @@ function EmptyState({ label }: { label: string }) {
 }
 
 function formatCheckInDate(scannedAt?: string | null) {
-    if (!scannedAt) return 'Checked in';
+    if (!scannedAt) return 'QR scanned';
     const date = new Date(scannedAt);
     const dateFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
     const timeFmt = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' });
-    return `Checked in • ${dateFmt.format(date)} ${timeFmt.format(date)}`;
+    return `QR scanned • ${dateFmt.format(date)} ${timeFmt.format(date)}`;
 }
 
 function EventGrid({
@@ -228,15 +226,22 @@ function EventGrid({
                                     'aspect-[16/9] w-full sm:aspect-square sm:h-[72px] sm:w-[72px]',
                                 )}
                             >
-                                <img
-                                    src={event.imageUrl}
-                                    alt={event.title}
-                                    loading="lazy"
-                                    className={cn(
-                                        'absolute inset-0 h-full w-full object-cover',
-                                        isClosed && 'grayscale',
-                                    )}
-                                />
+                                {event.imageUrl ? (
+                                    <img
+                                        src={event.imageUrl}
+                                        alt={event.title}
+                                        loading="lazy"
+                                        className={cn(
+                                            'absolute inset-0 h-full w-full object-cover',
+                                            isClosed && 'grayscale',
+                                        )}
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-500">
+                                        <ImageOff className="h-6 w-6" aria-hidden="true" />
+                                        <span className="sr-only">No image available</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="min-w-0">
@@ -334,11 +339,9 @@ function EventGrid({
 function AttendanceGrid({
     events,
     attendanceByProgramme,
-    onLeave,
 }: {
     events: EventItem[];
     attendanceByProgramme: Map<number, string | null>;
-    onLeave: (id: number) => void;
 }) {
     if (!events.length) return <EmptyState label="No events to show here yet." />;
 
@@ -364,12 +367,19 @@ function AttendanceGrid({
                                     'aspect-[16/9] w-full sm:aspect-square sm:h-[72px] sm:w-[72px]',
                                 )}
                             >
-                                <img
-                                    src={event.imageUrl}
-                                    alt={event.title}
-                                    loading="lazy"
-                                    className="absolute inset-0 h-full w-full object-cover"
-                                />
+                                {event.imageUrl ? (
+                                    <img
+                                        src={event.imageUrl}
+                                        alt={event.title}
+                                        loading="lazy"
+                                        className="absolute inset-0 h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-500">
+                                        <ImageOff className="h-6 w-6" aria-hidden="true" />
+                                        <span className="sr-only">No image available</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="min-w-0">
@@ -379,6 +389,13 @@ function AttendanceGrid({
                                             {event.tag}
                                         </Badge>
                                     ) : null}
+
+                                    <Badge
+                                        variant="outline"
+                                        className="h-5 px-1.5 text-[10px] uppercase tracking-wide border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-600/40 dark:bg-slate-800/40 dark:text-slate-200"
+                                    >
+                                        Joined
+                                    </Badge>
 
                                     <Badge
                                         variant="outline"
@@ -396,7 +413,7 @@ function AttendanceGrid({
                                                 : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200',
                                         )}
                                     >
-                                        {hasAttendance ? formatCheckInDate(scannedAt) : 'No attendance'}
+                                        {hasAttendance ? formatCheckInDate(scannedAt) : 'Not checked in'}
                                     </Badge>
                                 </div>
 
@@ -425,7 +442,7 @@ function AttendanceGrid({
                                 <div
                                     className={cn(
                                         'mt-3 grid gap-2',
-                                        hasPdf ? 'grid-cols-2' : 'grid-cols-1',
+                                        hasPdf ? 'grid-cols-1' : 'grid-cols-1',
                                         'sm:flex sm:items-center sm:justify-end sm:gap-2',
                                     )}
                                 >
@@ -442,21 +459,6 @@ function AttendanceGrid({
                                             </a>
                                         </Button>
                                     ) : null}
-
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant={hasAttendance ? 'default' : 'destructive'}
-                                        disabled={hasAttendance}
-                                        onClick={() => onLeave(event.id)}
-                                        className={cn(
-                                            'h-8 w-full px-3 text-xs shadow-sm sm:w-auto',
-                                            hasAttendance &&
-                                            'bg-emerald-600 text-white hover:bg-emerald-600 focus-visible:ring-emerald-400',
-                                        )}
-                                    >
-                                        {hasAttendance ? 'Checked in' : 'Leave'}
-                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -560,18 +562,6 @@ export default function EventList({ programmes = [], joined_programme_ids = [], 
                 },
             },
         );
-    }, []);
-
-    const handleLeave = React.useCallback((id: number) => {
-        setSelectedIds((prev) => prev.filter((item) => item !== id));
-        router.delete(`/event-list/${id}/leave`, {
-            preserveScroll: true,
-            onSuccess: () => toast.success('Event removed.'),
-            onError: () => {
-                toast.error('Unable to remove this event.');
-                setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-            },
-        });
     }, []);
 
     return (
@@ -774,13 +764,13 @@ export default function EventList({ programmes = [], joined_programme_ids = [], 
                         </TabsContent>
 
                         <TabsContent value="attended" className="mt-0 space-y-2">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Events you checked into with attendance or QR scan.</p>
-                            <AttendanceGrid events={attendedEvents} attendanceByProgramme={attendanceByProgramme} onLeave={handleLeave} />
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Events you joined and checked in with QR scans.</p>
+                            <AttendanceGrid events={attendedEvents} attendanceByProgramme={attendanceByProgramme} />
                         </TabsContent>
 
                         <TabsContent value="missed" className="mt-0 space-y-2">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Events you joined but did not check in.</p>
-                            <AttendanceGrid events={missedEvents} attendanceByProgramme={attendanceByProgramme} onLeave={handleLeave} />
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Events you joined but were not checked in or QR scanned.</p>
+                            <AttendanceGrid events={missedEvents} attendanceByProgramme={attendanceByProgramme} />
                         </TabsContent>
                     </Tabs>
                 </Card>
