@@ -57,6 +57,7 @@ import {
     Printer,
     CalendarDays,
     MapPin,
+    KeyRound,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -1088,6 +1089,18 @@ export default function ParticipantPage(props: PageProps) {
         );
     }
 
+    function resetParticipantPassword(p: ParticipantRow) {
+        router.patch(
+            ENDPOINTS.participants.update(p.id),
+            { password: 'aseanph2026' },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Participant password reset.'),
+                onError: () => toast.error('Unable to reset participant password.'),
+            },
+        );
+    }
+
     function openProgrammeManager(p: ParticipantRow) {
         setProgrammeParticipant(p);
         setProgrammeDialogOpen(true);
@@ -1640,6 +1653,10 @@ export default function ParticipantPage(props: PageProps) {
                                                                         <DropdownMenuItem onClick={() => toggleParticipantActive(p)}>
                                                                             <BadgeCheck className="mr-2 h-4 w-4" />
                                                                             {p.is_active ? 'Set Inactive' : 'Set Active'}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => resetParticipantPassword(p)}>
+                                                                            <KeyRound className="mr-2 h-4 w-4" />
+                                                                            Reset password
                                                                         </DropdownMenuItem>
                                                                         <DropdownMenuSeparator />
                                                                         <DropdownMenuItem
