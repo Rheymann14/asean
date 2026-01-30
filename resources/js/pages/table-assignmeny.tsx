@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { CheckCircle2, Plus, Users2, XCircle } from 'lucide-react';
+import { CheckCircle2, Plus, Users2, XCircle, Table as TableIcon } from 'lucide-react';
 
 type Country = {
     id: number;
@@ -219,15 +219,26 @@ export default function TableAssignmenyPage(props: PageProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Table Assignment" />
 
-            <div className="flex flex-col gap-6">
-                <div>
-                    <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Table Assignment</h1>
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                        Assign participants to tables, manage capacities, and track seating.
-                    </p>
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+                <div className="space-y-2">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                                <TableIcon className="h-5 w-5 text-[#00359c]" />
+                                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                                    Table Assignment
+                                </h1>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                Assign participants to tables, manage capacities, and track seating.
+                            </p>
+                        </div>
+                    </div>
+
+                    <Separator className="bg-slate-200/70 dark:bg-slate-800" />
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-6">
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">Create Table</CardTitle>
@@ -261,7 +272,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                         <p className="text-xs text-rose-500">{tableForm.errors.capacity}</p>
                                     ) : null}
                                 </div>
-                                <Button type="submit" disabled={tableForm.processing} className={cn('w-full', PRIMARY_BTN)}>
+                                <Button type="submit" disabled={tableForm.processing} className={cn('w-full sm:w-auto', PRIMARY_BTN)}>
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add table
                                 </Button>
@@ -302,7 +313,11 @@ export default function TableAssignmenyPage(props: PageProps) {
                                         ) : null}
                                     </div>
                                     <div className="flex items-end">
-                                        <Button type="submit" disabled={assignmentForm.processing} className={cn('w-full', PRIMARY_BTN)}>
+                                        <Button
+                                            type="submit"
+                                            disabled={assignmentForm.processing}
+                                            className={cn('w-full sm:w-auto', PRIMARY_BTN)}
+                                        >
                                             <CheckCircle2 className="mr-2 h-4 w-4" />
                                             Assign selected
                                         </Button>
