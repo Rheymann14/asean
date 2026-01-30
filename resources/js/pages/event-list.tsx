@@ -65,6 +65,12 @@ function resolveImageUrl(imageUrl?: string | null) {
     return `/event-images/${imageUrl}`;
 }
 
+function handleImageFallback(event: React.SyntheticEvent<HTMLImageElement>) {
+    const target = event.currentTarget;
+    if (target.src.endsWith(FALLBACK_IMAGE)) return;
+    target.src = FALLBACK_IMAGE;
+}
+
 function resolvePdfUrl(pdfUrl?: string | null) {
     if (!pdfUrl) return null;
     if (pdfUrl.startsWith('http') || pdfUrl.startsWith('/')) return pdfUrl;
@@ -232,6 +238,7 @@ function EventGrid({
                                     src={event.imageUrl}
                                     alt={event.title}
                                     loading="lazy"
+                                    onError={handleImageFallback}
                                     className={cn(
                                         'absolute inset-0 h-full w-full object-cover',
                                         isClosed && 'grayscale',
@@ -334,11 +341,9 @@ function EventGrid({
 function AttendanceGrid({
     events,
     attendanceByProgramme,
-    onLeave,
 }: {
     events: EventItem[];
     attendanceByProgramme: Map<number, string | null>;
-    onLeave: (id: number) => void;
 }) {
     if (!events.length) return <EmptyState label="No events to show here yet." />;
 
@@ -368,6 +373,7 @@ function AttendanceGrid({
                                     src={event.imageUrl}
                                     alt={event.title}
                                     loading="lazy"
+                                    onError={handleImageFallback}
                                     className="absolute inset-0 h-full w-full object-cover"
                                 />
                             </div>
@@ -446,16 +452,15 @@ function AttendanceGrid({
                                     <Button
                                         type="button"
                                         size="sm"
-                                        variant={hasAttendance ? 'default' : 'destructive'}
-                                        disabled={hasAttendance}
-                                        onClick={() => onLeave(event.id)}
+                                        disabled
                                         className={cn(
                                             'h-8 w-full px-3 text-xs shadow-sm sm:w-auto',
-                                            hasAttendance &&
-                                            'bg-emerald-600 text-white hover:bg-emerald-600 focus-visible:ring-emerald-400',
+                                            hasAttendance
+                                                ? 'bg-emerald-600 text-white hover:bg-emerald-600 focus-visible:ring-emerald-400'
+                                                : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
                                         )}
                                     >
-                                        {hasAttendance ? 'Checked in' : 'Leave'}
+                                        {hasAttendance ? 'Checked in' : 'Joined'}
                                     </Button>
                                 </div>
                             </div>
@@ -560,18 +565,6 @@ export default function EventList({ programmes = [], joined_programme_ids = [], 
                 },
             },
         );
-    }, []);
-
-    const handleLeave = React.useCallback((id: number) => {
-        setSelectedIds((prev) => prev.filter((item) => item !== id));
-        router.delete(`/event-list/${id}/leave`, {
-            preserveScroll: true,
-            onSuccess: () => toast.success('Event removed.'),
-            onError: () => {
-                toast.error('Unable to remove this event.');
-                setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-            },
-        });
     }, []);
 
     return (
@@ -775,12 +768,12 @@ export default function EventList({ programmes = [], joined_programme_ids = [], 
 
                         <TabsContent value="attended" className="mt-0 space-y-2">
                             <p className="text-xs text-slate-500 dark:text-slate-400">Events you checked into with attendance or QR scan.</p>
-                            <AttendanceGrid events={attendedEvents} attendanceByProgramme={attendanceByProgramme} onLeave={handleLeave} />
+                            <AttendanceGrid events={attendedEvents} attendanceByProgramme={attendanceByProgramme} />
                         </TabsContent>
 
                         <TabsContent value="missed" className="mt-0 space-y-2">
                             <p className="text-xs text-slate-500 dark:text-slate-400">Events you joined but did not check in.</p>
-                            <AttendanceGrid events={missedEvents} attendanceByProgramme={attendanceByProgramme} onLeave={handleLeave} />
+                            <AttendanceGrid events={missedEvents} attendanceByProgramme={attendanceByProgramme} />
                         </TabsContent>
                     </Tabs>
                 </Card>
