@@ -22,8 +22,8 @@ return new class extends Migration
             $table->timestamp('assigned_at')->nullable();
             $table->timestamps();
 
-            $table->unique(['participant_table_id', 'user_id']);
-            $table->unique('user_id');
+            $table->unique(['participant_table_id', 'user_id'], 'pt_assign_table_user_unique');
+            $table->unique('user_id', 'pt_assign_user_unique');
         });
     }
 
