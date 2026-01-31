@@ -20,20 +20,7 @@ class TableAssignmentController extends Controller
             ->get();
 
         $now = now();
-        $defaultEvent = $events->first(function (Programme $event) use ($now) {
-            if (! $event->is_active) {
-                return false;
-            }
-
-            $startsAt = $event->starts_at;
-            $endsAt = $event->ends_at;
-
-            if ($startsAt && $startsAt->isAfter($now)) {
-                return false;
-            }
-
-            return ! $endsAt || $endsAt->isAfter($now) || $endsAt->equalTo($now);
-        });
+        $defaultEvent = $events->first(fn (Programme $event) => $this->isProgrammeOpen($event, $now));
 
         $selectedEventId = (int) $request->input('event_id', $defaultEvent?->id ?? $events->first()?->id);
 
@@ -189,6 +176,13 @@ class TableAssignmentController extends Controller
             'participant_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
+        $programme = Programme::query()->find($validated['programme_id']);
+        if ($programme && ! $this->isProgrammeOpen($programme, now())) {
+            return back()->withErrors([
+                'programme_id' => 'This event is closed.',
+            ]);
+        }
+
         $table = ParticipantTable::withCount('assignments')
             ->where('programme_id', $validated['programme_id'])
             ->findOrFail($validated['participant_table_id']);
@@ -246,8 +240,31 @@ class TableAssignmentController extends Controller
 
     public function destroyAssignment(ParticipantTableAssignment $participantTableAssignment)
     {
+        $programme = $participantTableAssignment->programme;
+        if ($programme && ! $this->isProgrammeOpen($programme, now())) {
+            return back()->withErrors([
+                'assignment' => 'This event is closed.',
+            ]);
+        }
+
         $participantTableAssignment->delete();
 
         return back();
+    }
+
+    private function isProgrammeOpen(Programme $event, $now): bool
+    {
+        if (! $event->is_active) {
+            return false;
+        }
+
+        $startsAt = $event->starts_at;
+        $endsAt = $event->ends_at;
+
+        if ($startsAt && $startsAt->isAfter($now)) {
+            return false;
+        }
+
+        return ! $endsAt || $endsAt->isAfter($now) || $endsAt->equalTo($now);
     }
 }

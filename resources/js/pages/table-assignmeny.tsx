@@ -168,6 +168,9 @@ export default function TableAssignmenyPage(props: PageProps) {
     const [selectedParticipantIds, setSelectedParticipantIds] = React.useState<Set<number>>(new Set());
     const [capacityDrafts, setCapacityDrafts] = React.useState<Record<number, string>>({});
     const hasHydrated = React.useRef(false);
+    const selectedEvent = selectedEventId ? events.find((event) => String(event.id) === selectedEventId) : null;
+    const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, Date.now()) : null;
+    const isEventClosed = selectedEventPhase === 'closed';
 
     React.useEffect(() => {
         const nextDrafts: Record<number, string> = {};
@@ -242,6 +245,10 @@ export default function TableAssignmenyPage(props: PageProps) {
         const ids = Array.from(selectedParticipantIds);
         if (!selectedEventId) {
             toast.error('Select an event before assigning participants.');
+            return;
+        }
+        if (isEventClosed) {
+            toast.error('This event is closed.');
             return;
         }
         if (!selectedTableId) {
@@ -322,7 +329,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                             <CardDescription>Pick the event to manage seating assignments.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
+                                <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
                                 <div className="space-y-1">
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Event</label>
                                     <Select value={selectedEventId} onValueChange={setSelectedEventId}>
@@ -347,14 +354,13 @@ export default function TableAssignmenyPage(props: PageProps) {
                                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                                     {selectedEventId ? (
                                         (() => {
-                                            const event = events.find((item) => String(item.id) === selectedEventId);
-                                            if (!event) return <span className="text-slate-500">Event details unavailable.</span>;
-                                            const phase = resolveEventPhase(event, Date.now());
+                                            if (!selectedEvent) return <span className="text-slate-500">Event details unavailable.</span>;
+                                            const phase = selectedEventPhase ?? 'closed';
                                             return (
                                                 <>
                                                     <Badge className={phaseBadgeClass(phase)}>{phaseLabel(phase)}</Badge>
                                                     <span className="text-slate-500">
-                                                        {event.starts_at ? formatDateTime(event.starts_at) : 'Schedule TBA'}
+                                                        {selectedEvent.starts_at ? formatDateTime(selectedEvent.starts_at) : 'Schedule TBA'}
                                                     </span>
                                                 </>
                                             );
@@ -364,6 +370,11 @@ export default function TableAssignmenyPage(props: PageProps) {
                                     )}
                                 </div>
                             </div>
+                            {isEventClosed ? (
+                                <p className="text-sm text-rose-600">
+                                    Table assignments are locked because this event is closed.
+                                </p>
+                            ) : null}
                         </CardContent>
                     </Card>
 
@@ -442,7 +453,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                     <div className="flex items-end">
                                         <Button
                                             type="submit"
-                                            disabled={assignmentForm.processing}
+                                            disabled={assignmentForm.processing || isEventClosed}
                                             className={cn('w-full sm:w-auto', PRIMARY_BTN)}
                                         >
                                             <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -635,6 +646,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                                             variant="ghost"
                                                                             onClick={() => removeAssignment(assignment.id)}
                                                                             aria-label="Remove participant"
+                                                                            disabled={isEventClosed}
                                                                         >
                                                                             <XCircle className="h-4 w-4 text-rose-500" />
                                                                         </Button>
