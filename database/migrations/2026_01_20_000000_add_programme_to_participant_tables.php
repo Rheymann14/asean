@@ -16,9 +16,12 @@ return new class extends Migration
         });
 
         Schema::table('participant_table_assignments', function (Blueprint $table) {
+            $table->dropForeign(['user_id']);
             $table->foreignId('programme_id')->nullable()->after('id')->constrained('programmes')->nullOnDelete();
             $table->dropUnique('pt_assign_user_unique');
+            $table->index('user_id', 'pt_assign_user_index');
             $table->unique(['programme_id', 'user_id'], 'pt_assign_programme_user_unique');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
 
         DB::statement('
@@ -31,9 +34,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('participant_table_assignments', function (Blueprint $table) {
+            $table->dropForeign(['user_id']);
             $table->dropUnique('pt_assign_programme_user_unique');
-            $table->unique('user_id', 'pt_assign_user_unique');
             $table->dropConstrainedForeignId('programme_id');
+            $table->dropIndex('pt_assign_user_index');
+            $table->unique('user_id', 'pt_assign_user_unique');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
 
         Schema::table('participant_tables', function (Blueprint $table) {
