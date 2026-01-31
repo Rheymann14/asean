@@ -53,6 +53,7 @@ type VenueSectionItem = {
     id: number;
     title: string;
     description: string | null;
+    link: string | null;
     image_path: string;
 };
 
@@ -289,6 +290,7 @@ export default function Venue({ venues = [], section }: PageProps) {
     const [imgError, setImgError] = React.useState(false);
 
     const activeImageSrc = activeItem ? resolveSectionImage(activeItem.image_path) : null;
+    const activeReadMoreLink = activeItem?.link?.trim() || null;
 
     React.useEffect(() => {
         setTitleExpanded(false);
@@ -572,10 +574,18 @@ export default function Venue({ venues = [], section }: PageProps) {
                                 )}
                             </DialogHeader>
 
-                            <div className="mt-6 md:hidden">
+                            <div className="mt-6 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+                                {activeReadMoreLink ? (
+                                    <Button asChild className="h-11 rounded-2xl bg-[#0033A0] text-white hover:opacity-95">
+                                        <a href={activeReadMoreLink} target="_blank" rel="noopener noreferrer">
+                                            Read more
+                                            <ExternalLink className="ml-2 h-4 w-4" />
+                                        </a>
+                                    </Button>
+                                ) : null}
                                 <Button
                                     type="button"
-                                    className="h-11 w-full rounded-2xl bg-[#0033A0] text-white hover:opacity-95"
+                                    className="h-11 w-full rounded-2xl bg-[#0033A0] text-white hover:opacity-95 md:hidden"
                                     onClick={() => setActiveItem(null)}
                                 >
                                     Close

@@ -91,6 +91,7 @@ class VenueController extends Controller
                     'id' => $image->id,
                     'title' => $image->title,
                     'description' => $image->description,
+                    'link' => $image->link,
                     'image_path' => $image->image_path,
                 ]),
             ]

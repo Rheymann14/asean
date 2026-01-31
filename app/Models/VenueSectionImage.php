@@ -11,6 +11,7 @@ class VenueSectionImage extends Model
         'venue_section_id',
         'title',
         'description',
+        'link',
         'image_path',
     ];
 
