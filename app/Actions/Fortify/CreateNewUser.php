@@ -2,7 +2,9 @@
 
 namespace App\Actions\Fortify;
 
+use App\Mail\ParticipantWelcomeMail;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -42,12 +44,14 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $input['password'],
             'country_id' => $input['country_id'],
             'user_type_id' => $input['user_type_id'],
-        ]);
+        ])->refresh();
 
         $programmeIds = $input['programme_ids'] ?? [];
         if (! empty($programmeIds)) {
             $user->joinedProgrammes()->sync($programmeIds);
         }
+
+        Mail::to($user->email)->send(new ParticipantWelcomeMail($user));
 
         return $user;
     }
