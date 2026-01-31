@@ -12,6 +12,7 @@ use App\Http\Controllers\ContactDetailController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\VenueController;
+use App\Http\Controllers\VenueSectionController;
 use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TableAssignmentController;
@@ -66,6 +67,15 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
 
         Route::get('venue-management', [VenueController::class, 'index'])->name('venue-management');
         Route::resource('venues', VenueController::class)->only(['store', 'update', 'destroy']);
+
+        Route::get('section-management', [VenueSectionController::class, 'index'])->name('section-management');
+        Route::patch('section-management/title', [VenueSectionController::class, 'updateTitle'])
+            ->name('section-management.title');
+        Route::post('section-management', [VenueSectionController::class, 'store'])->name('section-management.store');
+        Route::patch('section-management/{venueSectionImage}', [VenueSectionController::class, 'update'])
+            ->name('section-management.update');
+        Route::delete('section-management/{venueSectionImage}', [VenueSectionController::class, 'destroy'])
+            ->name('section-management.destroy');
 
         Route::get('issuances-management', [IssuanceController::class, 'index'])->name('issuances-management');
         Route::resource('issuances', IssuanceController::class)->only(['store', 'update', 'destroy']);
