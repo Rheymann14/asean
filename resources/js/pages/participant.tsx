@@ -103,6 +103,8 @@ type ParticipantRow = {
     country_id: number | null;
     user_type_id: number | null;
     is_active: boolean;
+    consent_contact_sharing?: boolean;
+    consent_photo_video?: boolean;
     created_at?: string | null;
     joined_programme_ids?: number[];
     checked_in_programme_ids?: number[];
@@ -2195,6 +2197,40 @@ export default function ParticipantPage(props: PageProps) {
                                 </div>
                                 <Switch checked={participantForm.data.is_active} onCheckedChange={(v) => participantForm.setData('is_active', !!v)} />
                             </div>
+
+                            {editingParticipant ? (
+                                <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                    <div className="text-sm font-medium">Consents</div>
+                                    <div className="mt-2 grid gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span>Contact Information Sharing</span>
+                                            <Badge
+                                                className={cn(
+                                                    'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
+                                                    editingParticipant.consent_contact_sharing
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                )}
+                                            >
+                                                {editingParticipant.consent_contact_sharing ? 'Consented' : 'Not consented'}
+                                            </Badge>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span>Photo and Videos Consent</span>
+                                            <Badge
+                                                className={cn(
+                                                    'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
+                                                    editingParticipant.consent_photo_video
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                )}
+                                            >
+                                                {editingParticipant.consent_photo_video ? 'Consented' : 'Not consented'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
 
                         <DialogFooter className="gap-2 sm:gap-0">

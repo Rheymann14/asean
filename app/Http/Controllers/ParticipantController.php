@@ -52,6 +52,8 @@ class ParticipantController extends Controller
                     'country_id' => $user->country_id,
                     'user_type_id' => $user->user_type_id,
                     'is_active' => $user->is_active,
+                    'consent_contact_sharing' => $user->consent_contact_sharing,
+                    'consent_photo_video' => $user->consent_photo_video,
                     'created_at' => $user->created_at?->toISOString(),
                     'joined_programme_ids' => $user->joinedProgrammes
                         ? $user->joinedProgrammes->pluck('id')->values()->all()

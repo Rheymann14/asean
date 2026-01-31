@@ -118,6 +118,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
         setProgrammeIds([]);
         setShowPassword(false);
         setShowConfirmPassword(false);
+        setConsentContact(false);
+        setConsentMedia(false);
     }, [setCountry, setProgrammeIds, setRegistrantType]);
 
     React.useEffect(() => {
@@ -613,10 +615,74 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         </div>
                                     </div>
 
+                                    <div className="grid gap-3 text-left">
+                                        <input type="hidden" name="consent_contact_sharing" value={consentContact ? '1' : '0'} />
+                                        <input type="hidden" name="consent_photo_video" value={consentMedia ? '1' : '0'} />
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                    Contact Information Sharing
+                                                </p>
+                                                <span className="text-[11px] font-semibold text-red-600">*</span>
+                                            </div>
+
+                                            <p className="mt-1 text-sm leading-snug text-slate-600">
+                                                To promote networking between institutions with common interests, I give my consent to CHED to share my full name,
+                                                designation, institution, and email address to other attendees of the event.
+                                            </p>
+
+                                            <div className="mt-2 flex items-start gap-3">
+                                                <Checkbox
+                                                    id="consent-contact"
+                                                    checked={consentContact}
+                                                    onCheckedChange={(v) => setConsentContact(Boolean(v))}
+                                                    className="border-emerald-500 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 data-[state=checked]:text-white focus-visible:ring-emerald-600/30"
+                                                />
+                                                <Label htmlFor="consent-contact" className="text-sm font-medium text-slate-700">
+                                                    I consent.
+                                                </Label>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                    Photo and Videos Consent
+                                                </p>
+                                                <span className="text-[11px] font-semibold text-red-600">*</span>
+                                            </div>
+
+                                            <p className="mt-1 text-sm leading-snug text-slate-600">
+                                                I hereby grant permission to the conference organizers to photograph and record me during the event. I understand that
+                                                these images and recordings may be used for social media, event documentation, promotional materials for future events,
+                                                and other purposes deemed appropriate by the organizers.
+                                            </p>
+
+                                            <div className="mt-2 flex items-start gap-3">
+                                                <Checkbox
+                                                    id="consent-media"
+                                                    checked={consentMedia}
+                                                    onCheckedChange={(v) => setConsentMedia(Boolean(v))}
+                                                    className="border-emerald-500 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 data-[state=checked]:text-white focus-visible:ring-emerald-600/30"
+                                                />
+                                                <Label htmlFor="consent-media" className="text-sm font-medium text-slate-700">
+                                                    I consent.
+                                                </Label>
+                                            </div>
+                                        </div>
+
+                                        {!canContinue && (
+                                            <p className="px-1 text-xs text-slate-600">
+                                                Please tick both required consent boxes to continue.
+                                            </p>
+                                        )}
+                                    </div>
+
                                     <Button
                                         type="submit"
-                                        className="mt-1 h-11 w-full gap-2 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86]"
+                                        className="mt-1 h-11 w-full gap-2 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60"
                                         tabIndex={9}
+                                        disabled={!canContinue || processing}
                                         data-test="register-user-button"
                                     >
                                         {processing ? (
@@ -661,78 +727,11 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         </DialogDescription>
                                     </DialogHeader>
 
-                                    {/* ✅ Required consents (compact) */}
-                                    <div className="mt-4 grid gap-3 text-left">
-                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                                                    Contact Information Sharing
-                                                </p>
-                                                <span className="text-[11px] font-semibold text-red-600">*</span>
-                                            </div>
-
-                                            <p className="mt-1 text-sm leading-snug text-slate-600">
-                                                To promote networking between institutions with common interests, I give my consent to CHED to share my full name,
-                                                designation, institution, and email address to other attendees of the event.
-                                            </p>
-
-                                            <div className="mt-2 flex items-start gap-3">
-                                                <Checkbox
-                                                    id="consent-contact"
-                                                    checked={consentContact}
-                                                    onCheckedChange={(v) => setConsentContact(Boolean(v))}
-                                                     className="border-emerald-500 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 data-[state=checked]:text-white focus-visible:ring-emerald-600/30"
-                                                />
-                                                <Label htmlFor="consent-contact" className="text-sm font-medium text-slate-700">
-                                                    I consent.
-                                                </Label>
-                                            </div>
-                                        </div>
-
-                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                                                    Photo and Videos Consent
-                                                </p>
-                                                <span className="text-[11px] font-semibold text-red-600">*</span>
-                                            </div>
-
-                                            <p className="mt-1 text-sm leading-snug text-slate-600">
-                                                I hereby grant permission to the conference organizers to photograph and record me during the event. I understand that
-                                                these images and recordings may be used for social media, event documentation, promotional materials for future events,
-                                                and other purposes deemed appropriate by the organizers.
-                                            </p>
-
-                                            <div className="mt-2 flex items-start gap-3">
-                                                <Checkbox
-                                                    id="consent-media"
-                                                    checked={consentMedia}
-                                                    onCheckedChange={(v) => setConsentMedia(Boolean(v))}
-                                                     className="border-emerald-500 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 data-[state=checked]:text-white focus-visible:ring-emerald-600/30"
-                                                />
-                                                <Label htmlFor="consent-media" className="text-sm font-medium text-slate-700">
-                                                    I consent.
-                                                </Label>
-                                            </div>
-                                        </div>
-
-                                        {!canContinue && (
-                                            <p className="px-1 text-xs text-slate-600">
-                                                Please tick both required consent boxes to continue.
-                                            </p>
-                                        )}
-                                    </div>
-
                                     <DialogFooter className="sm:justify-center">
                                         <Button
                                             type="button"
-                                            disabled={!canContinue}
                                             className="rounded-full bg-[#0033A0] px-6 text-white hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60"
                                             onClick={() => {
-                                                if (!canContinue) {
-                                                    // toast.error('Please complete the required consents.');
-                                                    return;
-                                                }
                                                 setSuccessOpen(false);
                                                 router.visit(login());
                                             }}

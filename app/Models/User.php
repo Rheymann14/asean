@@ -37,6 +37,8 @@ class User extends Authenticatable
         'country_id',
         'user_type_id',
         'is_active',
+        'consent_contact_sharing',
+        'consent_photo_video',
     ];
 
     /**
@@ -63,6 +65,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'is_active' => 'boolean',
+            'consent_contact_sharing' => 'boolean',
+            'consent_photo_video' => 'boolean',
         ];
     }
 

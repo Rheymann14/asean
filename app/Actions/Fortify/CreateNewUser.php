@@ -34,6 +34,8 @@ class CreateNewUser implements CreatesNewUsers
             'user_type_id' => ['required', 'integer', 'exists:user_types,id'],
             'programme_ids' => ['nullable', 'array'],
             'programme_ids.*' => ['integer', 'exists:programmes,id'],
+            'consent_contact_sharing' => ['required', 'accepted'],
+            'consent_photo_video' => ['required', 'accepted'],
             'password' => $this->passwordRules(),
         ])->validate();
 
@@ -44,6 +46,8 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $input['password'],
             'country_id' => $input['country_id'],
             'user_type_id' => $input['user_type_id'],
+            'consent_contact_sharing' => (bool) $input['consent_contact_sharing'],
+            'consent_photo_video' => (bool) $input['consent_photo_video'],
         ])->refresh();
 
         $programmeIds = $input['programme_ids'] ?? [];
