@@ -2329,12 +2329,12 @@ export default function ParticipantPage(props: PageProps) {
                             visibility: visible !important;
                         }
 
-                        /* ✅ Pin print content to page */
+                        /* ✅ Allow print content to flow across pages */
                         #participant-print {
-                            position: fixed;
-                            inset: 0;
+                            position: relative;
                             background: white;
                             padding: ${padding};
+                            width: 100%;
                         }
 
                         /* ✅ NEVER CUT CARDS */
