@@ -7,6 +7,7 @@ import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -67,6 +68,10 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
     const [successOpen, setSuccessOpen] = React.useState(false);
+    const [consentContact, setConsentContact] = React.useState(false);
+    const [consentMedia, setConsentMedia] = React.useState(false);
+
+    const canContinue = consentContact && consentMedia;
 
     const [country, setCountry] = useRemember<string>('', 'register.country');
     const [registrantType, setRegistrantType] = useRemember<string>('', 'register.registrant_type');
@@ -638,8 +643,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                             </div>
 
                             <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
-                       
-                                <DialogContent className="max-w-md rounded-2xl border-none bg-gradient-to-br from-[#E8F0FF] via-white to-[#F5FBFF]">
+                         
+                                <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-3xl rounded-2xl border-none bg-gradient-to-br from-[#E8F0FF] via-white to-[#F5FBFF]">
                                     <DialogHeader className="items-center text-center">
                                         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0033A0] text-white shadow-lg shadow-[#0033A0]/20">
                                             <CheckCircle2 className="h-7 w-7" />
@@ -654,15 +659,80 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 Also check your <span className="font-semibold">Spam/Junk</span> folder if you don’t see it.
                                             </span>
                                         </DialogDescription>
-
-
                                     </DialogHeader>
+
+                                    {/* ✅ Required consents (compact) */}
+                                    <div className="mt-4 grid gap-3 text-left">
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                    Contact Information Sharing
+                                                </p>
+                                                <span className="text-[11px] font-semibold text-red-600">*</span>
+                                            </div>
+
+                                            <p className="mt-1 text-sm leading-snug text-slate-600">
+                                                To promote networking between institutions with common interests, I give my consent to CHED to share my full name,
+                                                designation, institution, and email address to other attendees of the event.
+                                            </p>
+
+                                            <div className="mt-2 flex items-start gap-3">
+                                                <Checkbox
+                                                    id="consent-contact"
+                                                    checked={consentContact}
+                                                    onCheckedChange={(v) => setConsentContact(Boolean(v))}
+                                                     className="border-emerald-500 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 data-[state=checked]:text-white focus-visible:ring-emerald-600/30"
+                                                />
+                                                <Label htmlFor="consent-contact" className="text-sm font-medium text-slate-700">
+                                                    I consent.
+                                                </Label>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                    Photo and Videos Consent
+                                                </p>
+                                                <span className="text-[11px] font-semibold text-red-600">*</span>
+                                            </div>
+
+                                            <p className="mt-1 text-sm leading-snug text-slate-600">
+                                                I hereby grant permission to the conference organizers to photograph and record me during the event. I understand that
+                                                these images and recordings may be used for social media, event documentation, promotional materials for future events,
+                                                and other purposes deemed appropriate by the organizers.
+                                            </p>
+
+                                            <div className="mt-2 flex items-start gap-3">
+                                                <Checkbox
+                                                    id="consent-media"
+                                                    checked={consentMedia}
+                                                    onCheckedChange={(v) => setConsentMedia(Boolean(v))}
+                                                     className="border-emerald-500 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 data-[state=checked]:text-white focus-visible:ring-emerald-600/30"
+                                                />
+                                                <Label htmlFor="consent-media" className="text-sm font-medium text-slate-700">
+                                                    I consent.
+                                                </Label>
+                                            </div>
+                                        </div>
+
+                                        {!canContinue && (
+                                            <p className="px-1 text-xs text-slate-600">
+                                                Please tick both required consent boxes to continue.
+                                            </p>
+                                        )}
+                                    </div>
 
                                     <DialogFooter className="sm:justify-center">
                                         <Button
                                             type="button"
-                                            className="rounded-full bg-[#0033A0] px-6 text-white hover:bg-[#002b86]"
+                                            disabled={!canContinue}
+                                            className="rounded-full bg-[#0033A0] px-6 text-white hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60"
                                             onClick={() => {
+                                                if (!canContinue) {
+                                                    // toast.error('Please complete the required consents.');
+                                                    return;
+                                                }
                                                 setSuccessOpen(false);
                                                 router.visit(login());
                                             }}
