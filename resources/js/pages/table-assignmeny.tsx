@@ -49,9 +49,19 @@ type TableRow = {
     assignments: TableAssignment[];
 };
 
+type EventRow = {
+    id: number;
+    title: string;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    is_active: boolean;
+};
+
 type PageProps = {
     tables?: TableRow[];
     participants?: Participant[];
+    events?: EventRow[];
+    selected_event_id?: number | null;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Table Assignment', href: '/table-assignment' }];
@@ -83,6 +93,33 @@ function formatDateTime(value?: string | null) {
     }).format(d);
 }
 
+type EventPhase = 'ongoing' | 'upcoming' | 'closed';
+
+function resolveEventPhase(event: EventRow, now: number): EventPhase {
+    if (!event.is_active) return 'closed';
+    const startsAt = event.starts_at ? new Date(event.starts_at).getTime() : null;
+    const endsAt = event.ends_at ? new Date(event.ends_at).getTime() : null;
+
+    if (startsAt && now < startsAt) return 'upcoming';
+    if (endsAt && now > endsAt) return 'closed';
+    return 'ongoing';
+}
+
+function phaseLabel(phase: EventPhase) {
+    return phase === 'ongoing' ? 'Ongoing' : phase === 'upcoming' ? 'Upcoming' : 'Closed';
+}
+
+function phaseBadgeClass(phase: EventPhase) {
+    switch (phase) {
+        case 'ongoing':
+            return 'bg-emerald-100 text-emerald-700';
+        case 'upcoming':
+            return 'bg-amber-100 text-amber-700';
+        default:
+            return 'bg-slate-200 text-slate-600';
+    }
+}
+
 function FlagThumb({ country, size = 18 }: { country: Country; size?: number }) {
     const src = country.flag_url || null;
 
@@ -110,20 +147,27 @@ function FlagThumb({ country, size = 18 }: { country: Country; size?: number }) 
 export default function TableAssignmenyPage(props: PageProps) {
     const tables = props.tables ?? [];
     const participants = props.participants ?? [];
+    const events = props.events ?? [];
+
+    const initialEventId = props.selected_event_id ? String(props.selected_event_id) : '';
 
     const tableForm = useForm({
+        programme_id: initialEventId,
         table_number: '',
         capacity: '',
     });
 
     const assignmentForm = useForm({
+        programme_id: initialEventId,
         participant_table_id: '',
         participant_ids: [] as number[],
     });
 
+    const [selectedEventId, setSelectedEventId] = React.useState<string>(initialEventId);
     const [selectedTableId, setSelectedTableId] = React.useState<string>('');
     const [selectedParticipantIds, setSelectedParticipantIds] = React.useState<Set<number>>(new Set());
     const [capacityDrafts, setCapacityDrafts] = React.useState<Record<number, string>>({});
+    const hasHydrated = React.useRef(false);
 
     React.useEffect(() => {
         const nextDrafts: Record<number, string> = {};
@@ -132,6 +176,25 @@ export default function TableAssignmenyPage(props: PageProps) {
         });
         setCapacityDrafts(nextDrafts);
     }, [tables]);
+
+    React.useEffect(() => {
+        if (!hasHydrated.current) {
+            hasHydrated.current = true;
+            return;
+        }
+
+        setSelectedTableId('');
+        setSelectedParticipantIds(new Set());
+        tableForm.reset('table_number', 'capacity');
+        tableForm.clearErrors();
+        assignmentForm.clearErrors();
+
+        router.get(
+            '/table-assignment',
+            { event_id: selectedEventId || undefined },
+            { preserveScroll: true, preserveState: true, replace: true },
+        );
+    }, [selectedEventId]);
 
     const allSelected = participants.length > 0 && participants.every((p) => selectedParticipantIds.has(p.id));
 
@@ -156,6 +219,15 @@ export default function TableAssignmenyPage(props: PageProps) {
 
     function submitTable(e: React.FormEvent) {
         e.preventDefault();
+        if (!selectedEventId) {
+            toast.error('Select an event before creating a table.');
+            return;
+        }
+
+        tableForm.transform((data) => ({
+            ...data,
+            programme_id: selectedEventId,
+        }));
         tableForm.post(ENDPOINTS.tables.store, {
             onSuccess: () => {
                 toast.success('Table added.');
@@ -168,6 +240,10 @@ export default function TableAssignmenyPage(props: PageProps) {
     function submitAssignments(e: React.FormEvent) {
         e.preventDefault();
         const ids = Array.from(selectedParticipantIds);
+        if (!selectedEventId) {
+            toast.error('Select an event before assigning participants.');
+            return;
+        }
         if (!selectedTableId) {
             toast.error('Select a table to assign participants.');
             return;
@@ -177,10 +253,11 @@ export default function TableAssignmenyPage(props: PageProps) {
             return;
         }
 
-        assignmentForm.setData({
+        assignmentForm.transform(() => ({
+            programme_id: selectedEventId,
             participant_table_id: String(Number(selectedTableId)),
             participant_ids: ids,
-        });
+        }));
 
         assignmentForm.post(ENDPOINTS.assignments.store, {
             onSuccess: () => {
@@ -239,6 +316,57 @@ export default function TableAssignmenyPage(props: PageProps) {
                 </div>
 
                 <div className="grid gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Event context</CardTitle>
+                            <CardDescription>Pick the event to manage seating assignments.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Event</label>
+                                    <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select event" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {events.length === 0 ? (
+                                                <SelectItem value="none" disabled>
+                                                    No events available
+                                                </SelectItem>
+                                            ) : (
+                                                events.map((event) => (
+                                                    <SelectItem key={event.id} value={String(event.id)}>
+                                                        {event.title}
+                                                    </SelectItem>
+                                                ))
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                    {selectedEventId ? (
+                                        (() => {
+                                            const event = events.find((item) => String(item.id) === selectedEventId);
+                                            if (!event) return <span className="text-slate-500">Event details unavailable.</span>;
+                                            const phase = resolveEventPhase(event, Date.now());
+                                            return (
+                                                <>
+                                                    <Badge className={phaseBadgeClass(phase)}>{phaseLabel(phase)}</Badge>
+                                                    <span className="text-slate-500">
+                                                        {event.starts_at ? formatDateTime(event.starts_at) : 'Schedule TBA'}
+                                                    </span>
+                                                </>
+                                            );
+                                        })()
+                                    ) : (
+                                        <span className="text-slate-500">Choose an event to load tables and participants.</span>
+                                    )}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">Create Table</CardTitle>

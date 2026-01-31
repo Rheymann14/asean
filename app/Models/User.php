@@ -10,7 +10,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 
 use App\Models\Country;
@@ -107,8 +107,8 @@ class User extends Authenticatable
         return $this->belongsToMany(Programme::class, 'participant_programmes')->withTimestamps();
     }
 
-    public function tableAssignment(): HasOne
+    public function tableAssignments(): HasMany
     {
-        return $this->hasOne(ParticipantTableAssignment::class);
+        return $this->hasMany(ParticipantTableAssignment::class);
     }
 }
