@@ -13,6 +13,7 @@ import {
     CircleX,
     Sparkles,
     ZoomIn,
+    ImageOff,
 } from 'lucide-react';
 
 import {
@@ -43,7 +44,7 @@ type FlexHoverItem = {
     id: number;
     title: string;
     body: string;
-    image: string;
+    image: string | null;
     tint: string;
 
     startsAt: string;
@@ -58,13 +59,14 @@ const TINTS = [
     'bg-gradient-to-br from-[#ffedd5] via-white to-[#e2e8f0]',
 ];
 
-const FALLBACK_IMAGE = '/img/asean_banner_logo.png';
+
 
 function resolveImageUrl(imageUrl?: string | null) {
-    if (!imageUrl) return FALLBACK_IMAGE;
+    if (!imageUrl) return null; // ✅ no image -> null
     if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
     return `/event-images/${imageUrl}`;
 }
+
 
 function resolvePdfUrl(pdfUrl?: string | null) {
     if (!pdfUrl) return null;
@@ -198,15 +200,15 @@ function SectionTitle({
     const meta =
         tone === 'ongoing'
             ? {
-                  icon: <CircleCheck className="h-4 w-4" />,
-                  iconWrap: 'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200',
-                  titleAccent: 'text-emerald-800 dark:text-emerald-200',
-                  line: 'from-emerald-500/35 via-emerald-500/10 to-transparent',
-                  countPill:
-                      'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-500/30',
-              }
+                icon: <CircleCheck className="h-4 w-4" />,
+                iconWrap: 'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200',
+                titleAccent: 'text-emerald-800 dark:text-emerald-200',
+                line: 'from-emerald-500/35 via-emerald-500/10 to-transparent',
+                countPill:
+                    'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-500/30',
+            }
             : tone === 'upcoming'
-              ? {
+                ? {
                     icon: <CalendarClock className="h-4 w-4" />,
                     iconWrap: 'bg-[#0033A0]/10 text-[#0033A0] dark:bg-[#7aa2ff]/15 dark:text-[#b9ccff]',
                     titleAccent: 'text-[#0033A0] dark:text-[#b9ccff]',
@@ -214,7 +216,7 @@ function SectionTitle({
                     countPill:
                         'bg-blue-50 text-blue-800 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-500/30',
                 }
-              : {
+                : {
                     icon: <CircleX className="h-4 w-4" />,
                     iconWrap: 'bg-rose-600/10 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200',
                     titleAccent: 'text-rose-800 dark:text-rose-200',
@@ -343,6 +345,11 @@ function EventTile({
     featured?: boolean;
 }) {
     const d = daysUntil(item.startsAt, nowTs);
+    const [imgOk, setImgOk] = React.useState(() => Boolean(item.image));
+
+    React.useEffect(() => {
+        setImgOk(Boolean(item.image));
+    }, [item.image]);
 
     const isClosed = phase === 'closed';
     const isUpcoming = phase === 'upcoming';
@@ -370,39 +377,101 @@ function EventTile({
 
             <div className={cn('relative p-3.5 sm:p-4', isClosed && 'opacity-90')}>
                 {/* image (click to preview) */}
-                <ImagePreviewDialog
-                    src={item.image}
-                    title={item.title}
-                    subtitle={formatEventWindow(item.startsAt, item.endsAt)}
-                >
-                    <button
-                        type="button"
+              
+                {imgOk && item.image ? (
+                    <ImagePreviewDialog
+                        src={item.image}
+                        title={item.title}
+                        subtitle={formatEventWindow(item.startsAt, item.endsAt)}
+                    >
+                        <button
+                            type="button"
+                            className={cn(
+                                'relative w-full overflow-hidden rounded-xl ring-1 ring-slate-200 dark:ring-slate-700',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/35',
+                            )}
+                            aria-label={`View image for ${item.title}`}
+                        >
+                            <img
+                                src={item.image}
+                                alt={item.title}
+                                onError={() => setImgOk(false)} // ✅ broken image -> show placeholder
+                                className={cn(
+                                    featured ? 'h-36 sm:h-40' : 'h-28 sm:h-32',
+                                    'w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]',
+                                    isClosed && 'grayscale',
+                                )}
+                                loading="lazy"
+                                draggable={false}
+                            />
+
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/25" />
+
+                            {/* top-right zoom hint */}
+                            <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                                <ZoomIn className="h-3.5 w-3.5" />
+                                View
+                            </div>
+
+                            {/* top-left status chip */}
+                            <div className="absolute left-2 top-2 flex items-center gap-2">
+                                {featured && !isClosed ? (
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-600/90 px-2 py-1 text-[11px] font-semibold text-white shadow">
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        Featured
+                                    </span>
+                                ) : null}
+
+                                {isClosed ? (
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-rose-600/90 px-2 py-1 text-[11px] font-semibold text-white shadow">
+                                        <CircleX className="h-3.5 w-3.5" />
+                                        Closed
+                                    </span>
+                                ) : isOngoing ? (
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-600/90 px-2 py-1 text-[11px] font-semibold text-white shadow">
+                                        <CircleCheck className="h-3.5 w-3.5" />
+                                        Ongoing
+                                    </span>
+                                ) : isUpcoming ? (
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-[#0033A0]/90 px-2 py-1 text-[11px] font-semibold text-white shadow">
+                                        <CalendarClock className="h-3.5 w-3.5" />
+                                        Upcoming
+                                    </span>
+                                ) : null}
+                            </div>
+                        </button>
+                    </ImagePreviewDialog>
+                ) : (
+                    <div
                         className={cn(
                             'relative w-full overflow-hidden rounded-xl ring-1 ring-slate-200 dark:ring-slate-700',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/35',
                         )}
-                        aria-label={`View image for ${item.title}`}
+                        role="img"
+                        aria-label={`No image found for ${item.title}`}
                     >
-                        <img
-                            src={item.image}
-                            alt={item.title}
+                        <div
                             className={cn(
                                 featured ? 'h-36 sm:h-40' : 'h-28 sm:h-32',
-                                'w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]',
-                                isClosed && 'grayscale',
+                                'flex items-center justify-center',
+                                'bg-white/60 dark:bg-slate-950/30',
                             )}
-                            loading="lazy"
-                            draggable={false}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/25" />
-
-                        {/* top-right zoom hint */}
-                        <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
-                            <ZoomIn className="h-3.5 w-3.5" />
-                            View
+                        >
+                            <div className="flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400">
+                                <ImageOff className="h-8 w-8" />
+                                <span className="text-[11px] font-semibold">No image found</span>
+                            </div>
                         </div>
 
-                        {/* top-left status chip */}
+                        {/* subtle overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/25" />
+
+                        {/* top-right label */}
+                        <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                            <ImageOff className="h-3.5 w-3.5" />
+                            No image
+                        </div>
+
+                        {/* top-left status chip (same as before) */}
                         <div className="absolute left-2 top-2 flex items-center gap-2">
                             {featured && !isClosed ? (
                                 <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-600/90 px-2 py-1 text-[11px] font-semibold text-white shadow">
@@ -428,8 +497,9 @@ function EventTile({
                                 </span>
                             ) : null}
                         </div>
-                    </button>
-                </ImagePreviewDialog>
+                    </div>
+                )}
+
 
                 {/* pills */}
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -645,7 +715,7 @@ export default function Programme({ programmes = [] }: PageProps) {
                         {items.length ? (
                             <ProgrammeGroups items={items} query={query} />
                         ) : (
-                            <EmptyState text="No event are available yet." />
+                            <EmptyState text="No events are available yet." />
                         )}
                     </div>
                 </section>
