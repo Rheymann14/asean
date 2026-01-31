@@ -4,15 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Models\ParticipantTable;
 use App\Models\ParticipantTableAssignment;
+use App\Models\Programme;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class TableAssignmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $events = Programme::query()
+            ->orderBy('starts_at')
+            ->orderBy('title')
+            ->get();
+
+        $now = now();
+        $defaultEvent = $events->first(fn (Programme $event) => $this->isProgrammeOpen($event, $now));
+
+        $selectedEventId = (int) $request->input('event_id', $defaultEvent?->id ?? $events->first()?->id);
+
         $tables = ParticipantTable::with(['assignments.user.country', 'assignments.user.userType'])
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
             ->orderBy('table_number')
             ->get()
             ->map(function (ParticipantTable $table) {
@@ -56,10 +69,16 @@ class TableAssignmentController extends Controller
                 ];
             });
 
-        $assignedIds = ParticipantTableAssignment::query()->pluck('user_id');
+        $assignedIds = ParticipantTableAssignment::query()
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->pluck('user_id');
 
         $participants = User::query()
             ->with(['country', 'userType'])
+            ->when(
+                $selectedEventId,
+                fn ($query) => $query->whereHas('joinedProgrammes', fn ($subQuery) => $subQuery->where('programmes.id', $selectedEventId))
+            )
             ->when(
                 $assignedIds->isNotEmpty(),
                 fn ($query) => $query->whereNotIn('id', $assignedIds)
@@ -101,15 +120,31 @@ class TableAssignmentController extends Controller
         return Inertia::render('table-assignmeny', [
             'tables' => $tables,
             'participants' => $participants,
+            'events' => $events->map(fn (Programme $event) => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'starts_at' => $event->starts_at?->toISOString(),
+                'ends_at' => $event->ends_at?->toISOString(),
+                'is_active' => $event->is_active,
+            ]),
+            'selected_event_id' => $selectedEventId ?: null,
         ]);
     }
 
     public function storeTable(Request $request)
     {
         $validated = $request->validate([
-            'table_number' => ['required', 'string', 'max:50', 'unique:participant_tables,table_number'],
+            'programme_id' => ['required', 'exists:programmes,id'],
+            'table_number' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('participant_tables', 'table_number')->where('programme_id', $request->input('programme_id')),
+            ],
             'capacity' => ['required', 'integer', 'min:1'],
         ]);
+
+        $validated['table_number'] = trim($validated['table_number']);
 
         ParticipantTable::create($validated);
 
@@ -132,16 +167,30 @@ class TableAssignmentController extends Controller
     public function storeAssignments(Request $request)
     {
         $validated = $request->validate([
-            'participant_table_id' => ['required', 'exists:participant_tables,id'],
+            'programme_id' => ['required', 'exists:programmes,id'],
+            'participant_table_id' => [
+                'required',
+                Rule::exists('participant_tables', 'id')->where('programme_id', $request->input('programme_id')),
+            ],
             'participant_ids' => ['required', 'array', 'min:1'],
             'participant_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        $table = ParticipantTable::withCount('assignments')->findOrFail($validated['participant_table_id']);
+        $programme = Programme::query()->find($validated['programme_id']);
+        if ($programme && ! $this->isProgrammeOpen($programme, now())) {
+            return back()->withErrors([
+                'programme_id' => 'This event is closed.',
+            ]);
+        }
+
+        $table = ParticipantTable::withCount('assignments')
+            ->where('programme_id', $validated['programme_id'])
+            ->findOrFail($validated['participant_table_id']);
         $participantIds = collect($validated['participant_ids'])->unique()->values();
 
         $eligibleIds = User::query()
             ->whereIn('id', $participantIds)
+            ->whereHas('joinedProgrammes', fn ($query) => $query->where('programmes.id', $validated['programme_id']))
             ->where(function ($query) {
                 $query->whereDoesntHave('userType')
                     ->orWhereHas('userType', function ($subQuery) {
@@ -156,6 +205,7 @@ class TableAssignmentController extends Controller
 
         $alreadyAssignedIds = ParticipantTableAssignment::query()
             ->whereIn('user_id', $eligibleIds)
+            ->where('programme_id', $validated['programme_id'])
             ->pluck('user_id');
 
         $newIds = $eligibleIds->diff($alreadyAssignedIds)->values();
@@ -175,6 +225,7 @@ class TableAssignmentController extends Controller
         $now = now();
 
         $payload = $newIds->map(fn ($id) => [
+            'programme_id' => $validated['programme_id'],
             'participant_table_id' => $table->id,
             'user_id' => $id,
             'assigned_at' => $now,
@@ -189,8 +240,31 @@ class TableAssignmentController extends Controller
 
     public function destroyAssignment(ParticipantTableAssignment $participantTableAssignment)
     {
+        $programme = $participantTableAssignment->programme;
+        if ($programme && ! $this->isProgrammeOpen($programme, now())) {
+            return back()->withErrors([
+                'assignment' => 'This event is closed.',
+            ]);
+        }
+
         $participantTableAssignment->delete();
 
         return back();
+    }
+
+    private function isProgrammeOpen(Programme $event, $now): bool
+    {
+        if (! $event->is_active) {
+            return false;
+        }
+
+        $startsAt = $event->starts_at;
+        $endsAt = $event->ends_at;
+
+        if ($startsAt && $startsAt->isAfter($now)) {
+            return false;
+        }
+
+        return ! $endsAt || $endsAt->isAfter($now) || $endsAt->equalTo($now);
     }
 }
