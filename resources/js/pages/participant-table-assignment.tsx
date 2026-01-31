@@ -1,0 +1,368 @@
+import * as React from 'react';
+import AppLayout from '@/layouts/app-layout';
+import { Head } from '@inertiajs/react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { CalendarDays, Check, ChevronsUpDown, MapPin, Table } from 'lucide-react';
+
+type TableAssignment = {
+    table_number: string;
+    capacity: number;
+    assigned_at?: string | null;
+};
+
+type EventRow = {
+    id: number;
+    title: string;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    location?: string | null;
+    table?: TableAssignment | null;
+};
+
+type PageProps = {
+    events?: EventRow[];
+};
+
+const breadcrumbs = [
+    { title: 'Dashboard', href: '/participant-dashboard' },
+    { title: 'Table Assignment', href: '/table-assignment' },
+];
+
+type EventPhase = 'ongoing' | 'upcoming' | 'closed';
+
+function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
+    if (!startsAt) return 'Schedule to be announced';
+
+    const start = new Date(startsAt);
+    const end = endsAt ? new Date(endsAt) : null;
+    const dateFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
+    const timeFmt = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' });
+
+    const date = dateFmt.format(start);
+    const startTime = timeFmt.format(start);
+
+    if (!end) return `${date} • ${startTime}`;
+
+    const sameDay =
+        start.getFullYear() === end.getFullYear() &&
+        start.getMonth() === end.getMonth() &&
+        start.getDate() === end.getDate();
+
+    const endTime = timeFmt.format(end);
+    if (sameDay) return `${date} • ${startTime}–${endTime}`;
+
+    return `${dateFmt.format(start)} ${startTime} → ${dateFmt.format(end)} ${timeFmt.format(end)}`;
+}
+
+function getEventPhase(startsAt: string | null | undefined, endsAt: string | null | undefined, nowTs: number): EventPhase {
+    if (!startsAt) return 'upcoming';
+
+    const start = new Date(startsAt);
+    const startTs = start.getTime();
+    const end = endsAt ? new Date(endsAt) : null;
+    const endTs = end ? end.getTime() : null;
+
+    if (endTs !== null) {
+        if (nowTs < startTs) return 'upcoming';
+        if (nowTs <= endTs) return 'ongoing';
+        return 'closed';
+    }
+
+    if (nowTs < startTs) return 'upcoming';
+
+    const now = new Date(nowTs);
+    const sameDay =
+        now.getFullYear() === start.getFullYear() &&
+        now.getMonth() === start.getMonth() &&
+        now.getDate() === start.getDate();
+
+    return sameDay ? 'ongoing' : 'closed';
+}
+
+function phaseLabel(phase: EventPhase) {
+    switch (phase) {
+        case 'ongoing':
+            return 'Ongoing';
+        case 'upcoming':
+            return 'Upcoming';
+        case 'closed':
+        default:
+            return 'Closed';
+    }
+}
+
+function phaseBadgeClass(phase: EventPhase) {
+    switch (phase) {
+        case 'ongoing':
+            return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200';
+        case 'upcoming':
+            return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200';
+        case 'closed':
+        default:
+            return 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300';
+    }
+}
+
+function Section({
+    title,
+    description,
+    events,
+}: {
+    title: string;
+    description: string;
+    events: Array<EventRow & { phase: EventPhase }>;
+}) {
+    return (
+        <section className="space-y-4">
+            <div>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
+            </div>
+
+            {events.length === 0 ? (
+                <Card className="border-dashed">
+                    <div className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
+                        No events to show in this section yet.
+                    </div>
+                </Card>
+            ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {events.map((event) => {
+                        const hasTable = Boolean(event.table);
+
+                        return (
+                            <Card key={event.id} className="border-slate-200/70 dark:border-slate-800">
+                                <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
+                                    <div className="space-y-2">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                                                {event.title}
+                                            </h3>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                            >
+                                                {phaseLabel(event.phase)}
+                                            </Badge>
+                                        </div>
+                                        <div className="flex flex-col gap-2 text-sm text-slate-600 dark:text-slate-300 sm:flex-row sm:flex-wrap sm:items-center">
+                                            <span className="inline-flex items-center gap-2">
+                                                <CalendarDays className="h-4 w-4 text-slate-400" />
+                                                {formatEventWindow(event.starts_at, event.ends_at)}
+                                            </span>
+                                            {event.location ? (
+                                                <span className="inline-flex items-center gap-2">
+                                                    <MapPin className="h-4 w-4 text-slate-400" />
+                                                    {event.location}
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex flex-col items-start gap-1 text-xs text-slate-500 dark:text-slate-400 sm:items-end">
+                                            <span className="uppercase tracking-wide">Table assignment</span>
+                                            {hasTable ? (
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                                    >
+                                                        Table {event.table?.table_number}
+                                                    </Badge>
+                                                    {event.table?.assigned_at ? (
+                                                        <span className="text-xs text-slate-500">
+                                                            Assigned {new Date(event.table.assigned_at).toLocaleString('en-PH')}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                            ) : (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300"
+                                                >
+                                                    Pending
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        );
+                    })}
+                </div>
+            )}
+        </section>
+    );
+}
+
+export default function ParticipantTableAssignment({ events = [] }: PageProps) {
+    const nowTs = React.useMemo(() => Date.now(), []);
+    const [filterId, setFilterId] = React.useState('all');
+    const [open, setOpen] = React.useState(false);
+
+    const eventsWithPhase = React.useMemo(
+        () =>
+            events.map((event) => ({
+                ...event,
+                phase: getEventPhase(event.starts_at ?? null, event.ends_at ?? null, nowTs),
+            })),
+        [events, nowTs],
+    );
+
+    const filteredEvents = React.useMemo(() => {
+        if (filterId === 'all') return eventsWithPhase;
+        const id = Number(filterId);
+        if (Number.isNaN(id)) return eventsWithPhase;
+        return eventsWithPhase.filter((event) => event.id === id);
+    }, [eventsWithPhase, filterId]);
+
+    const grouped = React.useMemo(
+        () => ({
+            ongoing: filteredEvents.filter((event) => event.phase === 'ongoing'),
+            upcoming: filteredEvents.filter((event) => event.phase === 'upcoming'),
+            closed: filteredEvents.filter((event) => event.phase === 'closed'),
+        }),
+        [filteredEvents],
+    );
+
+    const selectedEvent = React.useMemo(() => {
+        if (filterId === 'all') return null;
+        const id = Number(filterId);
+        if (Number.isNaN(id)) return null;
+        return eventsWithPhase.find((event) => event.id === id) ?? null;
+    }, [eventsWithPhase, filterId]);
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Table Assignment" />
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                        <Table className="h-5 w-5 text-[#00359c]" />
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                            Table assignments
+                        </h1>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                        Review your assigned table per event. This page is view-only.
+                    </p>
+                </div>
+
+                <Card className="border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Filter event
+                            </p>
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
+                                {selectedEvent ? selectedEvent.title : 'All joined events'}
+                            </p>
+                        </div>
+                        <Popover open={open} onOpenChange={setOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={open}
+                                    className="w-full justify-between md:w-80"
+                                >
+                                    <span className={cn('truncate', !selectedEvent && 'text-muted-foreground')}>
+                                        {selectedEvent ? selectedEvent.title : 'All events'}
+                                    </span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Search event..." />
+                                    <CommandList>
+                                        <CommandEmpty>No event found.</CommandEmpty>
+                                        <CommandGroup>
+                                            <CommandItem
+                                                value="all events"
+                                                onSelect={() => {
+                                                    setFilterId('all');
+                                                    setOpen(false);
+                                                }}
+                                            >
+                                                <div className="flex w-full items-center gap-3">
+                                                    <Check className={cn('h-4 w-4', filterId === 'all' ? 'opacity-100' : 'opacity-0')} />
+                                                    <span className="flex-1 truncate">All events</span>
+                                                </div>
+                                            </CommandItem>
+                                            {eventsWithPhase.map((event) => (
+                                                <CommandItem
+                                                    key={event.id}
+                                                    value={`${event.title} ${event.id}`}
+                                                    onSelect={() => {
+                                                        setFilterId(String(event.id));
+                                                        setOpen(false);
+                                                    }}
+                                                >
+                                                    <div className="flex w-full items-center gap-3">
+                                                        <Check
+                                                            className={cn(
+                                                                'h-4 w-4',
+                                                                filterId === String(event.id) ? 'opacity-100' : 'opacity-0',
+                                                            )}
+                                                        />
+                                                        <span className="flex-1 truncate">{event.title}</span>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                                        >
+                                                            {phaseLabel(event.phase)}
+                                                        </Badge>
+                                                    </div>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                </Card>
+
+                {eventsWithPhase.length === 0 ? (
+                    <Card className="border-dashed">
+                        <div className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
+                            No table assignments yet. Join an event to see your seating details.
+                        </div>
+                    </Card>
+                ) : (
+                    <div className="space-y-8">
+                        <Section
+                            title="Ongoing events"
+                            description="Events currently happening with your assigned table."
+                            events={grouped.ongoing}
+                        />
+                        <Section
+                            title="Upcoming events"
+                            description="Table assignments for upcoming events."
+                            events={grouped.upcoming}
+                        />
+                        <Section
+                            title="Closed events"
+                            description="Past events are listed for your reference."
+                            events={grouped.closed}
+                        />
+                    </div>
+                )}
+            </div>
+        </AppLayout>
+    );
+}
