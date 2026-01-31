@@ -4,8 +4,22 @@ import { Head } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { MapPin, ExternalLink, CalendarDays } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from '@/components/ui/dialog';
+import {
+    MapPin,
+    ExternalLink,
+    CalendarDays,
+    ChevronDown,
+    ChevronUp,
+    X,
+    ImageOff,
+} from 'lucide-react';
 
 type ProgrammeRow = {
     id: number;
@@ -126,12 +140,10 @@ function resolveSectionImage(imagePath?: string | null) {
 function EventVenuePanel({ event }: { event: EventVenue }) {
     return (
         <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-12">
-            {/* Map (no backdrop-blur here to avoid iframe flakiness) */}
             <Card className="overflow-hidden rounded-2xl border-slate-200/70 bg-white shadow-[0_12px_40px_-25px_rgba(2,6,23,0.35)] dark:border-white/10 dark:bg-slate-900 lg:col-span-8">
                 <MapEmbed embedUrl={event.embedUrl} googleMapsLink={event.googleMapsLink} />
             </Card>
 
-            {/* Details */}
             <Card className="rounded-2xl border-slate-200/70 bg-white/70 p-6 shadow-[0_12px_40px_-25px_rgba(2,6,23,0.35)] backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40 lg:col-span-4">
                 <div className="flex items-start gap-3">
                     <div className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0033A0]/10 text-[#0033A0] dark:bg-[#7aa2ff]/15 dark:text-[#7aa2ff]">
@@ -184,12 +196,76 @@ function EventVenuePanel({ event }: { event: EventVenue }) {
     );
 }
 
+/** ---- Truncate + toggle helper ---- */
+const CLAMP_CLASS: Record<number, string> = {
+    2: 'line-clamp-2',
+    3: 'line-clamp-3',
+    4: 'line-clamp-4',
+};
+
+function TruncateWithToggle({
+    text,
+    lines = 3,
+    expanded,
+    onToggle,
+    threshold = 140,
+    className = '',
+}: {
+    text: string;
+    lines?: 2 | 3 | 4;
+    expanded: boolean;
+    onToggle: () => void;
+    threshold?: number;
+    className?: string;
+}) {
+    const shouldToggle = text.trim().length > threshold;
+    const clamp = expanded ? '' : (CLAMP_CLASS[lines] ?? 'line-clamp-3');
+
+    return (
+        <div className="space-y-2">
+            <div className={[clamp, 'break-words [overflow-wrap:anywhere]', className].join(' ')}>
+                {text}
+            </div>
+
+            {shouldToggle ? (
+                <button
+                    type="button"
+                    onClick={onToggle}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-[#0033A0] hover:underline"
+                >
+                    {expanded ? (
+                        <>
+                            Show less <ChevronUp className="h-4 w-4" />
+                        </>
+                    ) : (
+                        <>
+                            Show more <ChevronDown className="h-4 w-4" />
+                        </>
+                    )}
+                </button>
+            ) : null}
+        </div>
+    );
+}
+
+function NoImageFallback({ label = 'No image uploaded' }: { label?: string }) {
+    return (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-500">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
+                <ImageOff className="h-5 w-5" />
+            </div>
+            <p className="text-sm">{label}</p>
+        </div>
+    );
+}
+
 export default function Venue({ venues = [], section }: PageProps) {
     const eventVenues = React.useMemo(() => {
         return venues.map((venue) => ({
             id: String(venue.id),
             label: venue.programme?.title ?? venue.name,
-            dateLabel: formatDateRange(venue.programme?.starts_at ?? null, venue.programme?.ends_at ?? null) ?? undefined,
+            dateLabel:
+                formatDateRange(venue.programme?.starts_at ?? null, venue.programme?.ends_at ?? null) ?? undefined,
             venueName: venue.name,
             address: venue.address,
             googleMapsLink: venue.google_maps_url ?? undefined,
@@ -200,7 +276,28 @@ export default function Venue({ venues = [], section }: PageProps) {
 
     const sectionTitle = section?.title?.trim() || 'Section Title';
     const sectionItems = section?.items ?? [];
+
     const [activeItem, setActiveItem] = React.useState<VenueSectionItem | null>(null);
+
+    const [brokenImages, setBrokenImages] = React.useState<Record<number, boolean>>({});
+
+    // ✅ toggles for long title/desc inside dialog (reset per item)
+    const [titleExpanded, setTitleExpanded] = React.useState(false);
+    const [descExpanded, setDescExpanded] = React.useState(false);
+
+    // ✅ image error handling (broken URL, etc.)
+    const [imgError, setImgError] = React.useState(false);
+
+    const activeImageSrc = activeItem ? resolveSectionImage(activeItem.image_path) : null;
+
+    React.useEffect(() => {
+        setTitleExpanded(false);
+        setDescExpanded(false);
+    }, [activeItem?.id]);
+
+    React.useEffect(() => {
+        setImgError(false);
+    }, [activeImageSrc]);
 
     return (
         <>
@@ -208,11 +305,6 @@ export default function Venue({ venues = [], section }: PageProps) {
 
             <PublicLayout navActive="/venue">
                 <section className="relative isolate mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-                    {/* soft background */}
-                    {/* <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 via-white to-slate-50" />
-                    <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 -z-10 h-72 w-72 rounded-full bg-[#0033A0]/10 blur-3xl" />
-                    <div aria-hidden className="pointer-events-none absolute -right-24 top-24 -z-10 h-72 w-72 rounded-full bg-[#FCD116]/15 blur-3xl" /> */}
-
                     <div className="mx-auto max-w-5xl text-center">
                         <h2 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
                             <span className="relative inline-block">
@@ -226,46 +318,23 @@ export default function Venue({ venues = [], section }: PageProps) {
                             <span className="h-2 w-2 rounded-full bg-[#FCD116] shadow-[0_0_0_6px_rgba(252,209,22,0.12)]" />
                             <span className="h-px w-12 bg-slate-200 dark:bg-slate-700" />
                         </div>
-
-
                     </div>
 
                     {/* ✅ Event Tabs */}
                     <div className="mx-auto mt-10 max-w-6xl">
                         {eventVenues.length === 0 ? (
-                            <Card
-                                className="
-        relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-8 text-center
-        shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/55
-        dark:border-white/10 dark:bg-slate-900/35
-    "
-                            >
-                                {/* soft glow / gradient */}
+                            <Card className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-8 text-center shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/55 dark:border-white/10 dark:bg-slate-900/35">
                                 <div
                                     aria-hidden
-                                    className="
-            pointer-events-none absolute inset-0
-            bg-[radial-gradient(60%_60%_at_50%_0%,rgba(59,130,246,0.12),transparent_60%)]
-            dark:bg-[radial-gradient(60%_60%_at_50%_0%,rgba(56,189,248,0.10),transparent_60%)]
-        "
+                                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_0%,rgba(59,130,246,0.12),transparent_60%)] dark:bg-[radial-gradient(60%_60%_at_50%_0%,rgba(56,189,248,0.10),transparent_60%)]"
                                 />
                                 <div
                                     aria-hidden
-                                    className="
-            pointer-events-none absolute -top-10 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full
-            bg-slate-200/40 blur-2xl dark:bg-white/10
-        "
+                                    className="pointer-events-none absolute -top-10 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full bg-slate-200/40 blur-2xl dark:bg-white/10"
                                 />
 
                                 <div className="relative mx-auto flex max-w-sm flex-col items-center">
-                                    <div
-                                        className="
-                mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl
-                border border-slate-200/70 bg-white/70 text-slate-700
-                shadow-sm backdrop-blur
-                dark:border-white/10 dark:bg-white/5 dark:text-slate-200
-            "
-                                    >
+                                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200/70 bg-white/70 text-slate-700 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
                                         <MapPin className="h-5 w-5" />
                                     </div>
 
@@ -278,8 +347,6 @@ export default function Venue({ venues = [], section }: PageProps) {
                                     </p>
 
                                     <div className="mt-5 h-px w-24 bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-white/10" />
-
-                               
                                 </div>
                             </Card>
                         ) : (
@@ -287,10 +354,8 @@ export default function Venue({ venues = [], section }: PageProps) {
                                 <div className="flex items-center justify-center">
                                     <TabsList
                                         className={[
-                                            // compact container
                                             'h-auto w-full max-w-6xl justify-start gap-1.5 rounded-2xl border border-slate-200/70 bg-white/70 p-1.5',
                                             'shadow-[0_10px_30px_-28px_rgba(2,6,23,0.25)] backdrop-blur-md',
-                                            // horizontal scroll (good for up to 20+)
                                             'overflow-x-auto overflow-y-hidden',
                                             '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
                                             'dark:border-white/10 dark:bg-slate-900/40',
@@ -301,16 +366,11 @@ export default function Venue({ venues = [], section }: PageProps) {
                                                 key={ev.id}
                                                 value={ev.id}
                                                 className={[
-                                                    // ✅ smaller pills
                                                     'h-8 shrink-0 rounded-full px-2.5 text-[11px] font-semibold leading-none',
                                                     'tracking-wide',
-                                                    // ✅ subtle inactive
                                                     'data-[state=inactive]:text-slate-700 data-[state=inactive]:hover:bg-slate-100/80',
-                                                    // ✅ strong active
                                                     'data-[state=active]:bg-[#0033A0] data-[state=active]:text-white',
-                                                    // ✅ dark mode
                                                     'dark:data-[state=inactive]:text-slate-200 dark:data-[state=inactive]:hover:bg-white/10',
-                                                    // ✅ keep long labels neat
                                                     'max-w-[160px] truncate',
                                                 ].join(' ')}
                                                 title={ev.label}
@@ -324,7 +384,6 @@ export default function Venue({ venues = [], section }: PageProps) {
                                 <div className="mt-6">
                                     {eventVenues.map((ev) => (
                                         <TabsContent key={ev.id} value={ev.id} className="m-0 outline-none">
-                                            {/* key ensures map fully resets when switching events */}
                                             <div key={ev.id} className="animate-in fade-in-0 duration-300">
                                                 <EventVenuePanel event={ev} />
                                             </div>
@@ -337,11 +396,9 @@ export default function Venue({ venues = [], section }: PageProps) {
 
                     {/* Section */}
                     <div className="mx-auto mt-12 max-w-5xl text-center">
-                 
-
                         <h2 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
                             <span className="relative inline-block">
-                                <span className="relative z-10 text-[#0033A0]">Section Title</span>
+                                <span className="relative z-10 text-[#0033A0]">{sectionTitle}</span>
                                 <span className="pointer-events-none absolute inset-x-0 bottom-1 -z-0 h-2 rounded-full bg-[#0033A0]/15 blur-[1px]" />
                             </span>{' '}
                         </h2>
@@ -377,40 +434,45 @@ export default function Venue({ venues = [], section }: PageProps) {
                                                     aria-label={`View details for ${item.title}`}
                                                 >
                                                     <div className="relative aspect-[4/3]">
-                                                    {imageSrc ? (
-                                                        <img
-                                                            src={imageSrc}
-                                                            alt={item.title}
-                                                            loading="lazy"
-                                                            decoding="async"
-                                                            className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.05]"
-                                                            draggable={false}
+                                                        {imageSrc && !brokenImages[item.id] ? (
+                                                            <img
+                                                                src={imageSrc}
+                                                                alt={item.title}
+                                                                loading="lazy"
+                                                                decoding="async"
+                                                                className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.05]"
+                                                                draggable={false}
+                                                                onError={() => setBrokenImages((prev) => ({ ...prev, [item.id]: true }))}
+                                                            />
+                                                        ) : (
+                                                            <div className="grid h-full w-full place-items-center bg-slate-100 dark:bg-slate-800/40">
+                                                                <NoImageFallback />
+                                                            </div>
+                                                        )}
+
+
+                                                        <div
+                                                            aria-hidden
+                                                            className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/15 to-transparent"
                                                         />
-                                                    ) : (
-                                                        <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
-                                                            No image available
+
+                                                        <div className="absolute inset-x-0 bottom-0 p-5">
+                                                            <div className="min-w-0 text-left">
+                                                                <h3 className="line-clamp-2 break-words [overflow-wrap:anywhere] text-lg font-semibold text-white drop-shadow-sm md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:group-hover:translate-y-0 md:group-hover:opacity-100">
+                                                                    {item.title}
+                                                                </h3>
+                                                                {item.description ? (
+                                                                    <p className="mt-1 line-clamp-2 break-words [overflow-wrap:anywhere] text-sm text-white/85 md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:delay-75 md:group-hover:translate-y-0 md:group-hover:opacity-100">
+                                                                        {item.description}
+                                                                    </p>
+                                                                ) : null}
+                                                            </div>
                                                         </div>
-                                                    )}
 
-                                                    <div
-                                                        aria-hidden
-                                                        className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/15 to-transparent"
-                                                    />
-
-                                                    <div className="absolute inset-x-0 bottom-0 p-5">
-                                                        <div className="min-w-0 text-left">
-                                                            <h3 className="line-clamp-2 text-lg font-semibold text-white drop-shadow-sm md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:group-hover:translate-y-0 md:group-hover:opacity-100">
-                                                                {item.title}
-                                                            </h3>
-                                                            {item.description ? (
-                                                                <p className="mt-1 line-clamp-2 text-sm text-white/85 md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:delay-75 md:group-hover:translate-y-0 md:group-hover:opacity-100">
-                                                                    {item.description}
-                                                                </p>
-                                                            ) : null}
-                                                        </div>
-                                                    </div>
-
-                                                    <div aria-hidden className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
+                                                        <div
+                                                            aria-hidden
+                                                            className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10"
+                                                        />
                                                     </div>
                                                 </button>
                                             </div>
@@ -420,34 +482,107 @@ export default function Venue({ venues = [], section }: PageProps) {
                             )}
                         </div>
                     </div>
-
-                    
                 </section>
             </PublicLayout>
 
+            {/* ✅ FIXED: remove the built-in dialog X (double X issue) + add fallback icon */}
             <Dialog open={!!activeItem} onOpenChange={(open) => (!open ? setActiveItem(null) : null)}>
-                <DialogContent className="max-w-xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl">{activeItem?.title}</DialogTitle>
-                        {activeItem?.description ? (
-                            <DialogDescription className="whitespace-pre-line text-sm text-slate-600">
-                                {activeItem.description}
-                            </DialogDescription>
-                        ) : null}
-                    </DialogHeader>
-                    {activeItem ? (
-                        <div className="mt-4 max-h-[65vh] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                            {resolveSectionImage(activeItem.image_path) ? (
-                                <img
-                                    src={resolveSectionImage(activeItem.image_path) as string}
-                                    alt={activeItem.title}
-                                    className="h-full max-h-[65vh] w-full object-contain"
-                                />
-                            ) : (
-                                <div className="grid h-48 place-items-center text-sm text-slate-500">No image available</div>
-                            )}
+                <DialogContent
+                    className={[
+                        // ✅ large width
+                        'w-[calc(100%-1.5rem)] sm:max-w-4xl',
+                        // ✅ prevent overflow
+                        'max-h-[90vh] overflow-hidden',
+                        // ✅ polish
+                        'rounded-2xl p-0',
+
+
+                    ].join(' ')}
+                >
+                    {/* header top bar */}
+                    <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Section details</p>
+
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2">
+                        {/* Left: image bounded */}
+                        <div className="bg-slate-50 p-4 sm:p-6 dark:bg-slate-950/30">
+                            <div className="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900">
+                                <div className="relative flex max-h-[60vh] min-h-[220px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-3 dark:bg-slate-800/40">
+                                    {!activeImageSrc || imgError ? (
+                                        <NoImageFallback label={!activeImageSrc ? 'No image uploaded' : 'Image failed to load'} />
+                                    ) : (
+                                        <img
+                                            src={activeImageSrc}
+                                            alt={activeItem?.title ?? 'Section image'}
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="max-h-[56vh] w-full object-contain"
+                                            draggable={false}
+                                            onError={() => setImgError(true)}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="mt-4 hidden justify-end md:flex">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-10 rounded-xl"
+                                    onClick={() => setActiveItem(null)}
+                                >
+                                    Close
+                                </Button>
+                            </div>
                         </div>
-                    ) : null}
+
+                        {/* Right: content scrollable */}
+                        <div className="max-h-[calc(90vh-52px)] overflow-y-auto p-5 sm:p-6">
+                            <DialogHeader className="space-y-3 text-left">
+                                <DialogTitle className="min-w-0 text-xl font-semibold leading-snug tracking-tight text-slate-900 sm:text-2xl dark:text-slate-50">
+                                    {activeItem?.title ? (
+                                        <TruncateWithToggle
+                                            text={activeItem.title}
+                                            lines={2}
+                                            expanded={titleExpanded}
+                                            onToggle={() => setTitleExpanded((v) => !v)}
+                                            threshold={90}
+                                            className="text-slate-900 dark:text-slate-50"
+                                        />
+                                    ) : null}
+                                </DialogTitle>
+
+                                {activeItem?.description ? (
+                                    <DialogDescription className="text-base leading-relaxed text-slate-600 dark:text-slate-300">
+                                        <TruncateWithToggle
+                                            text={activeItem.description}
+                                            lines={4}
+                                            expanded={descExpanded}
+                                            onToggle={() => setDescExpanded((v) => !v)}
+                                            threshold={160}
+                                            className="text-slate-600 dark:text-slate-300"
+                                        />
+                                    </DialogDescription>
+                                ) : (
+                                    <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
+                                        No description provided.
+                                    </DialogDescription>
+                                )}
+                            </DialogHeader>
+
+                            <div className="mt-6 md:hidden">
+                                <Button
+                                    type="button"
+                                    className="h-11 w-full rounded-2xl bg-[#0033A0] text-white hover:opacity-95"
+                                    onClick={() => setActiveItem(null)}
+                                >
+                                    Close
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>
