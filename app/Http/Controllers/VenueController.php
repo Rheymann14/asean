@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Programme;
+use App\Models\VenueSection;
 use App\Models\Venue;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -79,8 +80,25 @@ class VenueController extends Controller
                     : null,
             ]);
 
+        $section = VenueSection::query()
+            ->with(['images' => fn ($query) => $query->orderBy('id')])
+            ->first();
+
+        $sectionData = $section
+            ? [
+                'title' => $section->title,
+                'items' => $section->images->map(fn ($image) => [
+                    'id' => $image->id,
+                    'title' => $image->title,
+                    'description' => $image->description,
+                    'image_path' => $image->image_path,
+                ]),
+            ]
+            : null;
+
         return Inertia::render('venue', [
             'venues' => $venues,
+            'section' => $sectionData,
         ]);
     }
 
