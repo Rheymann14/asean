@@ -4,53 +4,8 @@ import { Head } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapPin, ExternalLink, ArrowUpRight, CalendarDays } from 'lucide-react';
-
-type TourismCard = {
-    title: string;
-    subtitle: string;
-    image: string;
-    href: string; // external link
-};
-
-const TOURISM_GALLERY: TourismCard[] = [
-    {
-        title: 'Beach / Resort',
-        subtitle: 'Sun, sand, and island stays.',
-        image: '/img/tourism/beach.jpg',
-        href: 'https://lovethephilippines.travel/interests?tag=Beach%20Resort',
-    },
-    {
-        title: 'Dive / Marine',
-        subtitle: 'Reefs, shipwrecks, and marine life.',
-        image: '/img/tourism/dive.jpeg',
-        href: 'https://lovethephilippines.travel/interests?tag=Dive%2FMarine',
-    },
-    {
-        title: 'Festival Events',
-        subtitle: 'Culture, colors, and street celebrations.',
-        image: '/img/tourism/festival.jpg',
-        href: 'https://lovethephilippines.travel/interests?tag=Festive',
-    },
-    {
-        title: 'National Ecotourism Site',
-        subtitle: 'Nature trails and eco-friendly adventures.',
-        image: '/img/tourism/ecotourism.jpg',
-        href: 'https://lovethephilippines.travel/interests?tag=National%20Ecotourism%20Site',
-    },
-    {
-        title: 'National Park',
-        subtitle: 'Mountains, forests, and protected wonders.',
-        image: '/img/tourism/national-park.png',
-        href: 'https://lovethephilippines.travel/interests?tag=National%20Park',
-    },
-    {
-        title: 'Urban Attraction',
-        subtitle: 'City sights, museums, and iconic spots.',
-        image: '/img/tourism/urban.jpg',
-        href: 'https://lovethephilippines.travel/interests?tag=Urban%20Attraction',
-    },
-];
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { MapPin, ExternalLink, CalendarDays } from 'lucide-react';
 
 type ProgrammeRow = {
     id: number;
@@ -80,8 +35,21 @@ type EventVenue = {
     tip?: string;
 };
 
+type VenueSectionItem = {
+    id: number;
+    title: string;
+    description: string | null;
+    image_path: string;
+};
+
+type VenueSection = {
+    title: string;
+    items: VenueSectionItem[];
+};
+
 type PageProps = {
     venues?: VenueRow[];
+    section?: VenueSection | null;
 };
 
 function formatDateRange(startsAt?: string | null, endsAt?: string | null) {
@@ -149,6 +117,12 @@ function MapEmbed({
     );
 }
 
+function resolveSectionImage(imagePath?: string | null) {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http') || imagePath.startsWith('/')) return imagePath;
+    return `/section/${imagePath}`;
+}
+
 function EventVenuePanel({ event }: { event: EventVenue }) {
     return (
         <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-12">
@@ -210,7 +184,7 @@ function EventVenuePanel({ event }: { event: EventVenue }) {
     );
 }
 
-export default function Venue({ venues = [] }: PageProps) {
+export default function Venue({ venues = [], section }: PageProps) {
     const eventVenues = React.useMemo(() => {
         return venues.map((venue) => ({
             id: String(venue.id),
@@ -223,6 +197,10 @@ export default function Venue({ venues = [] }: PageProps) {
             tip: 'Tap “Open in Google Maps” for the exact pin and navigation directions.',
         }));
     }, [venues]);
+
+    const sectionTitle = section?.title?.trim() || 'Section Title';
+    const sectionItems = section?.items ?? [];
+    const [activeItem, setActiveItem] = React.useState<VenueSectionItem | null>(null);
 
     return (
         <>
@@ -375,74 +353,103 @@ export default function Venue({ venues = [] }: PageProps) {
                         </div>
 
                         <div className="mx-auto mt-10 max-w-6xl">
-                            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                                {TOURISM_GALLERY.map((item) => (
-                                    <a
-                                        key={item.title}
-                                        href={item.href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        aria-label={`Open ${item.title} link`}
-                                        className={[
-                                            'group relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white',
-                                            'shadow-[0_18px_55px_-45px_rgba(2,6,23,0.35)]',
-                                            'transition will-change-transform hover:-translate-y-1 hover:shadow-[0_30px_70px_-45px_rgba(2,6,23,0.55)]',
-                                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/60 focus-visible:ring-offset-2',
-                                        ].join(' ')}
-                                    >
-                                        <div className="relative aspect-[4/3]">
-                                            <img
-                                                src={item.image}
-                                                alt={item.title}
-                                                loading="lazy"
-                                                decoding="async"
-                                                className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.05]"
-                                                draggable={false}
-                                            />
+                            {sectionItems.length === 0 ? (
+                                <Card className="rounded-2xl border border-dashed border-slate-200 bg-white/70 p-6 text-sm text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+                                    No section highlights yet.
+                                </Card>
+                            ) : (
+                                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                                    {sectionItems.map((item) => {
+                                        const imageSrc = resolveSectionImage(item.image_path);
+                                        return (
+                                            <div
+                                                key={item.id}
+                                                className={[
+                                                    'group relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white',
+                                                    'shadow-[0_18px_55px_-45px_rgba(2,6,23,0.35)]',
+                                                    'transition will-change-transform hover:-translate-y-1 hover:shadow-[0_30px_70px_-45px_rgba(2,6,23,0.55)]',
+                                                ].join(' ')}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setActiveItem(item)}
+                                                    className="block w-full text-left"
+                                                    aria-label={`View details for ${item.title}`}
+                                                >
+                                                    <div className="relative aspect-[4/3]">
+                                                    {imageSrc ? (
+                                                        <img
+                                                            src={imageSrc}
+                                                            alt={item.title}
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                            className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.05]"
+                                                            draggable={false}
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
+                                                            No image available
+                                                        </div>
+                                                    )}
 
-                                            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/15 to-transparent" />
+                                                    <div
+                                                        aria-hidden
+                                                        className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/15 to-transparent"
+                                                    />
 
-                                            <div className="absolute inset-x-0 bottom-0 p-5">
-                                                <div className="flex items-end justify-between gap-3">
-                                                    <div className="min-w-0">
-                                                        <h3 className="text-lg font-semibold text-white drop-shadow-sm md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:group-hover:translate-y-0 md:group-hover:opacity-100">
-                                                            {item.title}
-                                                        </h3>
-                                                        <p className="mt-1 line-clamp-2 text-sm text-white/85 md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:delay-75 md:group-hover:translate-y-0 md:group-hover:opacity-100">
-                                                            {item.subtitle}
-                                                        </p>
+                                                    <div className="absolute inset-x-0 bottom-0 p-5">
+                                                        <div className="min-w-0 text-left">
+                                                            <h3 className="line-clamp-2 text-lg font-semibold text-white drop-shadow-sm md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:group-hover:translate-y-0 md:group-hover:opacity-100">
+                                                                {item.title}
+                                                            </h3>
+                                                            {item.description ? (
+                                                                <p className="mt-1 line-clamp-2 text-sm text-white/85 md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:delay-75 md:group-hover:translate-y-0 md:group-hover:opacity-100">
+                                                                    {item.description}
+                                                                </p>
+                                                            ) : null}
+                                                        </div>
                                                     </div>
 
-                                                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/10 text-white backdrop-blur transition group-hover:bg-white/15">
-                                                        <ArrowUpRight className="h-5 w-5" />
-                                                    </span>
-                                                </div>
+                                                    <div aria-hidden className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
+                                                    </div>
+                                                </button>
                                             </div>
-
-                                            <div aria-hidden className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
-                                        </div>
-
-                                        <div className="flex items-center justify-between px-5 py-4">
-                                            <span className="text-xs font-semibold tracking-wide text-slate-600">Click to explore</span>
-                                            <span className="text-xs font-semibold text-[#0033A0] opacity-80 transition group-hover:opacity-100">
-                                                Open
-                                            </span>
-                                        </div>
-                                    </a>
-                                ))}
-
-                            </div>
-
-                            <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500">
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#FCD116]" />
-                                This will redirect to the Department of Tourism (DOT) website.
-                            </p>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     
                 </section>
             </PublicLayout>
+
+            <Dialog open={!!activeItem} onOpenChange={(open) => (!open ? setActiveItem(null) : null)}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">{activeItem?.title}</DialogTitle>
+                        {activeItem?.description ? (
+                            <DialogDescription className="whitespace-pre-line text-sm text-slate-600">
+                                {activeItem.description}
+                            </DialogDescription>
+                        ) : null}
+                    </DialogHeader>
+                    {activeItem ? (
+                        <div className="mt-4 max-h-[65vh] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                            {resolveSectionImage(activeItem.image_path) ? (
+                                <img
+                                    src={resolveSectionImage(activeItem.image_path) as string}
+                                    alt={activeItem.title}
+                                    className="h-full max-h-[65vh] w-full object-contain"
+                                />
+                            ) : (
+                                <div className="grid h-48 place-items-center text-sm text-slate-500">No image available</div>
+                            )}
+                        </div>
+                    ) : null}
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
