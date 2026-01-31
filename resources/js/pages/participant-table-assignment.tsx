@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarDays, Check, ChevronsUpDown, MapPin, Table } from 'lucide-react';
+import { CalendarDays, Check, ChevronsUpDown, MapPin, Table, Armchair } from 'lucide-react';
 
 type TableAssignment = {
     table_number: string;
@@ -106,28 +106,76 @@ function phaseLabel(phase: EventPhase) {
 function phaseBadgeClass(phase: EventPhase) {
     switch (phase) {
         case 'ongoing':
-            return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200';
+            return '!border-emerald-200 !bg-emerald-50 !text-emerald-700 dark:!border-emerald-500/30 dark:!bg-emerald-500/10 dark:!text-emerald-200';
         case 'upcoming':
-            return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200';
+            return '!border-sky-200 !bg-sky-50 !text-sky-700 dark:!border-sky-500/30 dark:!bg-sky-500/10 dark:!text-sky-200';
         case 'closed':
         default:
-            return 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300';
+            return '!border-rose-200 !bg-rose-50 !text-rose-700 dark:!border-rose-500/30 dark:!bg-rose-500/10 dark:!text-rose-200';
     }
 }
 
+function phaseTitleClass(phase: EventPhase) {
+    switch (phase) {
+        case 'ongoing':
+            return 'text-emerald-900 dark:text-emerald-200';
+        case 'upcoming':
+            return 'text-sky-900 dark:text-sky-200';
+        case 'closed':
+        default:
+            return 'text-rose-900 dark:text-rose-200';
+    }
+}
+
+function phaseDotClass(phase: EventPhase) {
+    switch (phase) {
+        case 'ongoing':
+            return 'bg-emerald-500 dark:bg-emerald-400';
+        case 'upcoming':
+            return 'bg-sky-500 dark:bg-sky-400';
+        case 'closed':
+        default:
+            return 'bg-rose-500 dark:bg-rose-400';
+    }
+}
+
+function phaseCardAccentClass(phase: EventPhase) {
+    switch (phase) {
+        case 'ongoing':
+            return 'border-l-4 border-l-emerald-500/70 dark:border-l-emerald-400/60';
+        case 'upcoming':
+            return 'border-l-4 border-l-sky-500/70 dark:border-l-sky-400/60';
+        case 'closed':
+        default:
+            return 'border-l-4 border-l-rose-500/70 dark:border-l-rose-400/60';
+    }
+}
+
+
 function Section({
+    phase,
     title,
     description,
     events,
 }: {
+    phase: EventPhase;
     title: string;
     description: string;
     events: Array<EventRow & { phase: EventPhase }>;
 }) {
     return (
         <section className="space-y-4">
-            <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+            <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                    <span className={cn('h-2.5 w-2.5 rounded-full', phaseDotClass(phase))} />
+                    <h2 className={cn('text-lg font-semibold', phaseTitleClass(phase))}>{title}</h2>
+                    <Badge
+                        variant="outline"
+                        className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(phase))}
+                    >
+                        {phaseLabel(phase)}
+                    </Badge>
+                </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
             </div>
 
@@ -143,7 +191,13 @@ function Section({
                         const hasTable = Boolean(event.table);
 
                         return (
-                            <Card key={event.id} className="border-slate-200/70 dark:border-slate-800">
+                            <Card
+                                key={event.id}
+                                className={cn(
+                                    'border-slate-200/70 dark:border-slate-800',
+                                    phaseCardAccentClass(event.phase),
+                                )}
+                            >
                                 <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
                                     <div className="space-y-2">
                                         <div className="flex flex-wrap items-center gap-2">
@@ -170,23 +224,26 @@ function Section({
                                             ) : null}
                                         </div>
                                     </div>
+
                                     <div className="flex items-center gap-2">
                                         <div className="flex flex-col items-start gap-1 text-xs text-slate-500 dark:text-slate-400 sm:items-end">
                                             <span className="uppercase tracking-wide">Table assignment</span>
                                             {hasTable ? (
+
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <Badge
                                                         variant="outline"
-                                                        className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                                        className={cn(
+                                                            'rounded-full px-3 py-1 text-sm font-semibold',
+                                                            '!border-amber-400 !bg-white !text-amber-900 shadow-sm ring-2 ring-amber-200/70',
+                                                            'dark:!border-amber-500/50 dark:!bg-slate-950 dark:!text-amber-200 dark:ring-amber-500/20',
+                                                        )}
                                                     >
-                                                        Table {event.table?.table_number}
+                                                         {event.table?.table_number}
                                                     </Badge>
-                                                    {event.table?.assigned_at ? (
-                                                        <span className="text-xs text-slate-500">
-                                                            Assigned {new Date(event.table.assigned_at).toLocaleString('en-PH')}
-                                                        </span>
-                                                    ) : null}
                                                 </div>
+
+
                                             ) : (
                                                 <Badge
                                                     variant="outline"
@@ -256,20 +313,47 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                         </h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
-                        Review your assigned table per event. This page is view-only.
+                        Review your assigned table per event.
                     </p>
                 </div>
 
                 <Card className="border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                        <div>
+                        <div className="space-y-1">
                             <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                 Filter event
                             </p>
-                            <p className="text-sm text-slate-600 dark:text-slate-300">
-                                {selectedEvent ? selectedEvent.title : 'All joined events'}
-                            </p>
+
+                            {/* ✅ Show status color in the filter summary */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span
+                                    className={cn(
+                                        'h-2.5 w-2.5 rounded-full',
+                                        selectedEvent ? phaseDotClass(selectedEvent.phase) : 'bg-slate-300 dark:bg-slate-600',
+                                    )}
+                                />
+                                <p className="max-w-[min(520px,80vw)] truncate text-sm text-slate-700 dark:text-slate-200">
+                                    {selectedEvent ? selectedEvent.title : 'All joined events'}
+                                </p>
+
+                                {selectedEvent ? (
+                                    <Badge
+                                        variant="outline"
+                                        className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(selectedEvent.phase))}
+                                    >
+                                        {phaseLabel(selectedEvent.phase)}
+                                    </Badge>
+                                ) : (
+                                    <Badge
+                                        variant="outline"
+                                        className="border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300"
+                                    >
+                                        All
+                                    </Badge>
+                                )}
+                            </div>
                         </div>
+
                         <Popover open={open} onOpenChange={setOpen}>
                             <PopoverTrigger asChild>
                                 <Button
@@ -279,12 +363,35 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                     aria-expanded={open}
                                     className="w-full justify-between md:w-80"
                                 >
-                                    <span className={cn('truncate', !selectedEvent && 'text-muted-foreground')}>
-                                        {selectedEvent ? selectedEvent.title : 'All events'}
+                                    <span className="flex min-w-0 items-center gap-2">
+                                        <span
+                                            className={cn(
+                                                'h-2.5 w-2.5 rounded-full',
+                                                selectedEvent ? phaseDotClass(selectedEvent.phase) : 'bg-slate-300 dark:bg-slate-600',
+                                            )}
+                                        />
+                                        <span className={cn('truncate', !selectedEvent && 'text-muted-foreground')}>
+                                            {selectedEvent ? selectedEvent.title : 'All events'}
+                                        </span>
                                     </span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+
+                                    <span className="flex items-center gap-2">
+                                        {selectedEvent ? (
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    'hidden text-[10px] uppercase tracking-wide sm:inline-flex',
+                                                    phaseBadgeClass(selectedEvent.phase),
+                                                )}
+                                            >
+                                                {phaseLabel(selectedEvent.phase)}
+                                            </Badge>
+                                        ) : null}
+                                        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                                    </span>
                                 </Button>
                             </PopoverTrigger>
+
                             <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
                                     <CommandInput placeholder="Search event..." />
@@ -301,8 +408,15 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                                 <div className="flex w-full items-center gap-3">
                                                     <Check className={cn('h-4 w-4', filterId === 'all' ? 'opacity-100' : 'opacity-0')} />
                                                     <span className="flex-1 truncate">All events</span>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300"
+                                                    >
+                                                        All
+                                                    </Badge>
                                                 </div>
                                             </CommandItem>
+
                                             {eventsWithPhase.map((event) => (
                                                 <CommandItem
                                                     key={event.id}
@@ -319,6 +433,7 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                                                 filterId === String(event.id) ? 'opacity-100' : 'opacity-0',
                                                             )}
                                                         />
+                                                        <span className={cn('h-2 w-2 rounded-full', phaseDotClass(event.phase))} />
                                                         <span className="flex-1 truncate">{event.title}</span>
                                                         <Badge
                                                             variant="outline"
@@ -346,16 +461,19 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                 ) : (
                     <div className="space-y-8">
                         <Section
+                            phase="ongoing"
                             title="Ongoing events"
                             description="Events currently happening with your assigned table."
                             events={grouped.ongoing}
                         />
                         <Section
+                            phase="upcoming"
                             title="Upcoming events"
                             description="Table assignments for upcoming events."
                             events={grouped.upcoming}
                         />
                         <Section
+                            phase="closed"
                             title="Closed events"
                             description="Past events are listed for your reference."
                             events={grouped.closed}
