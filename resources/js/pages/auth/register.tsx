@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
 import RegisterLayout from '@/layouts/register-layout';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -29,7 +28,7 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import { CalendarRange, Check, CheckCircle2, ChevronsUpDown, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { CalendarRange, Check, CheckCircle2, ChevronsUpDown, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 
 type CountryOption = {
     id: number;
@@ -611,13 +610,24 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                     <Button
                                         type="submit"
-                                        className="mt-1 h-11 w-full rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86]"
+                                        className="mt-1 h-11 w-full gap-2 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86]"
                                         tabIndex={9}
                                         data-test="register-user-button"
                                     >
-                                        {processing && <Spinner />}
-                                        Register
+                                        {processing ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                                Registering…
+                                            </>
+                                        ) : (
+                                            'Register'
+                                        )}
                                     </Button>
+                                    {processing && (
+                                        <p className="text-center text-sm text-slate-500">
+                                            Creating your account and sending your confirmation email. Please wait…
+                                        </p>
+                                    )}
                                     <div className="mt-8 text-center text-sm text-muted-foreground">
                                         Already have an account?{' '}
                                         <TextLink href={login()} tabIndex={10}>
