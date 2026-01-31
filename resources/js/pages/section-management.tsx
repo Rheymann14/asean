@@ -32,6 +32,7 @@ type SectionImage = {
     id: number;
     title: string;
     description: string | null;
+    link: string | null;
     image_path: string;
     updated_at?: string | null;
 };
@@ -74,9 +75,10 @@ export default function SectionManagement({ section }: PageProps) {
         title: sectionTitle,
     });
 
-    const imageForm = useForm<{ title: string; description: string; image: File | null }>({
+    const imageForm = useForm<{ title: string; description: string; link: string; image: File | null }>({
         title: '',
         description: '',
+        link: '',
         image: null,
     });
 
@@ -113,6 +115,7 @@ export default function SectionManagement({ section }: PageProps) {
         imageForm.setData({
             title: item.title ?? '',
             description: item.description ?? '',
+            link: item.link ?? '',
             image: null,
         });
         imageForm.clearErrors();
@@ -145,17 +148,19 @@ export default function SectionManagement({ section }: PageProps) {
 
     function submitImage(e: React.FormEvent) {
         e.preventDefault();
+        const isEditing = Boolean(editing);
 
         imageForm.transform((data) => ({
             title: data.title.trim(),
             description: data.description.trim(),
+            link: data.link.trim(),
             image: data.image,
+            ...(isEditing ? { _method: 'patch' } : {}),
         }));
 
-        const action = editing ? imageForm.patch : imageForm.post;
         const url = editing ? ENDPOINTS.update(editing.id) : ENDPOINTS.store;
 
-        action(url, {
+        imageForm.post(url, {
             preserveScroll: true,
             forceFormData: true,
             onSuccess: () => {
@@ -275,6 +280,7 @@ export default function SectionManagement({ section }: PageProps) {
                                             <TableHead className="w-[110px]">Preview</TableHead>
                                             <TableHead>Title</TableHead>
                                             <TableHead>Description</TableHead>
+                                            <TableHead>Link</TableHead>
                                             <TableHead className="w-[80px] text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -308,6 +314,20 @@ export default function SectionManagement({ section }: PageProps) {
                                                         <p className="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">
                                                             {item.description || '—'}
                                                         </p>
+                                                    </TableCell>
+                                                    <TableCell className="whitespace-normal">
+                                                        {item.link ? (
+                                                            <a
+                                                                href={item.link}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-sm font-medium text-[#00359c] underline-offset-4 hover:underline"
+                                                            >
+                                                                {item.link}
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-sm text-slate-500">—</span>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <DropdownMenu>
@@ -375,6 +395,20 @@ export default function SectionManagement({ section }: PageProps) {
                             />
                             {imageForm.errors.description ? (
                                 <div className="text-xs text-red-600">{imageForm.errors.description}</div>
+                            ) : null}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                Redirection link
+                            </label>
+                            <Input
+                                value={imageForm.data.link}
+                                onChange={(e) => imageForm.setData('link', e.target.value)}
+                                placeholder="https://example.com"
+                            />
+                            {imageForm.errors.link ? (
+                                <div className="text-xs text-red-600">{imageForm.errors.link}</div>
                             ) : null}
                         </div>
 

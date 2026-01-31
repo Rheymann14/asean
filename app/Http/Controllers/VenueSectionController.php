@@ -22,6 +22,7 @@ class VenueSectionController extends Controller
                 'id' => $image->id,
                 'title' => $image->title,
                 'description' => $image->description,
+                'link' => $image->link,
                 'image_path' => $image->image_path,
                 'updated_at' => $image->updated_at?->toISOString(),
             ]);
@@ -53,6 +54,7 @@ class VenueSectionController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'link' => ['nullable', 'url', 'max:2048'],
             'image' => ['required', 'image', 'max:10240'],
         ]);
 
@@ -62,6 +64,7 @@ class VenueSectionController extends Controller
         $section->images()->create([
             'title' => trim($validated['title']),
             'description' => $validated['description'] ? trim($validated['description']) : null,
+            'link' => $validated['link'] ? trim($validated['link']) : null,
             'image_path' => $imageName,
         ]);
 
@@ -73,6 +76,7 @@ class VenueSectionController extends Controller
         $validated = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'link' => ['nullable', 'url', 'max:2048'],
             'image' => ['nullable', 'image', 'max:10240'],
         ]);
 
@@ -95,6 +99,10 @@ class VenueSectionController extends Controller
 
         if (array_key_exists('description', $validated)) {
             $validated['description'] = $validated['description'] ? trim($validated['description']) : null;
+        }
+
+        if (array_key_exists('link', $validated)) {
+            $validated['link'] = $validated['link'] ? trim($validated['link']) : null;
         }
 
         $venueSectionImage->update($validated);
