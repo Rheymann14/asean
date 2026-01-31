@@ -55,7 +55,7 @@ class ParticipantWelcomeMail extends Mailable
             view: 'emails.participant-welcome',
             with: [
                 'appUrl' => config('app.url') ?: 'https://asean.chedro12.com',
-                'bannerUrl' => asset('img/asean_banner_logo.png'),
+                'bannerUrl' => 'public/img/asean_banner_logo.png',
                 'logoUrl' => asset('img/asean_logo.png'),
                 'events' => $events,
                 'assignments' => $assignments,

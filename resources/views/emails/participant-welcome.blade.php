@@ -26,29 +26,14 @@
                                 <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #475569;">
                                     System link:
                                     <a href="{{ $appUrl }}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">{{ $appUrl }}</a>
-                                    &mdash; log in anytime to review your profile, joined events, and check-in updates.
+                                    &mdash; log in anytime to review your profile, joined events, and check-in updates. <strong>Your username is:</strong> {{ $user->email }}<br />
                                 </p>
                                 <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #64748b;">
-                                    This is a no-reply email. For concerns, please contact the ASEAN PH 2026 helpdesk through the portal.
+                                    This is a no-reply email. For concerns.
                                 </p>
                             </td>
                         </tr>
-                        <tr>
-                            <td style="padding: 0 32px 24px;">
-                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border-radius: 14px; padding: 16px;">
-                                    <tr>
-                                        <td style="font-size: 13px; color: #1e293b; font-weight: 600; padding-bottom: 8px;">Participant Details</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="font-size: 13px; line-height: 1.8; color: #475569;">
-                                            <strong>Participant ID:</strong> {{ $user->display_id }}<br />
-                                            <strong>Your username is:</strong> {{ $user->email }}<br />
-                                            <strong>Country:</strong> {{ $user->country?->name ?? '—' }}
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
+                  
                         <tr>
                             <td style="padding: 0 32px 24px;">
                                 <h2 style="margin: 0 0 12px; font-size: 16px; color: #0f172a;">System-generated Landscape ID</h2>
@@ -103,7 +88,7 @@
                         </tr>
                         <tr>
                             <td style="padding: 0 32px 16px;">
-                                <h2 style="margin: 0 0 12px; font-size: 16px; color: #0f172a;">Events Joined &amp; Table Assignments</h2>
+                                <h2 style="margin: 0 0 12px; font-size: 16px; color: #0f172a;">Events Joined</h2>
                                 @if ($events->isEmpty())
                                     <p style="margin: 0; font-size: 13px; color: #475569;">No events joined yet. Log in to the portal to select your events.</p>
                                 @else
@@ -111,7 +96,7 @@
                                         <tr>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Event</th>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Date</th>
-                                            <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Table</th>
+                                            <!-- <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Table</th> -->
                                         </tr>
                                         @foreach ($events as $event)
                                             @php
@@ -123,9 +108,9 @@
                                                 <td style="padding: 10px 0; font-size: 13px; color: #475569;">
                                                     {{ $event['starts_at'] ?? 'TBA' }}
                                                 </td>
-                                                <td style="padding: 10px 0; font-size: 13px; color: #475569;">
+                                                <!-- <td style="padding: 10px 0; font-size: 13px; color: #475569;">
                                                     {{ $tableNumber ? 'Table ' . $tableNumber : 'Pending assignment' }}
-                                                </td>
+                                                </td> -->
                                             </tr>
                                         @endforeach
                                     </table>
