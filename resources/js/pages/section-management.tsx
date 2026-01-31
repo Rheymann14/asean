@@ -14,6 +14,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -267,65 +268,72 @@ export default function SectionManagement({ section }: PageProps) {
                                 No section images yet.
                             </div>
                         ) : (
-                            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                                {images.map((item) => {
-                                    const imageUrl = resolveSectionImage(item.image_path);
-                                    return (
-                                        <div
-                                            key={item.id}
-                                            className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950"
-                                        >
-                                            <div className="relative aspect-[4/3]">
-                                                {imageUrl ? (
-                                                    <img
-                                                        src={imageUrl}
-                                                        alt={item.title}
-                                                        className="h-full w-full object-cover"
-                                                        loading="lazy"
-                                                    />
-                                                ) : (
-                                                    <div className="flex h-full items-center justify-center bg-slate-100 text-xs text-slate-500">
-                                                        No image available
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                        <div className="p-4">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                        {item.title}
-                                                    </p>
-                                                    {item.description ? (
-                                                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                                            {item.description}
+                            <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[110px]">Preview</TableHead>
+                                            <TableHead>Title</TableHead>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead className="w-[80px] text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {images.map((item) => {
+                                            const imageUrl = resolveSectionImage(item.image_path);
+                                            return (
+                                                <TableRow key={item.id}>
+                                                    <TableCell>
+                                                        <div className="h-16 w-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
+                                                            {imageUrl ? (
+                                                                <img
+                                                                    src={imageUrl}
+                                                                    alt={item.title}
+                                                                    className="h-full w-full object-cover"
+                                                                    loading="lazy"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex h-full items-center justify-center text-[10px] text-slate-500">
+                                                                    No image
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="whitespace-normal">
+                                                        <p className="line-clamp-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            {item.title}
                                                         </p>
-                                                    ) : null}
-                                                </div>
-
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="rounded-full">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-44">
-                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => openEdit(item)}>
-                                                            <Pencil className="mr-2 h-4 w-4" />
-                                                            Edit
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => requestDelete(item)}>
-                                                            <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </div>
-                                        </div>
-                                    );
-                                })}
+                                                    </TableCell>
+                                                    <TableCell className="whitespace-normal">
+                                                        <p className="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">
+                                                            {item.description || '—'}
+                                                        </p>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="rounded-full">
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-44">
+                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                <DropdownMenuItem onClick={() => openEdit(item)}>
+                                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                                    Edit
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => requestDelete(item)}>
+                                                                    <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                                                                    Delete
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
                             </div>
                         )}
                     </div>
@@ -384,12 +392,12 @@ export default function SectionManagement({ section }: PageProps) {
 
                             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
                                 {previewUrl ? (
-                                    <img src={previewUrl} alt="Preview" className="h-48 w-full object-cover" />
+                                    <img src={previewUrl} alt="Preview" className="h-48 w-full object-contain" />
                                 ) : currentImageUrl ? (
                                     <img
                                         src={currentImageUrl}
                                         alt="Current section"
-                                        className="h-48 w-full object-cover"
+                                        className="h-48 w-full object-contain"
                                     />
                                 ) : (
                                     <div className="grid h-48 place-items-center text-xs text-slate-500">No image selected</div>
