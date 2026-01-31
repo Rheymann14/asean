@@ -29,7 +29,7 @@
                                     &mdash; log in anytime to review your profile, joined events, and check-in updates.
                                 </p>
                                 <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #64748b;">
-                                    This is a no-reply email. For concerns, please contact the ASEAN PH 2026 helpdesk through the portal.
+                                    This is a no-reply email. 
                                 </p>
                             </td>
                         </tr>
@@ -59,7 +59,7 @@
                                                 <strong>{{ $user->name }}</strong><br />
                                                 {{ $user->country?->name ?? 'ASEAN Participant' }}<br />
                                                 Participant ID: <strong>{{ $user->display_id }}</strong><br />
-                                                <span style="color: #64748b;">Use this landscape ID for check-in attendance verification.</span>
+                                                <span style="color: #64748b;">Use this QR code or login to your account to see the system generated ID for check-in attendance verification.</span>
                                             </div>
                                         </td>
                                         <td style="width: 40%; text-align: center;">
@@ -80,7 +80,7 @@
                                         <tr>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Event</th>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Date</th>
-                                            <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Table</th>
+                                            <!-- <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Table</th> -->
                                         </tr>
                                         @foreach ($events as $event)
                                             @php
@@ -92,9 +92,9 @@
                                                 <td style="padding: 10px 0; font-size: 13px; color: #475569;">
                                                     {{ $event['starts_at'] ?? 'TBA' }}
                                                 </td>
-                                                <td style="padding: 10px 0; font-size: 13px; color: #475569;">
+                                                <!-- <td style="padding: 10px 0; font-size: 13px; color: #475569;">
                                                     {{ $tableNumber ? 'Table ' . $tableNumber : 'Pending assignment' }}
-                                                </td>
+                                                </td> -->
                                             </tr>
                                         @endforeach
                                     </table>
