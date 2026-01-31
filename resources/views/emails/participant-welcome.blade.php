@@ -29,7 +29,7 @@
                                     &mdash; log in anytime to review your profile, joined events, and check-in updates.
                                 </p>
                                 <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #64748b;">
-                                    This is a no-reply email. 
+                                    This is a no-reply email. For concerns, please contact the ASEAN PH 2026 helpdesk through the portal.
                                 </p>
                             </td>
                         </tr>
@@ -52,19 +52,50 @@
                         <tr>
                             <td style="padding: 0 32px 24px;">
                                 <h2 style="margin: 0 0 12px; font-size: 16px; color: #0f172a;">System-generated Landscape ID</h2>
-                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; background-color: #ffffff;">
+                                @php
+                                    $qrSrc = $qrImage ? $message->embedData($qrImage, 'participant-qr.png', 'image/png') : $qrUrl;
+                                @endphp
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #dbeafe; border-radius: 18px; padding: 16px; background-color: #eff6ff;">
                                     <tr>
-                                        <td style="width: 60%; vertical-align: top; padding-right: 12px;">
-                                            <div style="font-size: 13px; line-height: 1.6; color: #475569;">
-                                                <strong>{{ $user->name }}</strong><br />
-                                                {{ $user->country?->name ?? 'ASEAN Participant' }}<br />
-                                                Participant ID: <strong>{{ $user->display_id }}</strong><br />
-                                                <span style="color: #64748b;">Use this QR code or login to your account to see the system generated ID for check-in attendance verification.</span>
-                                            </div>
+                                        <td style="padding-bottom: 12px;">
+                                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="width: 48px; vertical-align: middle;">
+                                                        <img src="{{ $logoUrl }}" alt="ASEAN logo" style="width: 42px; height: 42px; display: block;" />
+                                                    </td>
+                                                    <td style="vertical-align: middle;">
+                                                        <div style="font-size: 13px; font-weight: 700; color: #0f172a;">ASEAN Philippines 2026</div>
+                                                        <div style="font-size: 11px; color: #475569;">Participant Identification</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </td>
-                                        <td style="width: 40%; text-align: center;">
-                                            <img src="{{ $qrUrl }}" alt="Participant QR code" style="width: 180px; height: 180px; border-radius: 12px; border: 1px solid #e2e8f0;" />
-                                            <div style="margin-top: 8px; font-size: 11px; color: #64748b;">Scan for attendance check-in</div>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td style="width: 60%; vertical-align: top; padding-right: 12px;">
+                                                        <div style="font-size: 13px; line-height: 1.6; color: #334155;">
+                                                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b;">Participant</div>
+                                                            <div style="font-weight: 700; color: #0f172a;">{{ $user->name }}</div>
+                                                            <div style="margin-top: 6px;">{{ $user->country?->name ?? 'ASEAN Participant' }}</div>
+                                                            <div style="margin-top: 6px; font-size: 12px; color: #475569;">Participant ID:</div>
+                                                            <div style="font-weight: 700; color: #1e40af;">{{ $user->display_id }}</div>
+                                                            <div style="margin-top: 8px; font-size: 11px; color: #64748b;">
+                                                                Use this landscape ID for check-in attendance verification.
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 40%; text-align: center; vertical-align: top;">
+                                                        <div style="background: #ffffff; border-radius: 14px; padding: 10px; border: 1px solid #dbeafe; display: inline-block;">
+                                                            <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 6px;">QR Code</div>
+                                                            <img src="{{ $qrSrc }}" alt="Participant QR code" style="width: 160px; height: 160px; border-radius: 10px; border: 1px solid #e2e8f0;" />
+                                                        </div>
+                                                        <div style="margin-top: 8px; font-size: 11px; color: #64748b;">Scan for attendance check-in</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </td>
                                     </tr>
                                 </table>
@@ -80,7 +111,7 @@
                                         <tr>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Event</th>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Date</th>
-                                            <!-- <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Table</th> -->
+                                            <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Table</th>
                                         </tr>
                                         @foreach ($events as $event)
                                             @php
@@ -92,9 +123,9 @@
                                                 <td style="padding: 10px 0; font-size: 13px; color: #475569;">
                                                     {{ $event['starts_at'] ?? 'TBA' }}
                                                 </td>
-                                                <!-- <td style="padding: 10px 0; font-size: 13px; color: #475569;">
+                                                <td style="padding: 10px 0; font-size: 13px; color: #475569;">
                                                     {{ $tableNumber ? 'Table ' . $tableNumber : 'Pending assignment' }}
-                                                </td> -->
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </table>

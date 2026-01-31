@@ -6,6 +6,7 @@ use App\Models\ParticipantTableAssignment;
 use App\Models\Programme;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -35,6 +36,8 @@ class ParticipantWelcomeMail extends Mailable
 
     public function content(): Content
     {
+        $qrUrl = $this->qrUrl();
+
         $events = $this->user->joinedProgrammes
             ->sortBy('starts_at')
             ->values()
@@ -53,9 +56,11 @@ class ParticipantWelcomeMail extends Mailable
             with: [
                 'appUrl' => config('app.url') ?: 'https://asean.chedro12.com',
                 'bannerUrl' => asset('img/asean_banner_logo.png'),
+                'logoUrl' => asset('img/asean_logo.png'),
                 'events' => $events,
                 'assignments' => $assignments,
-                'qrUrl' => $this->qrUrl(),
+                'qrImage' => $this->fetchQrImage($qrUrl),
+                'qrUrl' => $qrUrl,
                 'user' => $this->user,
             ],
         );
@@ -71,5 +76,20 @@ class ParticipantWelcomeMail extends Mailable
         $payload = urlencode((string) $this->user->qr_payload);
 
         return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data={$payload}";
+    }
+
+    private function fetchQrImage(string $url): ?string
+    {
+        try {
+            $response = Http::timeout(6)->get($url);
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            return $response->body();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
