@@ -2297,6 +2297,11 @@ export default function ParticipantPage(props: PageProps) {
                     // ✅ Fixed columns (predictable layout)
                     const gridCols = printOrientation === 'landscape' ? 'repeat(3, 3.37in)' : 'repeat(2, 3.46in)';
 
+                    const perPage = printOrientation === 'landscape' ? 6 : 4;
+                    const printPages = Array.from({ length: Math.ceil(selectedParticipantsPrintable.length / perPage) }, (_, i) =>
+                        selectedParticipantsPrintable.slice(i * perPage, i * perPage + perPage),
+                    );
+
                     // ✅ Safe spacing so 2 rows of portrait won’t overflow
                     const gap = '0.12in';
                     const padding = '0.25in';
@@ -2329,12 +2334,22 @@ export default function ParticipantPage(props: PageProps) {
                             visibility: visible !important;
                         }
 
-                        /* ✅ Pin print content to page */
+                        /* ✅ Allow print content to flow across pages without repeating */
                         #participant-print {
-                            position: fixed;
-                            inset: 0;
+                            position: static;
                             background: white;
                             padding: ${padding};
+                            width: 100%;
+                        }
+
+                        .print-page {
+                            break-after: page;
+                            page-break-after: always;
+                        }
+
+                        .print-page:last-child {
+                            break-after: auto;
+                            page-break-after: auto;
                         }
 
                         /* ✅ NEVER CUT CARDS */
@@ -2351,24 +2366,27 @@ export default function ParticipantPage(props: PageProps) {
                 `}</style>
 
                             <div id="participant-print">
-                                <div
-                                    className="grid"
-                                    style={{
-                                        gridTemplateColumns: gridCols,
-                                        gap,
-                                        alignContent: 'start',
-                                        justifyContent: 'start',
-                                    }}
-                                >
-                                    {selectedParticipantsPrintable.map((p) => (
-                                        <ParticipantIdPrintCard
-                                            key={p.id}
-                                            participant={p}
-                                            qrDataUrl={qrDataUrls[p.id]}
-                                            orientation={printOrientation}
-                                        />
-                                    ))}
-                                </div>
+                                {printPages.map((page, pageIndex) => (
+                                    <div
+                                        key={`print-page-${pageIndex}`}
+                                        className="print-page grid"
+                                        style={{
+                                            gridTemplateColumns: gridCols,
+                                            gap,
+                                            alignContent: 'start',
+                                            justifyContent: 'start',
+                                        }}
+                                    >
+                                        {page.map((p) => (
+                                            <ParticipantIdPrintCard
+                                                key={p.id}
+                                                participant={p}
+                                                qrDataUrl={qrDataUrls[p.id]}
+                                                orientation={printOrientation}
+                                            />
+                                        ))}
+                                    </div>
+                                ))}
                             </div>
                         </>
                     );
