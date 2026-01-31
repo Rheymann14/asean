@@ -147,21 +147,17 @@ class TableAssignmentController extends Controller
         $participant = $request->user();
 
         $events = $participant->joinedProgrammes()
-            ->with('venue')
             ->orderBy('starts_at')
             ->orderBy('title')
             ->get();
 
         $assignments = ParticipantTableAssignment::query()
-            ->with(['participantTable', 'programme.venue'])
+            ->with(['participantTable', 'programme'])
             ->where('user_id', $participant->id)
             ->get()
             ->keyBy('programme_id');
 
         $eventRows = $events->map(function (Programme $event) use ($assignments) {
-            $venueName = trim((string) ($event->venue?->name ?? ''));
-            $venueAddress = trim((string) ($event->venue?->address ?? ''));
-            $venueLabel = $venueName && $venueAddress ? "{$venueName} • {$venueAddress}" : ($venueName ?: $venueAddress);
             $assignment = $assignments->get($event->id);
             $table = $assignment?->participantTable;
 
@@ -170,7 +166,7 @@ class TableAssignmentController extends Controller
                 'title' => $event->title,
                 'starts_at' => $event->starts_at?->toISOString(),
                 'ends_at' => $event->ends_at?->toISOString(),
-                'location' => $venueLabel ?: $event->location,
+                'location' => $event->location,
                 'table' => $table
                     ? [
                         'table_number' => $table->table_number,
