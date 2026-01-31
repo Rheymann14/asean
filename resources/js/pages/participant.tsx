@@ -2329,9 +2329,11 @@ export default function ParticipantPage(props: PageProps) {
                             visibility: visible !important;
                         }
 
-                        /* ✅ Allow print content to flow across pages */
+                        /* ✅ Allow print content to flow across pages without repeating */
                         #participant-print {
-                            position: relative;
+                            position: absolute;
+                            top: 0;
+                            left: 0;
                             background: white;
                             padding: ${padding};
                             width: 100%;
