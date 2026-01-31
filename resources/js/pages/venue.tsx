@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { MapPin, ExternalLink, CalendarDays } from 'lucide-react';
 
 type ProgrammeRow = {
@@ -199,6 +200,7 @@ export default function Venue({ venues = [], section }: PageProps) {
 
     const sectionTitle = section?.title?.trim() || 'Section Title';
     const sectionItems = section?.items ?? [];
+    const [activeItem, setActiveItem] = React.useState<VenueSectionItem | null>(null);
 
     return (
         <>
@@ -366,7 +368,13 @@ export default function Venue({ venues = [], section }: PageProps) {
                                                     'transition will-change-transform hover:-translate-y-1 hover:shadow-[0_30px_70px_-45px_rgba(2,6,23,0.55)]',
                                                 ].join(' ')}
                                             >
-                                                <div className="relative aspect-[4/3]">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setActiveItem(item)}
+                                                    className="block w-full text-left"
+                                                    aria-label={`View details for ${item.title}`}
+                                                >
+                                                    <div className="relative aspect-[4/3]">
                                                     {imageSrc ? (
                                                         <img
                                                             src={imageSrc}
@@ -389,7 +397,7 @@ export default function Venue({ venues = [], section }: PageProps) {
 
                                                     <div className="absolute inset-x-0 bottom-0 p-5">
                                                         <div className="min-w-0 text-left">
-                                                            <h3 className="text-lg font-semibold text-white drop-shadow-sm md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:group-hover:translate-y-0 md:group-hover:opacity-100">
+                                                            <h3 className="line-clamp-2 text-lg font-semibold text-white drop-shadow-sm md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:group-hover:translate-y-0 md:group-hover:opacity-100">
                                                                 {item.title}
                                                             </h3>
                                                             {item.description ? (
@@ -401,7 +409,8 @@ export default function Venue({ venues = [], section }: PageProps) {
                                                     </div>
 
                                                     <div aria-hidden className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
-                                                </div>
+                                                    </div>
+                                                </button>
                                             </div>
                                         );
                                     })}
@@ -411,6 +420,32 @@ export default function Venue({ venues = [], section }: PageProps) {
                     </div>
                 </section>
             </PublicLayout>
+
+            <Dialog open={!!activeItem} onOpenChange={(open) => (!open ? setActiveItem(null) : null)}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">{activeItem?.title}</DialogTitle>
+                        {activeItem?.description ? (
+                            <DialogDescription className="whitespace-pre-line text-sm text-slate-600">
+                                {activeItem.description}
+                            </DialogDescription>
+                        ) : null}
+                    </DialogHeader>
+                    {activeItem ? (
+                        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                            {resolveSectionImage(activeItem.image_path) ? (
+                                <img
+                                    src={resolveSectionImage(activeItem.image_path) as string}
+                                    alt={activeItem.title}
+                                    className="h-auto w-full object-cover"
+                                />
+                            ) : (
+                                <div className="grid h-48 place-items-center text-sm text-slate-500">No image available</div>
+                            )}
+                        </div>
+                    ) : null}
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
