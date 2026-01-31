@@ -432,12 +432,12 @@ export default function Venue({ venues = [], section }: PageProps) {
                         ) : null}
                     </DialogHeader>
                     {activeItem ? (
-                        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                        <div className="mt-4 max-h-[65vh] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                             {resolveSectionImage(activeItem.image_path) ? (
                                 <img
                                     src={resolveSectionImage(activeItem.image_path) as string}
                                     alt={activeItem.title}
-                                    className="h-auto w-full object-cover"
+                                    className="h-full max-h-[65vh] w-full object-contain"
                                 />
                             ) : (
                                 <div className="grid h-48 place-items-center text-sm text-slate-500">No image available</div>

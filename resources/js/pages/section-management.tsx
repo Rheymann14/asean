@@ -371,6 +371,7 @@ export default function SectionManagement({ section }: PageProps) {
                                 onChange={(e) => imageForm.setData('description', e.target.value)}
                                 placeholder="Short description"
                                 rows={3}
+                                className="break-all"
                             />
                             {imageForm.errors.description ? (
                                 <div className="text-xs text-red-600">{imageForm.errors.description}</div>
