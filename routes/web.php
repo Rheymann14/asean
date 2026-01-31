@@ -35,6 +35,8 @@ Route::get('/event', [ProgrammeController::class, 'publicIndex'])->name('event')
 Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issuances');
 
     Route::middleware(['auth'])->group(function () {
+        Route::get('table-assignment', [TableAssignmentController::class, 'index'])->name('table-assignment');
+
         Route::middleware(['role:participant'])->group(function () {
             Route::get('participant-dashboard', function () {
                 return Inertia::render('participant-dashboard');
@@ -86,7 +88,6 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         Route::get('event-management', [ProgrammeController::class, 'index'])->name('event-management');
         Route::resource('programmes', ProgrammeController::class)->only(['store', 'update', 'destroy']);
 
-        Route::get('table-assignment', [TableAssignmentController::class, 'index'])->name('table-assignment');
         Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
         Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');
         Route::post('table-assignment/assignments', [TableAssignmentController::class, 'storeAssignments'])->name('table-assignment.assignments.store');
