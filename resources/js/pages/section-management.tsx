@@ -145,17 +145,18 @@ export default function SectionManagement({ section }: PageProps) {
 
     function submitImage(e: React.FormEvent) {
         e.preventDefault();
+        const isEditing = Boolean(editing);
 
         imageForm.transform((data) => ({
             title: data.title.trim(),
             description: data.description.trim(),
             image: data.image,
+            ...(isEditing ? { _method: 'patch' } : {}),
         }));
 
-        const action = editing ? imageForm.patch : imageForm.post;
         const url = editing ? ENDPOINTS.update(editing.id) : ENDPOINTS.store;
 
-        action(url, {
+        imageForm.post(url, {
             preserveScroll: true,
             forceFormData: true,
             onSuccess: () => {
