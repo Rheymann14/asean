@@ -357,17 +357,13 @@ export default function Venue({ venues = [] }: PageProps) {
                         )}
                     </div>
 
-                    {/* Tourism section (unchanged) */}
+                    {/* Section */}
                     <div className="mx-auto mt-12 max-w-5xl text-center">
-                        <p className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.34em] text-slate-500">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#FCD116]" />
-                            Love the Philippines
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#FCD116]" />
-                        </p>
+                 
 
                         <h2 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
                             <span className="relative inline-block">
-                                <span className="relative z-10 text-[#0033A0]">Tourism</span>
+                                <span className="relative z-10 text-[#0033A0]">Section Title</span>
                                 <span className="pointer-events-none absolute inset-x-0 bottom-1 -z-0 h-2 rounded-full bg-[#0033A0]/15 blur-[1px]" />
                             </span>{' '}
                         </h2>
@@ -443,6 +439,8 @@ export default function Venue({ venues = [] }: PageProps) {
                             </p>
                         </div>
                     </div>
+
+                    
                 </section>
             </PublicLayout>
         </>
