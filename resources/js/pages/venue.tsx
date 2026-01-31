@@ -541,7 +541,8 @@ export default function Venue({ venues = [], section }: PageProps) {
                         </div>
 
                         {/* Right: content scrollable */}
-                        <div className="max-h-[calc(90vh-52px)] overflow-y-auto p-5 sm:p-6">
+                        <div className="relative max-h-[calc(90vh-52px)] overflow-y-auto p-5 pb-24 sm:p-6 sm:pb-28">
+
                             <DialogHeader className="space-y-3 text-left">
                                 <DialogTitle className="min-w-0 text-xl font-semibold leading-snug tracking-tight text-slate-900 sm:text-2xl dark:text-slate-50">
                                     {activeItem?.title ? (
@@ -574,23 +575,28 @@ export default function Venue({ venues = [], section }: PageProps) {
                                 )}
                             </DialogHeader>
 
-                            <div className="mt-6 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-                                {activeReadMoreLink ? (
-                                    <Button asChild className="h-11 rounded-2xl bg-[#0033A0] text-white hover:opacity-95">
+                            {activeReadMoreLink ? (
+                                <div className="absolute bottom-5 right-5 sm:bottom-6 sm:right-6">
+                                    <Button
+                                        asChild
+                                        className="h-9 rounded-xl bg-[#0033A0] px-3 text-xs font-semibold text-white hover:opacity-95"
+                                    >
                                         <a href={activeReadMoreLink} target="_blank" rel="noopener noreferrer">
                                             Read more
-                                            <ExternalLink className="ml-2 h-4 w-4" />
+                                            <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                                         </a>
                                     </Button>
-                                ) : null}
-                                <Button
-                                    type="button"
-                                    className="h-11 w-full rounded-2xl bg-[#0033A0] text-white hover:opacity-95 md:hidden"
-                                    onClick={() => setActiveItem(null)}
-                                >
-                                    Close
-                                </Button>
-                            </div>
+                                </div>
+                            ) : null}
+
+                            <Button
+                                type="button"
+                                className="mt-6 h-11 w-full rounded-2xl bg-[#0033A0] text-white hover:opacity-95 md:hidden"
+                                onClick={() => setActiveItem(null)}
+                            >
+                                Close
+                            </Button>
+
                         </div>
                     </div>
                 </DialogContent>
