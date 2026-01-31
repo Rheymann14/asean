@@ -34,37 +34,39 @@ class ParticipantWelcomeMail extends Mailable
         );
     }
 
-    public function content(): Content
-    {
-        $qrUrl = $this->qrUrl();
+public function content(): Content
+{
+    $qrUrl = $this->qrUrl();
 
-        $events = $this->user->joinedProgrammes
-            ->sortBy('starts_at')
-            ->values()
-            ->map(fn (Programme $event) => [
-                'id' => $event->id,
-                'title' => $event->title,
-                'starts_at' => $event->starts_at?->format('F j, Y g:i A'),
-                'ends_at' => $event->ends_at?->format('F j, Y g:i A'),
-            ]);
+    $events = $this->user->joinedProgrammes
+        ->sortBy('starts_at')
+        ->values()
+        ->map(fn (Programme $event) => [
+            'id' => $event->id,
+            'title' => $event->title,
+            'starts_at' => $event->starts_at?->format('F j, Y g:i A'),
+            'ends_at' => $event->ends_at?->format('F j, Y g:i A'),
+        ]);
 
-        /** @var Collection<int, ParticipantTableAssignment> $assignments */
-        $assignments = $this->user->tableAssignments->keyBy('programme_id');
+    $assignments = $this->user->tableAssignments->keyBy('programme_id');
 
-        return new Content(
-            view: 'emails.participant-welcome',
-            with: [
-                'appUrl' => config('app.url') ?: 'https://asean.chedro12.com',
-                'bannerUrl' => 'public/img/asean_banner_logo.png',
-                'logoUrl' => asset('img/asean_logo.png'),
-                'events' => $events,
-                'assignments' => $assignments,
-                'qrImage' => $this->fetchQrImage($qrUrl),
-                'qrUrl' => $qrUrl,
-                'user' => $this->user,
-            ],
-        );
-    }
+    $appUrl = rtrim(config('app.url') ?: 'https://asean.chedro12.com', '/');
+
+    return new Content(
+        view: 'emails.participant-welcome',
+        with: [
+            'appUrl' => $appUrl,
+            'bannerUrl' => $appUrl . '/img/asean_banner_logo.png',
+            'logoUrl'   => $appUrl . '/img/asean_logo.png',
+            'events' => $events,
+            'assignments' => $assignments,
+            'qrImage' => $this->fetchQrImage($qrUrl),
+            'qrUrl' => $qrUrl,
+            'user' => $this->user,
+        ],
+    );
+}
+
 
     public function attachments(): array
     {
