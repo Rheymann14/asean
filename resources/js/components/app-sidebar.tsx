@@ -77,6 +77,11 @@ export function AppSidebar() {
                   href: '/event-list',
                   icon: CalendarDays,
               },
+              {
+                  title: 'Table Assignment',
+                  href: '/table-assignment',
+                  icon: Table,
+              },
           ];
 
     const footerNavItems: NavItem[] = isChed

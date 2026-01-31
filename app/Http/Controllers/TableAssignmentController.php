@@ -7,6 +7,7 @@ use App\Models\ParticipantTableAssignment;
 use App\Models\Programme;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -14,6 +15,16 @@ class TableAssignmentController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+        $user->loadMissing('userType');
+        $roleName = Str::upper((string) ($user->userType->name ?? ''));
+        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
+        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
+
+        if (! $isChed) {
+            return $this->participantIndex($request);
+        }
+
         $events = Programme::query()
             ->orderBy('starts_at')
             ->orderBy('title')
@@ -128,6 +139,50 @@ class TableAssignmentController extends Controller
                 'is_active' => $event->is_active,
             ]),
             'selected_event_id' => $selectedEventId ?: null,
+        ]);
+    }
+
+    private function participantIndex(Request $request)
+    {
+        $participant = $request->user();
+
+        $events = $participant->joinedProgrammes()
+            ->with('venue')
+            ->orderBy('starts_at')
+            ->orderBy('title')
+            ->get();
+
+        $assignments = ParticipantTableAssignment::query()
+            ->with(['participantTable', 'programme.venue'])
+            ->where('user_id', $participant->id)
+            ->get()
+            ->keyBy('programme_id');
+
+        $eventRows = $events->map(function (Programme $event) use ($assignments) {
+            $venueName = trim((string) ($event->venue?->name ?? ''));
+            $venueAddress = trim((string) ($event->venue?->address ?? ''));
+            $venueLabel = $venueName && $venueAddress ? "{$venueName} • {$venueAddress}" : ($venueName ?: $venueAddress);
+            $assignment = $assignments->get($event->id);
+            $table = $assignment?->participantTable;
+
+            return [
+                'id' => $event->id,
+                'title' => $event->title,
+                'starts_at' => $event->starts_at?->toISOString(),
+                'ends_at' => $event->ends_at?->toISOString(),
+                'location' => $venueLabel ?: $event->location,
+                'table' => $table
+                    ? [
+                        'table_number' => $table->table_number,
+                        'capacity' => $table->capacity,
+                        'assigned_at' => $assignment?->assigned_at?->toISOString(),
+                    ]
+                    : null,
+            ];
+        });
+
+        return Inertia::render('participant-table-assignment', [
+            'events' => $eventRows,
         ]);
     }
 
