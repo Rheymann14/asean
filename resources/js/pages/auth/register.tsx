@@ -628,6 +628,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                             </div>
 
                             <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+                       
                                 <DialogContent className="max-w-md rounded-2xl border-none bg-gradient-to-br from-[#E8F0FF] via-white to-[#F5FBFF]">
                                     <DialogHeader className="items-center text-center">
                                         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0033A0] text-white shadow-lg shadow-[#0033A0]/20">
@@ -638,8 +639,13 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                         <DialogDescription className="text-sm text-slate-600">
                                             Thanks for signing up! ✨ You can now try logging in using the email you provided.
-
+                                            <span className="mt-2 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                                                <span className="font-semibold">Please check your EMAIL.</span> Please find your QR code and participant details attached.
+                                                Also check your <span className="font-semibold">Spam/Junk</span> folder if you don’t see it.
+                                            </span>
                                         </DialogDescription>
+
+
                                     </DialogHeader>
 
                                     <DialogFooter className="sm:justify-center">

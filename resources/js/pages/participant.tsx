@@ -1,5 +1,6 @@
 import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { createPortal } from 'react-dom';
 import { participant } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
@@ -555,7 +556,7 @@ function ParticipantIdPrintCard({
                                     <div
                                         className={cn(
                                             'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
-                                            isLandscape ? 'h-15 w-15' : 'h-9 w-9',
+                                            isLandscape ? 'h-[60px] w-[60px]' : 'h-9 w-9',
                                         )}
                                     >
                                         {flagSrc ? (
@@ -590,7 +591,8 @@ function ParticipantIdPrintCard({
                                                     isLandscape ? 'text-[15px]' : 'text-[11px]',
                                                 )}
                                             >
-                                                {participant.country.code.toUpperCase()}
+                                                {String(participant.country.code ?? '').toUpperCase()}
+
                                             </div>
                                         ) : null}
                                     </div>
@@ -665,8 +667,9 @@ function ParticipantIdPrintCard({
                                             isLandscape ? 'text-[10px]' : 'text-[11px]',
                                         )}
                                     >
-                                        <span className="line-clamp-2" title={`${participant.country?.code?.toUpperCase() ?? ''} • ${name}`}>
-                                            {participant.country?.code?.toUpperCase() ?? ''}
+                                        <span className="line-clamp-2" title={`${String(participant.country?.code ?? '').toUpperCase()} • ${name}`}>
+                                            {String(participant.country?.code ?? '').toUpperCase()}
+
                                             {participant.country?.code ? ' • ' : ''}
                                             {name}
                                         </span>
@@ -692,6 +695,14 @@ function slugify(input: string) {
         .trim()
         .replace(/[^a-z0-9]+/g, '-') // spaces -> dash
         .replace(/(^-|-$)/g, '');
+}
+
+
+
+function chunk<T>(arr: T[], size: number) {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
 }
 
 function buildFlagCandidates(code: string, name: string, preferred?: string | null) {
@@ -780,6 +791,48 @@ export default function ParticipantPage(props: PageProps) {
     const [printOrientation, setPrintOrientation] = React.useState<PrintOrientation>('portrait');
     const [qrDataUrls, setQrDataUrls] = React.useState<Record<number, string>>({});
     const qrCacheRef = React.useRef<Record<number, string>>({});
+
+        async function ensureQrForParticipants(list: ParticipantRow[]) {
+        // only generate for non-CHED participants with qr_payload
+        const pending = list.filter(
+            (p) => !isChedParticipant(p) && !!p.qr_payload && !qrCacheRef.current[p.id],
+        );
+
+        if (pending.length === 0) return;
+
+        const results = await Promise.all(
+            pending.map(async (p) => {
+                try {
+                    const dataUrl = await QRCode.toDataURL(p.qr_payload ?? '', {
+                        margin: 1,
+                        scale: 8,
+                        errorCorrectionLevel: 'M',
+                    });
+                    return { id: p.id, dataUrl };
+                } catch {
+                    return null;
+                }
+            }),
+        );
+
+        const next = { ...qrCacheRef.current };
+        let changed = false;
+
+        for (const r of results) {
+            if (!r) continue;
+            next[r.id] = r.dataUrl;
+            changed = true;
+        }
+
+        if (changed) {
+            qrCacheRef.current = next;
+            setQrDataUrls(next);
+        }
+    }
+
+
+    const [printMounted, setPrintMounted] = React.useState(false);
+    React.useEffect(() => setPrintMounted(true), []);
 
     // dialogs
     const [participantDialogOpen, setParticipantDialogOpen] = React.useState(false);
@@ -1184,8 +1237,8 @@ export default function ParticipantPage(props: PageProps) {
             kind === 'participant'
                 ? ENDPOINTS.participants.destroy(id)
                 : kind === 'country'
-                  ? ENDPOINTS.countries.destroy(id)
-                  : ENDPOINTS.userTypes.destroy(id);
+                    ? ENDPOINTS.countries.destroy(id)
+                    : ENDPOINTS.userTypes.destroy(id);
 
         router.delete(destroyUrl, {
             preserveScroll: true,
@@ -1341,7 +1394,7 @@ export default function ParticipantPage(props: PageProps) {
         setUserTypeDialogOpen(true);
     }
 
-    function requestPrintIds(orientation: PrintOrientation) {
+    async function requestPrintIds(orientation: PrintOrientation) {
         if (selectedParticipantsPrintable.length === 0) {
             toast.error('Select at least one NON-CHED participant to print.');
             return;
@@ -1349,10 +1402,14 @@ export default function ParticipantPage(props: PageProps) {
 
         setPrintOrientation(orientation);
 
-        setTimeout(() => {
-            window.print();
-        }, 100);
+        await ensureQrForParticipants(selectedParticipantsPrintable);
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => window.print());
+        });
     }
+
+
 
     function toggleParticipantSelect(id: number, checked: boolean) {
         setSelectedParticipantIds((prev) => {
@@ -2288,79 +2345,34 @@ export default function ParticipantPage(props: PageProps) {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* PRINT ONLY */}
-            <div className="hidden print:block">
-                {(() => {
-                    // ✅ Force A4 with mm (more reliable than "A4 portrait/landscape")
-                    const pageSize = printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm';
+            {printMounted
+                ? createPortal(
+                    <div id="participant-print-root" className="hidden print:block">
+                        <style>{`
+                  @media print {
+                      @page { size: ${printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm'}; margin: 0; }
+                      html, body { margin: 0 !important; padding: 0 !important; height: auto !important; background: #fff !important; }
+                      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-                    // ✅ Fixed columns (predictable layout)
-                    const gridCols = printOrientation === 'landscape' ? 'repeat(3, 3.37in)' : 'repeat(2, 3.46in)';
+                      body > * { display: none !important; }
+                      #participant-print-root { display: block !important; }
 
-                    // ✅ Safe spacing so 2 rows of portrait won’t overflow
-                    const gap = '0.12in';
-                    const padding = '0.25in';
+                      .print-page { box-sizing: border-box; padding: 0.25in; page-break-after: always; break-after: page; }
+                      .print-page:last-of-type { page-break-after: auto; break-after: auto; }
 
-                    return (
-                        <>
-                            <style>{`
-                    @media print {
-                        @page { size: ${pageSize}; margin: 0; }
+                      .print-grid { display: flex; flex-wrap: wrap; gap: 0.12in; align-content: flex-start; justify-content: flex-start; max-width: ${printOrientation === 'landscape' ? '10.35in' : '7.04in'}; }
 
-                        html, body {
-                            margin: 0 !important;
-                            padding: 0 !important;
-                            height: auto !important;
-                        }
+                      .id-print-card { break-inside: avoid; page-break-inside: avoid; box-sizing: border-box; box-shadow: none !important; }
 
-                        * {
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                        }
+                      /* ✅ EXTRA PRINT SAFETY (prevents missing layers) */
+                      .id-print-card { isolation: isolate; }
+                  }
+              `}</style>
 
-                        /* ✅ HIDE EVERYTHING (sidebar, header, etc.) */
-                        body * {
-                            visibility: hidden !important;
-                        }
-
-                        /* ✅ SHOW ONLY PRINT AREA */
-                        #participant-print,
-                        #participant-print * {
-                            visibility: visible !important;
-                        }
-
-                        /* ✅ Pin print content to page */
-                        #participant-print {
-                            position: fixed;
-                            inset: 0;
-                            background: white;
-                            padding: ${padding};
-                        }
-
-                        /* ✅ NEVER CUT CARDS */
-                        .id-print-card {
-                            break-inside: avoid;
-                            page-break-inside: avoid;
-                        }
-
-                        /* ✅ avoid shadows causing “slight oversize” -> cropping */
-                        .id-print-card {
-                            box-shadow: none !important;
-                        }
-                    }
-                `}</style>
-
-                            <div id="participant-print">
-                                <div
-                                    className="grid"
-                                    style={{
-                                        gridTemplateColumns: gridCols,
-                                        gap,
-                                        alignContent: 'start',
-                                        justifyContent: 'start',
-                                    }}
-                                >
-                                    {selectedParticipantsPrintable.map((p) => (
+                        {chunk(selectedParticipantsPrintable, printOrientation === 'landscape' ? 9 : 4).map((page, pageIndex) => (
+                            <div key={pageIndex} className="print-page">
+                                <div className="print-grid">
+                                    {page.map((p) => (
                                         <ParticipantIdPrintCard
                                             key={p.id}
                                             participant={p}
@@ -2370,10 +2382,12 @@ export default function ParticipantPage(props: PageProps) {
                                     ))}
                                 </div>
                             </div>
-                        </>
-                    );
-                })()}
-            </div>
+                        ))}
+                    </div>,
+                    document.body,
+                )
+                : null}
+
         </AppLayout>
     );
 }
