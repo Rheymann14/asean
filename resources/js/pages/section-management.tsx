@@ -88,7 +88,7 @@ export default function SectionManagement({ section }: PageProps) {
 
     React.useEffect(() => {
         sectionForm.setData('title', sectionTitle);
-    }, [sectionTitle, sectionForm]);
+    }, [sectionTitle]);
 
     React.useEffect(() => {
         return () => {
