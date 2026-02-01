@@ -289,7 +289,7 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Activity Log" />
 
-            <SettingsLayout>
+           
                 <div className="space-y-6">
                     <HeadingSmall
                         title="Activity Log"
@@ -579,7 +579,7 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                         )}
                     </div>
                 </div>
-            </SettingsLayout>
+            
         </AppLayout>
     );
 }
