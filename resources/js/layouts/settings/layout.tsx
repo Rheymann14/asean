@@ -32,11 +32,6 @@ const baseNavItems: NavItem[] = [
         href: editAppearance(),
         icon: null,
     },
-     {
-        title: 'Activity Log',
-        href: activityLog(),
-        icon: null,
-    },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
