@@ -29,7 +29,7 @@ class LogActivity
         $activity = $this->resolveActivity($request, $routeName);
         $status = $this->resolveStatus($response->getStatusCode(), $activity);
 
-        if ($routeName === 'activity-log.index' && $activity === 'view') {
+        if ($activity === 'view') {
             return $response;
         }
         $pageLabel = $routeName
