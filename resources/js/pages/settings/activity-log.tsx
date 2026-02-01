@@ -51,7 +51,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Activity Log', href: activityLog().url },
 ];
 
-type LogStatus = 'success' | 'failed' | 'warning' | 'info';
+type RawLogStatus = 'success' | 'failed' | 'warning' | 'info';
+type LogStatus = 'success' | 'failed';
 type ActivityType =
     | 'login'
     | 'logout'
@@ -73,7 +74,7 @@ type ActivityLogRow = {
     };
     activity: ActivityType;
     description: string | null;
-    status: LogStatus;
+    status: RawLogStatus;
     ip?: string | null;
     device?: string | null;
     timestamp: string; // ISO
@@ -95,12 +96,17 @@ function statusBadgeClass(status: LogStatus) {
             return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200';
         case 'failed':
             return 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200';
-        case 'warning':
-            return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200';
-        case 'info':
         default:
-            return 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200';
+            return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200';
     }
+}
+
+function normalizeStatus(status: RawLogStatus): LogStatus {
+    if (status === 'failed') {
+        return 'failed';
+    }
+
+    return 'success';
 }
 
 function activityBadgeClass(type: ActivityType) {
@@ -239,7 +245,9 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
         return logs.filter((row) => {
             const rowDate = new Date(row.timestamp);
             const rowKey = dayKeyFromDate(rowDate);
-            const matchesStatus = status === 'all' ? true : row.status === status;
+            const normalizedStatus = normalizeStatus(row.status);
+            const matchesStatus =
+                status === 'all' ? true : normalizedStatus === status;
             const matchesQuery = !q
                 ? true
                 : [
@@ -339,8 +347,6 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                 <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="success">Success</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
             </Select>
@@ -547,20 +553,19 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
 
                                                         {/* Status */}
                                                         <TableCell className="py-2 align-top">
-                                                            <Badge
-                                                                className={cn(
-                                                                    'rounded-full border px-2 py-0.5 text-[11px]',
-                                                                    statusBadgeClass(row.status),
-                                                                )}
-                                                            >
-                                                                {row.status === 'success'
+                                                        <Badge
+                                                            className={cn(
+                                                                'rounded-full border px-2 py-0.5 text-[11px]',
+                                                                statusBadgeClass(
+                                                                    normalizeStatus(row.status),
+                                                                ),
+                                                            )}
+                                                        >
+                                                                {normalizeStatus(row.status) ===
+                                                                'success'
                                                                     ? 'Success'
-                                                                    : row.status === 'failed'
-                                                                        ? 'Failed'
-                                                                        : row.status === 'warning'
-                                                                            ? 'Warning'
-                                                                            : 'Info'}
-                                                            </Badge>
+                                                                    : 'Failed'}
+                                                        </Badge>
                                                         </TableCell>
 
                                                         {/* Timestamp */}
