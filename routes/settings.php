@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\ActivityLogController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
@@ -23,9 +24,9 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('settings/appearance');
     })->name('appearance.edit');
 
-    Route::get('settings/activity-log', function () {
-    return Inertia::render('settings/activity-log');
-})->name('activity-log.index');
+    Route::get('settings/activity-log', [ActivityLogController::class, 'index'])
+        ->middleware('role:ched')
+        ->name('activity-log.index');
 
     Route::get('settings/two-factor', [TwoFactorAuthenticationController::class, 'show'])
         ->name('two-factor.show');

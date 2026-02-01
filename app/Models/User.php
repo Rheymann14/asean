@@ -18,6 +18,7 @@ use App\Models\UserType;
 use App\Models\Issuance;
 use App\Models\Programme;
 use App\Models\ParticipantTableAssignment;
+use App\Models\ActivityLog;
 
 class User extends Authenticatable
 {
@@ -114,5 +115,10 @@ class User extends Authenticatable
     public function tableAssignments(): HasMany
     {
         return $this->hasMany(ParticipantTableAssignment::class);
+    }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
     }
 }

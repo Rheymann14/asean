@@ -64,19 +64,19 @@ type ActivityType =
     | 'reject';
 
 type ActivityLogRow = {
-    id: string;
+    id: number;
     page: string; // e.g. "Settings / Profile"
-    pageHref?: string; // optional
+    pageHref?: string | null; // optional
     user: {
         name: string;
-        role?: string;
+        role?: string | null;
     };
     activity: ActivityType;
-    description: string;
+    description: string | null;
     status: LogStatus;
-    ip?: string;
-    device?: string;
-    timestamp: string; // ISO or readable; static for now
+    ip?: string | null;
+    device?: string | null;
+    timestamp: string; // ISO
 };
 
 type DayGroup = {
@@ -85,122 +85,9 @@ type DayGroup = {
     rows: ActivityLogRow[];
 };
 
-const SAMPLE_GROUPS: DayGroup[] = [
-    {
-        dayLabel: 'Today — Jan 12, 2026',
-        dayKey: '2026-01-12',
-        rows: [
-            {
-                id: 'a1',
-                page: 'Settings / Activity Log',
-                pageHref: '/settings/activity-log',
-                user: { name: 'Rheymann Cuartocruz', role: 'super_admin' },
-                activity: 'view',
-                description: 'Opened Activity Log page and loaded latest entries.',
-                status: 'info',
-                ip: '192.168.1.20',
-                device: 'Chrome / Windows',
-                timestamp: '2026-01-12 00:22',
-            },
-            {
-                id: 'a2',
-                page: 'Participants / Check-in',
-                pageHref: '/participants/check-in',
-                user: { name: 'Maria Santos', role: 'ched_admin' },
-                activity: 'approve',
-                description: 'Approved participant check-in for Event #42 (ASEAN Registration Briefing).',
-                status: 'success',
-                ip: '10.0.0.8',
-                device: 'Edge / Windows',
-                timestamp: '2026-01-12 00:05',
-            },
-            {
-                id: 'a3',
-                page: 'Users / Role Management',
-                pageHref: '/users',
-                user: { name: 'John Dela Cruz', role: 'admin' },
-                activity: 'update',
-                description: 'Changed role of user “ann.lee@domain.com” from staff to editor.',
-                status: 'warning',
-                ip: '10.0.0.25',
-                device: 'Chrome / Mac',
-                timestamp: '2026-01-12 00:01',
-            },
-        ],
-    },
-    {
-        dayLabel: 'Yesterday — Jan 11, 2026',
-        dayKey: '2026-01-11',
-        rows: [
-            {
-                id: 'b1',
-                page: 'Settings / Two-Factor',
-                pageHref: '/settings/two-factor',
-                user: { name: 'Rheymann Cuartocruz', role: 'super_admin' },
-                activity: 'update',
-                description: 'Enabled two-factor authentication (Authenticator App).',
-                status: 'success',
-                ip: '192.168.1.20',
-                device: 'Chrome / Windows',
-                timestamp: '2026-01-11 21:40',
-            },
-            {
-                id: 'b2',
-                page: 'Auth / Login',
-                pageHref: '/login',
-                user: { name: 'Unknown user', role: 'guest' },
-                activity: 'login',
-                description: 'Failed login attempt for email “test@domain.com” (invalid password).',
-                status: 'failed',
-                ip: '203.177.45.10',
-                device: 'Mobile Safari / iOS',
-                timestamp: '2026-01-11 20:15',
-            },
-            {
-                id: 'b3',
-                page: 'Reports / Export',
-                pageHref: '/reports',
-                user: { name: 'Maria Santos', role: 'ched_admin' },
-                activity: 'export',
-                description: 'Exported participants list (CSV) filtered by country: PH, TH, SG.',
-                status: 'success',
-                ip: '10.0.0.8',
-                device: 'Edge / Windows',
-                timestamp: '2026-01-11 19:02',
-            },
-        ],
-    },
-    {
-        dayLabel: 'Jan 10, 2026',
-        dayKey: '2026-01-10',
-        rows: [
-            {
-                id: 'c1',
-                page: 'Venues / Manage',
-                pageHref: '/venues',
-                user: { name: 'John Dela Cruz', role: 'admin' },
-                activity: 'create',
-                description: 'Created new venue “KCC Convention Center” with map coordinates.',
-                status: 'success',
-                ip: '10.0.0.25',
-                device: 'Chrome / Mac',
-                timestamp: '2026-01-10 14:20',
-            },
-            {
-                id: 'c2',
-                page: 'Issuances / Upload',
-                pageHref: '/issuances',
-                user: { name: 'Anna Lee', role: 'editor' },
-                activity: 'create',
-                description: 'Uploaded “Office Order 01-2026” PDF and marked as active.',
-                status: 'info',
-                ip: '10.0.0.19',
-                device: 'Chrome / Windows',
-                timestamp: '2026-01-10 09:11',
-            },
-        ],
-    },
-];
+type ActivityLogProps = {
+    logs: ActivityLogRow[];
+};
 
 function statusBadgeClass(status: LogStatus) {
     switch (status) {
@@ -277,46 +164,126 @@ function formatActivity(type: ActivityType) {
     return map[type] ?? type;
 }
 
-export default function ActivityLog() {
+function dayKeyFromDate(date: Date) {
+    return date.toISOString().slice(0, 10);
+}
+
+function formatDayLabel(date: Date) {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const dateKey = dayKeyFromDate(date);
+    const todayKey = dayKeyFromDate(today);
+    const yesterdayKey = dayKeyFromDate(yesterday);
+    const dateLabel = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    });
+
+    if (dateKey === todayKey) {
+        return `Today — ${dateLabel}`;
+    }
+
+    if (dateKey === yesterdayKey) {
+        return `Yesterday — ${dateLabel}`;
+    }
+
+    return dateLabel;
+}
+
+function formatTimestamp(value: string) {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+export default function ActivityLog({ logs }: ActivityLogProps) {
     const [query, setQuery] = React.useState('');
     const [status, setStatus] = React.useState<'all' | LogStatus>('all');
 
-    // static date inputs (no backend yet)
-    const [from, setFrom] = React.useState('2026-01-10');
-    const [to, setTo] = React.useState('2026-01-12');
+    const initialRange = React.useMemo(() => {
+        if (!logs.length) {
+            const today = dayKeyFromDate(new Date());
+            return { from: today, to: today };
+        }
+
+        const latest = new Date(logs[0].timestamp);
+        const earliest = new Date(logs[logs.length - 1].timestamp);
+
+        return {
+            from: dayKeyFromDate(earliest),
+            to: dayKeyFromDate(latest),
+        };
+    }, [logs]);
+
+    const [from, setFrom] = React.useState(() => initialRange.from);
+    const [to, setTo] = React.useState(() => initialRange.to);
+
+    const filteredRows = React.useMemo(() => {
+        const q = query.trim().toLowerCase();
+        const fromKey = from ? from : null;
+        const toKey = to ? to : null;
+
+        return logs.filter((row) => {
+            const rowDate = new Date(row.timestamp);
+            const rowKey = dayKeyFromDate(rowDate);
+            const matchesStatus = status === 'all' ? true : row.status === status;
+            const matchesQuery = !q
+                ? true
+                : [
+                      row.page,
+                      row.user.name,
+                      row.user.role ?? '',
+                      row.description ?? '',
+                      row.activity,
+                      row.ip ?? '',
+                      row.device ?? '',
+                      row.timestamp,
+                  ]
+                      .join(' ')
+                      .toLowerCase()
+                      .includes(q);
+
+            const matchesDate =
+                (!fromKey || rowKey >= fromKey) &&
+                (!toKey || rowKey <= toKey);
+
+            return matchesStatus && matchesQuery && matchesDate;
+        });
+    }, [logs, query, status, from, to]);
 
     const filteredGroups = React.useMemo(() => {
-        // Static filtering: query + status only (date inputs are UI only for now)
-        const q = query.trim().toLowerCase();
-        return SAMPLE_GROUPS.map((g) => ({
-            ...g,
-            rows: g.rows.filter((r) => {
-                const matchesStatus = status === 'all' ? true : r.status === status;
-                const matchesQuery = !q
-                    ? true
-                    : [
-                        r.page,
-                        r.user.name,
-                        r.user.role ?? '',
-                        r.description,
-                        r.activity,
-                        r.ip ?? '',
-                        r.device ?? '',
-                        r.timestamp,
-                    ]
-                        .join(' ')
-                        .toLowerCase()
-                        .includes(q);
+        const groups = new Map<string, DayGroup>();
 
-                return matchesStatus && matchesQuery;
-            }),
-        })).filter((g) => g.rows.length > 0);
-    }, [query, status]);
+        filteredRows.forEach((row) => {
+            const rowDate = new Date(row.timestamp);
+            const rowKey = dayKeyFromDate(rowDate);
+            const group = groups.get(rowKey) ?? {
+                dayKey: rowKey,
+                dayLabel: formatDayLabel(rowDate),
+                rows: [],
+            };
 
-    const totalRows = React.useMemo(
-        () => filteredGroups.reduce((sum, g) => sum + g.rows.length, 0),
-        [filteredGroups],
-    );
+            group.rows.push(row);
+            groups.set(rowKey, group);
+        });
+
+        return Array.from(groups.values());
+    }, [filteredRows]);
+
+    const totalRows = React.useMemo(() => filteredRows.length, [filteredRows]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -401,8 +368,8 @@ export default function ActivityLog() {
                 onClick={() => {
                     setQuery('');
                     setStatus('all');
-                    setFrom('2026-01-10');
-                    setTo('2026-01-12');
+                    setFrom(initialRange.from);
+                    setTo(initialRange.to);
                 }}
             >
                 <Filter className="mr-2 h-4 w-4" />
@@ -421,7 +388,7 @@ export default function ActivityLog() {
                                 <span>result(s)</span>
                                 <span className="hidden sm:inline">•</span>
                                 <span className="hidden sm:inline">
-                                    Date range UI: <span className="font-medium">{from}</span> to{' '}
+                                    Date range: <span className="font-medium">{from}</span> to{' '}
                                     <span className="font-medium">{to}</span>
                                 </span>
                             </div>
@@ -599,7 +566,7 @@ export default function ActivityLog() {
                                                         {/* Timestamp */}
                                                         <TableCell className="py-2 align-top text-right">
                                                             <span className="text-xs text-slate-600 dark:text-slate-300">
-                                                                {row.timestamp}
+                                                                {formatTimestamp(row.timestamp)}
                                                             </span>
                                                         </TableCell>
                                                     </TableRow>
