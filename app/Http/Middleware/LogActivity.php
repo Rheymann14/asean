@@ -241,6 +241,112 @@ class LogActivity
                 : 'Added section image.';
         }
 
+        if ($routeName === 'participants.store') {
+            $name = $request->input('full_name');
+
+            return $name
+                ? sprintf('Added participant "%s".', $name)
+                : 'Added participant.';
+        }
+
+        if ($routeName === 'participants.update') {
+            $participant = $this->resolveParticipant($request);
+            $name = $participant?->name ?? $request->input('full_name');
+
+            if ($name && $this->hasActiveToggle($request)) {
+                $state = $request->boolean('is_active') ? 'active' : 'inactive';
+                return sprintf('Set participant "%s" %s.', $name, $state);
+            }
+
+            return $name
+                ? sprintf('Updated participant "%s".', $name)
+                : 'Updated participant.';
+        }
+
+        if ($routeName === 'participants.destroy') {
+            $participant = $this->resolveParticipant($request);
+            $name = $participant?->name ?? $request->input('full_name');
+
+            return $name
+                ? sprintf('Removed participant "%s".', $name)
+                : 'Removed participant.';
+        }
+
+        if ($routeName === 'venues.store') {
+            $name = $request->input('name');
+
+            return $name
+                ? sprintf('Added venue "%s".', $name)
+                : 'Added venue.';
+        }
+
+        if ($routeName === 'venues.update') {
+            $venue = $request->route()?->parameter('venue');
+            $name = $venue?->name ?? $request->input('name');
+
+            if ($name && $this->hasActiveToggle($request)) {
+                $state = $request->boolean('is_active') ? 'active' : 'inactive';
+                return sprintf('Set venue "%s" %s.', $name, $state);
+            }
+
+            return $name
+                ? sprintf('Updated venue "%s".', $name)
+                : 'Updated venue.';
+        }
+
+        if ($routeName === 'venues.destroy') {
+            $venue = $request->route()?->parameter('venue');
+            $name = $venue?->name ?? $request->input('name');
+
+            return $name
+                ? sprintf('Removed venue "%s".', $name)
+                : 'Removed venue.';
+        }
+
+        if ($routeName === 'issuances.store') {
+            $title = $request->input('title');
+
+            return $title
+                ? sprintf('Added issuance "%s".', $title)
+                : 'Added issuance.';
+        }
+
+        if ($routeName === 'issuances.update') {
+            $issuance = $request->route()?->parameter('issuance');
+            $title = $issuance?->title ?? $request->input('title');
+
+            if ($title && $this->hasActiveToggle($request)) {
+                $state = $request->boolean('is_active') ? 'active' : 'inactive';
+                return sprintf('Set issuance "%s" %s.', $title, $state);
+            }
+
+            return $title
+                ? sprintf('Updated issuance "%s".', $title)
+                : 'Updated issuance.';
+        }
+
+        if ($routeName === 'issuances.destroy') {
+            $issuance = $request->route()?->parameter('issuance');
+            $title = $issuance?->title ?? $request->input('title');
+
+            return $title
+                ? sprintf('Removed issuance "%s".', $title)
+                : 'Removed issuance.';
+        }
+
+        if ($routeName === 'contact-details.update') {
+            $title = $request->input('title');
+
+            if ($title && $this->hasActiveToggle($request)) {
+                $state = $request->boolean('is_active') ? 'active' : 'inactive';
+                return sprintf('Set contact detail "%s" %s.', $title, $state);
+            }
+
+            return $title
+                ? sprintf('Updated contact detail "%s".', $title)
+                : 'Updated contact detail.';
+        }
+
         if ($routeName === 'profile.update') {
             $userName = $request->user()?->name;
 
