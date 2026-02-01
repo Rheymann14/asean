@@ -7,11 +7,11 @@ import { index as activityLog } from '@/routes/activity-log';
 import { edit } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
 
-const sidebarNavItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
     {
         title: 'Profile',
         href: edit(),
@@ -32,18 +32,32 @@ const sidebarNavItems: NavItem[] = [
         href: editAppearance(),
         icon: null,
     },
-    //  {
-    //     title: 'Activity Log',
-    //     href: activityLog(),
-    //     icon: null,
-    // },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
+    const { auth } = usePage<SharedData>().props;
+
     // When server-side rendering, we only render the layout on the client...
     if (typeof window === 'undefined') {
         return null;
     }
+
+    const userType = auth?.user?.user_type ?? auth?.user?.userType ?? null;
+    const roleValue = (userType?.slug ?? userType?.name ?? '').toUpperCase();
+    const isChed = roleValue === 'CHED';
+
+    const sidebarNavItems: NavItem[] = [
+        ...baseNavItems,
+        ...(isChed
+            ? [
+                  {
+                      title: 'Activity Log',
+                      href: activityLog(),
+                      icon: null,
+                  },
+              ]
+            : []),
+    ];
 
     const currentPath = window.location.pathname;
 
