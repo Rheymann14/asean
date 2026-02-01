@@ -28,6 +28,10 @@ class LogActivity
         $path = $request->path() === '/' ? '/' : '/'.ltrim($request->path(), '/');
         $activity = $this->resolveActivity($request, $routeName);
         $status = $this->resolveStatus($response->getStatusCode(), $activity);
+
+        if ($activity === 'view') {
+            return $response;
+        }
         $pageLabel = $routeName
             ? Str::of($routeName)->replace('.', ' / ')->headline()
             : $path;
