@@ -17,7 +17,7 @@ import {
     useScroll,
     useTransform,
 } from 'framer-motion';
-import { ArrowRight, CheckCircle2, MessageCircle, Star, X, FlaskConical } from 'lucide-react';
+import { ArrowRight, CheckCircle2, MessageCircle, Star, X, MonitorCog } from 'lucide-react';
 
 import * as React from 'react';
 
@@ -166,24 +166,24 @@ function FlyingFlag({
         (side === 'left'
             ? (LEFT_X[index] ?? LEFT_X[LEFT_X.length - 1])
             : side === 'right'
-              ? (RIGHT_X[index] ?? RIGHT_X[RIGHT_X.length - 1])
-              : CENTER_X);
+                ? (RIGHT_X[index] ?? RIGHT_X[RIGHT_X.length - 1])
+                : CENTER_X);
 
     const targetY =
         target?.y ??
         (side === 'left'
             ? (LEFT_Y[index] ?? 0)
             : side === 'right'
-              ? (RIGHT_Y[index] ?? 0)
-              : CENTER_Y);
+                ? (RIGHT_Y[index] ?? 0)
+                : CENTER_Y);
 
     const targetR =
         target?.r ??
         (side === 'left'
             ? (LEFT_R[index] ?? 0)
             : side === 'right'
-              ? (RIGHT_R[index] ?? 0)
-              : CENTER_R);
+                ? (RIGHT_R[index] ?? 0)
+                : CENTER_R);
 
     const x = useTransform(progress, [0, 0.6], [0, targetX]);
     const y = useTransform(progress, [0, 0.6], [0, targetY]);
@@ -230,25 +230,25 @@ function HeroStickyParallax() {
 
 
 
-      const isMobile = useMediaQuery('(max-width: 640px)');
+    const isMobile = useMediaQuery('(max-width: 640px)');
 
 
 
 
     function useMediaQuery(query: string) {
-    const [matches, setMatches] = React.useState(false);
+        const [matches, setMatches] = React.useState(false);
 
-    React.useEffect(() => {
-        const mq = window.matchMedia(query);
-        const onChange = () => setMatches(mq.matches);
+        React.useEffect(() => {
+            const mq = window.matchMedia(query);
+            const onChange = () => setMatches(mq.matches);
 
-        onChange();
-        mq.addEventListener?.('change', onChange);
-        return () => mq.removeEventListener?.('change', onChange);
-    }, [query]);
+            onChange();
+            mq.addEventListener?.('change', onChange);
+            return () => mq.removeEventListener?.('change', onChange);
+        }, [query]);
 
-    return matches;
-}
+        return matches;
+    }
 
 
     const [betaDismissed, setBetaDismissed] = React.useState(false);
@@ -285,7 +285,7 @@ function HeroStickyParallax() {
         return [others[0], others[1], timor!, others[2], others[3]].filter(Boolean) as FlagItem[];
     }, [timor]);
 
-  const bottom6 = React.useMemo(() => {
+    const bottom6 = React.useMemo(() => {
         const others = ASEAN_FLAGS.filter((f) => f.name !== 'Timor-Leste');
         return others.slice(4, 10) as FlagItem[]; // 6 flags
     }, []);
@@ -293,19 +293,19 @@ function HeroStickyParallax() {
     // ✅ MOBILE positions (tweak numbers if you want tighter/wider)
     const mobileTopSlots: FlagTarget[] = [
         { x: -130, y: -130, r: -10 },
-        { x: -65,  y: -140, r: -6  },
-        { x: 0,    y: -150, r: 0   },
-        { x: 65,   y: -140, r: 6   },
-        { x: 130,  y: -130, r: 10  },
+        { x: -65, y: -140, r: -6 },
+        { x: 0, y: -150, r: 0 },
+        { x: 65, y: -140, r: 6 },
+        { x: 130, y: -130, r: 10 },
     ];
 
     const mobileBottomSlots: FlagTarget[] = [
         { x: -150, y: 140, r: -8 },
-        { x: -90,  y: 155, r: -4 },
-        { x: -30,  y: 145, r: 0  },
-        { x: 30,   y: 145, r: 0  },
-        { x: 90,   y: 155, r: 4  },
-        { x: 150,  y: 140, r: 8  },
+        { x: -90, y: 155, r: -4 },
+        { x: -30, y: 145, r: 0 },
+        { x: 30, y: 145, r: 0 },
+        { x: 90, y: 155, r: 4 },
+        { x: 150, y: 140, r: 8 },
     ];
 
     return (
@@ -319,31 +319,47 @@ function HeroStickyParallax() {
                 {/* ✅ stays visible while HERO is sticky (won’t scroll away) */}
                 <div className="pointer-events-none absolute left-1/2 top-16 z-[70] w-[calc(100%-1rem)] -translate-x-1/2 sm:top-20 sm:w-auto">
                     <div className="flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
-                        {/* ✅ show the small amber pill only AFTER the big notice is dismissed (prevents duplicate) */}
-                        {betaDismissed && (
-                            <div
-                                className={cn(
-                                    'inline-flex w-full items-center justify-center gap-2',
-                                    'rounded-full border border-amber-300/70 bg-amber-50/85 shadow-sm ring-1 ring-amber-200/40 backdrop-blur',
-                                    'px-3 py-2 text-[10px] font-extrabold tracking-[0.22em] text-amber-800',
-                                    'sm:w-auto sm:px-4 sm:text-[11px] sm:tracking-[0.24em]',
-                                )}
-                            >
-                                <span className="relative inline-flex h-2 w-2 shrink-0">
-                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
-                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-                                </span>
 
-                                <span className="truncate sm:whitespace-nowrap">ONGOING BETA TESTING</span>
-                            </div>
-                        )}
+                        <AnimatePresence>
+                          
+                                <motion.div
+                                    initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -10, scale: 0.98 }}
+                                    animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.98 }}
+                                    transition={{ duration: 0.22, ease: easeOut }}
+                                    className="fixed left-1/2 top-[86px] z-[80] -translate-x-1/2 px-3 sm:top-[98px]"
+                                >
+                                    <div className="flex max-w-[92vw] items-center gap-2 rounded-full border border-amber-300/70 bg-white/85 px-3 py-2 shadow-lg ring-1 ring-amber-200/40 backdrop-blur">
+                                        {/* ping dot */}
+                                        <span className="relative inline-flex h-2 w-2">
+                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
+                                            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                                        </span>
+
+                                        <MonitorCog className="h-4 w-4 text-amber-700" />
+
+                                        <span className="whitespace-nowrap text-[10px] font-extrabold tracking-[0.28em] text-amber-800">
+                                            ONGOING BETA TESTING
+                                        </span>
+
+                                        <span className="hidden whitespace-nowrap text-[11px] font-medium text-amber-900/70 sm:inline">
+                                            Expect minor changes.
+                                        </span>
+
+                                  
+
+                                    </div>
+                                </motion.div>
+                        
+                        </AnimatePresence>
+
                     </div>
                 </div>
 
                 <div className="relative flex w-full max-w-7xl flex-col items-center justify-center">
                     {/* ✅ give more vertical room for flags that move up/down */}
                     <div className="relative flex h-[300px] w-full items-center justify-center sm:h-[520px]">
-   {isMobile ? (
+                        {isMobile ? (
                             <>
                                 {/* 5 ABOVE */}
                                 {top5.map((flag, i) => (
@@ -387,7 +403,7 @@ function HeroStickyParallax() {
                                 )}
                             </>
                         )}
-                   
+
 
 
                         {/* CENTER LOGO */}
@@ -879,72 +895,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
 
 
 
-    function BetaTestingNotice({ onOpenFeedback }: { onOpenFeedback: () => void }) {
-        const shouldReduceMotion = useReducedMotion();
 
-        const [open, setOpen] = React.useState<boolean>(() => {
-            if (typeof window === 'undefined') return true;
-            return window.localStorage.getItem(BETA_STORAGE_KEY) !== '1';
-        });
-
-        const dismiss = React.useCallback(() => {
-            setOpen(false);
-            try {
-                window.localStorage.setItem(BETA_STORAGE_KEY, '1');
-            } catch {
-                // ignore storage errors
-            }
-        }, []);
-
-        return (
-            <AnimatePresence>
-                {open && (
-                    <motion.div
-                        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -10, scale: 0.98 }}
-                        animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.98 }}
-                        transition={{ duration: 0.22, ease: easeOut }}
-                        className="fixed left-1/2 top-[86px] z-[80] -translate-x-1/2 px-3 sm:top-[98px]"
-                    >
-                        <div className="flex max-w-[92vw] items-center gap-2 rounded-full border border-amber-300/70 bg-white/85 px-3 py-2 shadow-lg ring-1 ring-amber-200/40 backdrop-blur">
-                            {/* ping dot */}
-                            <span className="relative inline-flex h-2 w-2">
-                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
-                                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-                            </span>
-
-                            <FlaskConical className="h-4 w-4 text-amber-700" />
-
-                            <span className="whitespace-nowrap text-[10px] font-extrabold tracking-[0.28em] text-amber-800">
-                                ONGOING BETA TESTING
-                            </span>
-
-                            <span className="hidden whitespace-nowrap text-[11px] font-medium text-amber-900/70 sm:inline">
-                                Expect minor changes.
-                            </span>
-
-                            <Button
-                                type="button"
-                                onClick={onOpenFeedback}
-                                className="ml-1 h-8 rounded-full bg-amber-500/15 px-3 text-[10px] font-extrabold tracking-[0.24em] text-amber-900 shadow-none hover:bg-amber-500/20"
-                            >
-                                FEEDBACK <ArrowRight className="ml-1 h-4 w-4" />
-                            </Button>
-
-                            <button
-                                type="button"
-                                onClick={dismiss}
-                                className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-full transition hover:bg-black/5"
-                                aria-label="Dismiss beta notice"
-                            >
-                                <X className="h-4 w-4 text-amber-900/70" />
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        );
-    }
 
     const [selectedLeader, setSelectedLeader] = React.useState<LeadershipItem | null>(null);
     const [modalOpen, setModalOpen] = React.useState(false);
@@ -1119,7 +1070,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                 }
             >
 
-                <BetaTestingNotice onOpenFeedback={() => setFeedbackOpen(true)} />
+
                 {/* 1. HERO */}
                 <HeroStickyParallax />
 
