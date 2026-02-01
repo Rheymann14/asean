@@ -241,6 +241,22 @@ class LogActivity
                 : 'Added section image.';
         }
 
+        if ($routeName === 'profile.update') {
+            $userName = $request->user()?->name;
+
+            return $userName
+                ? sprintf('Updated profile for "%s".', $userName)
+                : 'Updated profile.';
+        }
+
+        if ($routeName === 'profile.destroy') {
+            return 'Deleted profile.';
+        }
+
+        if ($routeName === 'user-password.update') {
+            return 'Updated account password.';
+        }
+
         return null;
     }
 
@@ -331,6 +347,20 @@ class LogActivity
                 'label' => 'Table',
                 'name' => $table?->table_number
                     ?? $request->input('table_number'),
+            ];
+        }
+
+        if (Str::startsWith($routeName, 'profile.')) {
+            return [
+                'label' => 'Profile',
+                'name' => $request->user()?->name,
+            ];
+        }
+
+        if (Str::startsWith($routeName, 'user-password.')) {
+            return [
+                'label' => 'Password',
+                'name' => null,
             ];
         }
 
