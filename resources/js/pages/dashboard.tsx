@@ -215,6 +215,8 @@ export default function Dashboard() {
 
     const maxScanned = React.useMemo(() => Math.max(1, ...topEventsRows.map((x) => x.attendance)), [topEventsRows]);
 
+
+
     const joinedByEvent = React.useMemo(() => {
         const eventsByJoined = attendanceByEvent
             .slice()
@@ -231,10 +233,44 @@ export default function Dashboard() {
         return eventsByJoined.slice(0, 20);
     }, [attendanceByEvent]);
 
+    // ✅ keep the bar from looking "full" when max joined is only 1
+    const maxJoined = React.useMemo(() => {
+        return Math.max(0, ...joinedByEvent.map((d) => Number(d.joined ?? 0)));
+    }, [joinedByEvent]);
+
+    // minimum axis max = 5, then round up to nearest 5 for nicer scaling
+    const joinedXAxisMax = React.useMemo(() => {
+        return Math.max(5, Math.ceil(maxJoined / 5) * 5);
+    }, [maxJoined]);
+
+    const joinedTickStep = React.useMemo(() => {
+        if (joinedXAxisMax <= 10) return 1;
+        if (joinedXAxisMax <= 25) return 5;
+        return 10;
+    }, [joinedXAxisMax]);
+
+    const joinedTicks = React.useMemo(() => {
+        const steps = Math.floor(joinedXAxisMax / joinedTickStep);
+        return Array.from({ length: steps + 1 }, (_, i) => i * joinedTickStep);
+    }, [joinedXAxisMax, joinedTickStep]);
+
+
     const joinedChartHeight = React.useMemo(() => {
         const rows = Math.max(1, joinedByEvent.length);
-        return Math.max(210, rows * 28);
+
+        const ROW_HEIGHT = 22;
+        const TOP_BOTTOM = 24;
+
+        // ✅ smaller minimum height when few rows (fixes the “too much empty space” look)
+        const MIN = rows <= 2 ? 150 : 190;
+
+        // keep it from growing too tall
+        const MAX = 280;
+
+        return Math.min(MAX, Math.max(MIN, rows * ROW_HEIGHT + TOP_BOTTOM));
     }, [joinedByEvent.length]);
+
+
 
     const chartLineData = React.useMemo(() => {
         return lineData.map((item) => ({
@@ -501,7 +537,7 @@ export default function Dashboard() {
                         </CardHeader>
 
                         <CardContent className="p-4 pt-2">
-                            <div className="max-h-[260px] overflow-auto pr-1">
+                           <div className="max-h-[280px] overflow-auto pr-1">
                                 <div style={{ height: joinedChartHeight }} className="min-h-[210px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart
@@ -510,7 +546,16 @@ export default function Dashboard() {
                                             margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
                                         >
                                             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                                            <XAxis type="number" tickLine={false} axisLine={false} className="text-[11px]" />
+                                            <XAxis
+                                                type="number"
+                                                domain={[0, joinedXAxisMax]}
+                                                ticks={joinedTicks}
+                                                allowDecimals={false}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                className="text-[11px]"
+                                            />
+
                                             <YAxis
                                                 dataKey="name"
                                                 type="category"
@@ -538,12 +583,8 @@ export default function Dashboard() {
                                                     );
                                                 }}
                                             />
-                                            <Bar dataKey="joined" fill={CHART_PRIMARY} radius={[0, 6, 6, 0]}>
-                                                <LabelList
-                                                    dataKey="joined"
-                                                    position="right"
-                                                    className="fill-muted-foreground text-[10px]"
-                                                />
+                                            <Bar dataKey="joined" fill={CHART_PRIMARY} radius={[0, 6, 6, 0]} barSize={14}>
+                                                <LabelList dataKey="joined" position="right" className="fill-muted-foreground text-[10px]" />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
