@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 
 import HeadingSmall from '@/components/heading-small';
 import { type BreadcrumbItem } from '@/types';
@@ -85,8 +85,36 @@ type DayGroup = {
     rows: ActivityLogRow[];
 };
 
+type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
+type PaginatedLogs = {
+    data: ActivityLogRow[];
+    links: PaginationLink[];
+    meta: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+        from: number | null;
+        to: number | null;
+    };
+};
+
+type ActivityLogFilters = {
+    status?: LogStatus | null;
+    search?: string | null;
+    from?: string | null;
+    to?: string | null;
+    perPage?: number | null;
+};
+
 type ActivityLogProps = {
-    logs: ActivityLogRow[];
+    logs: PaginatedLogs;
+    filters: ActivityLogFilters;
 };
 
 function statusBadgeClass(status: LogStatus) {
@@ -209,65 +237,32 @@ function formatTimestamp(value: string) {
     });
 }
 
-export default function ActivityLog({ logs }: ActivityLogProps) {
-    const [query, setQuery] = React.useState('');
-    const [status, setStatus] = React.useState<'all' | LogStatus>('all');
+function formatPaginationLabel(label: string) {
+    return label
+        .replace('&laquo;', '«')
+        .replace('&raquo;', '»')
+        .replace(/<\/?[^>]+(>|$)/g, '');
+}
 
-    const initialRange = React.useMemo(() => {
-        if (!logs.length) {
-            const today = dayKeyFromDate(new Date());
-            return { from: today, to: today };
-        }
+export default function ActivityLog({ logs, filters }: ActivityLogProps) {
+    const [query, setQuery] = React.useState(filters.search ?? '');
+    const [status, setStatus] = React.useState<'all' | LogStatus>(filters.status ?? 'all');
+    const [from, setFrom] = React.useState(filters.from ?? '');
+    const [to, setTo] = React.useState(filters.to ?? '');
+    const [perPage, setPerPage] = React.useState<number>(filters.perPage ?? logs.meta.per_page ?? 25);
 
-        const latest = new Date(logs[0].timestamp);
-        const earliest = new Date(logs[logs.length - 1].timestamp);
-
-        return {
-            from: dayKeyFromDate(earliest),
-            to: dayKeyFromDate(latest),
-        };
-    }, [logs]);
-
-    const [from, setFrom] = React.useState(() => initialRange.from);
-    const [to, setTo] = React.useState(() => initialRange.to);
-
-    const filteredRows = React.useMemo(() => {
-        const q = query.trim().toLowerCase();
-        const fromKey = from ? from : null;
-        const toKey = to ? to : null;
-
-        return logs.filter((row) => {
-            const rowDate = new Date(row.timestamp);
-            const rowKey = dayKeyFromDate(rowDate);
-            const matchesStatus = status === 'all' ? true : row.status === status;
-            const matchesQuery = !q
-                ? true
-                : [
-                      row.page,
-                      row.user.name,
-                      row.user.role ?? '',
-                      row.description ?? '',
-                      row.activity,
-                      row.ip ?? '',
-                      row.device ?? '',
-                      row.timestamp,
-                  ]
-                      .join(' ')
-                      .toLowerCase()
-                      .includes(q);
-
-            const matchesDate =
-                (!fromKey || rowKey >= fromKey) &&
-                (!toKey || rowKey <= toKey);
-
-            return matchesStatus && matchesQuery && matchesDate;
-        });
-    }, [logs, query, status, from, to]);
+    React.useEffect(() => {
+        setQuery(filters.search ?? '');
+        setStatus(filters.status ?? 'all');
+        setFrom(filters.from ?? '');
+        setTo(filters.to ?? '');
+        setPerPage(filters.perPage ?? logs.meta.per_page ?? 25);
+    }, [filters.search, filters.status, filters.from, filters.to, filters.perPage, logs.meta.per_page]);
 
     const filteredGroups = React.useMemo(() => {
         const groups = new Map<string, DayGroup>();
 
-        filteredRows.forEach((row) => {
+        logs.data.forEach((row) => {
             const rowDate = new Date(row.timestamp);
             const rowKey = dayKeyFromDate(rowDate);
             const group = groups.get(rowKey) ?? {
@@ -281,9 +276,50 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
         });
 
         return Array.from(groups.values());
-    }, [filteredRows]);
+    }, [logs.data]);
 
-    const totalRows = React.useMemo(() => filteredRows.length, [filteredRows]);
+    const totalRows = logs.meta.total;
+    const hasMounted = React.useRef(false);
+
+    const applyFilters = React.useCallback(
+        (next: Partial<ActivityLogFilters>) => {
+            const nextStatus = next.status ?? status;
+            const nextSearch = next.search ?? query;
+            const nextFrom = next.from ?? from;
+            const nextTo = next.to ?? to;
+            const nextPerPage = next.perPage ?? perPage;
+
+            router.get(
+                activityLog(),
+                {
+                    search: nextSearch || undefined,
+                    status: nextStatus && nextStatus !== 'all' ? nextStatus : undefined,
+                    from: nextFrom || undefined,
+                    to: nextTo || undefined,
+                    per_page: nextPerPage,
+                    page: 1,
+                },
+                {
+                    preserveScroll: true,
+                    replace: true,
+                },
+            );
+        },
+        [query, status, from, to, perPage],
+    );
+
+    React.useEffect(() => {
+        if (!hasMounted.current) {
+            hasMounted.current = true;
+            return;
+        }
+
+        const timeout = window.setTimeout(() => {
+            applyFilters({ search: query });
+        }, 300);
+
+        return () => window.clearTimeout(timeout);
+    }, [query, applyFilters]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -308,7 +344,11 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                 <Input
                     type="date"
                     value={from}
-                    onChange={(e) => setFrom(e.target.value)}
+                    onChange={(e) => {
+                        const nextFrom = e.target.value;
+                        setFrom(nextFrom);
+                        applyFilters({ from: nextFrom || null });
+                    }}
                     className="h-9 w-full rounded-xl pl-10"
                 />
             </div>
@@ -321,7 +361,11 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                 <Input
                     type="date"
                     value={to}
-                    onChange={(e) => setTo(e.target.value)}
+                    onChange={(e) => {
+                        const nextTo = e.target.value;
+                        setTo(nextTo);
+                        applyFilters({ to: nextTo || null });
+                    }}
                     className="h-9 w-full rounded-xl pl-10"
                 />
             </div>
@@ -332,7 +376,14 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
     <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
         <div className="grid gap-1.5 sm:col-span-3">
             <Label className="text-xs text-slate-600 dark:text-slate-300">Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as any)}>
+            <Select
+                value={status}
+                onValueChange={(v) => {
+                    const nextStatus = v as LogStatus | 'all';
+                    setStatus(nextStatus);
+                    applyFilters({ status: nextStatus === 'all' ? null : nextStatus });
+                }}
+            >
                 <SelectTrigger className="h-9 w-full rounded-xl">
                     <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
@@ -346,7 +397,7 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
             </Select>
         </div>
 
-        <div className="grid gap-1.5 sm:col-span-7">
+        <div className="grid gap-1.5 sm:col-span-5">
             <Label className="text-xs text-slate-600 dark:text-slate-300">Search</Label>
             <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -359,6 +410,28 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
             </div>
         </div>
 
+        <div className="grid gap-1.5 sm:col-span-2">
+            <Label className="text-xs text-slate-600 dark:text-slate-300">Show entries</Label>
+            <Select
+                value={String(perPage)}
+                onValueChange={(value) => {
+                    const nextPerPage = Number(value);
+                    setPerPage(nextPerPage);
+                    applyFilters({ perPage: nextPerPage });
+                }}
+            >
+                <SelectTrigger className="h-9 w-full rounded-xl">
+                    <SelectValue placeholder="Per page" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+
         <div className="sm:col-span-2">
             <Label className="sr-only">Reset</Label>
             <Button
@@ -368,8 +441,17 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                 onClick={() => {
                     setQuery('');
                     setStatus('all');
-                    setFrom(initialRange.from);
-                    setTo(initialRange.to);
+                    setFrom('');
+                    setTo('');
+                    const defaultPerPage = filters.perPage ?? logs.meta.per_page ?? 25;
+                    setPerPage(defaultPerPage);
+                    applyFilters({
+                        search: '',
+                        status: null,
+                        from: null,
+                        to: null,
+                        perPage: defaultPerPage,
+                    });
                 }}
             >
                 <Filter className="mr-2 h-4 w-4" />
@@ -384,16 +466,23 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
 
                         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
                             <div className="inline-flex items-center gap-2">
-                                <span className="font-medium text-slate-900 dark:text-slate-100">{totalRows}</span>
+                                <span className="font-medium text-slate-900 dark:text-slate-100">
+                                    {logs.meta.from ?? 0}-{logs.meta.to ?? 0}
+                                </span>
+                                <span>of</span>
+                                <span className="font-medium text-slate-900 dark:text-slate-100">
+                                    {totalRows}
+                                </span>
                                 <span>result(s)</span>
                                 <span className="hidden sm:inline">•</span>
-                                <span className="hidden sm:inline">
-                                    Date range: <span className="font-medium">{from}</span> to{' '}
-                                    <span className="font-medium">{to}</span>
-                                </span>
+                                {from || to ? (
+                                    <span className="hidden sm:inline">
+                                        Date range:{' '}
+                                        <span className="font-medium">{from || '—'}</span> to{' '}
+                                        <span className="font-medium">{to || '—'}</span>
+                                    </span>
+                                ) : null}
                             </div>
-
-                       
                         </div>
                     </Card>
 
@@ -578,6 +667,44 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                             ))
                         )}
                     </div>
+
+                    {logs.links.length > 1 ? (
+                        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300">
+                            <span>
+                                Showing{' '}
+                                <span className="font-medium text-slate-900 dark:text-slate-100">
+                                    {logs.meta.from ?? 0}
+                                </span>{' '}
+                                to{' '}
+                                <span className="font-medium text-slate-900 dark:text-slate-100">
+                                    {logs.meta.to ?? 0}
+                                </span>{' '}
+                                of{' '}
+                                <span className="font-medium text-slate-900 dark:text-slate-100">
+                                    {logs.meta.total}
+                                </span>{' '}
+                                entries
+                            </span>
+
+                            <div className="flex flex-wrap items-center gap-1">
+                                {logs.links.map((link, index) => (
+                                    <Link
+                                        key={`${link.label}-${index}`}
+                                        href={link.url ?? '#'}
+                                        className={cn(
+                                            'inline-flex items-center justify-center rounded-xl border px-3 py-1.5 text-xs font-medium transition',
+                                            link.active
+                                                ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900'
+                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-white/10',
+                                            !link.url && 'pointer-events-none opacity-50',
+                                        )}
+                                    >
+                                        {formatPaginationLabel(link.label)}
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             </SettingsLayout>
         </AppLayout>
