@@ -537,7 +537,7 @@ export default function Dashboard() {
                         </CardHeader>
 
                         <CardContent className="p-4 pt-2">
-                           <div className="max-h-[280px] overflow-auto pr-1">
+                            <div className="max-h-[280px] overflow-auto pr-1">
                                 <div style={{ height: joinedChartHeight }} className="min-h-[210px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart
@@ -729,14 +729,23 @@ export default function Dashboard() {
 
                                                         <td className="px-4 py-2 align-top text-right">
                                                             <Button
-                                                                variant="ghost"
+                                                                type="button"
+                                                                variant="secondary"
                                                                 size="sm"
-                                                                className="h-7 px-2 text-xs font-semibold text-foreground"
                                                                 onClick={() => openAttendance(ev)}
+                                                                className="
+                                                                    h-7 rounded-full px-3 text-xs font-semibold
+                                                                    bg-[#0033A0]/10 text-[#0033A0]
+                                                                    hover:bg-[#0033A0]/15
+                                                                    focus-visible:ring-2 focus-visible:ring-[#0033A0]/30
+                                                                "
+                                                                title="View attendance details"
+                                                                aria-label={`View attendance details: ${ev.attendance.toLocaleString()}`}
                                                             >
                                                                 {ev.attendance.toLocaleString()}
                                                             </Button>
                                                         </td>
+
                                                     </tr>
                                                 );
                                             })
