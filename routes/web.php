@@ -29,6 +29,18 @@ Route::get('/og/asean_logo.png', function () {
     ]);
 });
 
+Route::get('/og/asean_banner_logo.png', function () {
+    $path = public_path('img/asean_banner_logo.png');
+
+    abort_unless(is_file($path), 404);
+
+    return response()->file($path, [
+        'Content-Type'  => 'image/png',
+        'Cache-Control' => 'public, max-age=86400',
+        'Content-Disposition' => 'inline; filename="asean_banner_logo.png"',
+    ]);
+});
+
 Route::get('/', function () {
     return Inertia::render('welcome', [
         'canRegister' => Features::enabled(Features::registration()),
