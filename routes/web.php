@@ -18,16 +18,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TableAssignmentController;
 
 
-Route::get('/og/asean_logo.png', function () {
-    $path = public_path('img/asean_logo.png');
-
-    abort_unless(is_file($path), 404);
-
-    return response()->file($path, [
-        'Content-Type'  => 'image/png',
-        'Cache-Control' => 'public, max-age=86400',
-    ]);
-});
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
