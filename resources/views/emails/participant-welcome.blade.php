@@ -12,7 +12,10 @@
                     <table role="presentation" width="680" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);">
                         <tr>
                             <td style="padding: 24px 32px 12px;">
-                                <img src="{{ $bannerUrl }}" alt="ASEAN Philippines 2026 banner" style="display: block; width: 100%; max-width: 280px; height: auto;" />
+                                @php
+                                    $bannerSrc = $bannerPath ? $message->embed($bannerPath) : $bannerUrl;
+                                @endphp
+                                <img src="{{ $bannerSrc }}" alt="ASEAN Philippines 2026 banner" style="display: block; width: 100%; max-width: 280px; height: auto;" />
                             </td>
                         </tr>
                         <tr>
@@ -46,7 +49,10 @@
                                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                                                 <tr>
                                                     <td style="width: 48px; vertical-align: middle;">
-                                                        <img src="{{ $logoUrl }}" alt="ASEAN logo" style="width: 42px; height: 42px; display: block;" />
+                                                        @php
+                                                            $logoSrc = $logoPath ? $message->embed($logoPath) : $logoUrl;
+                                                        @endphp
+                                                        <img src="{{ $logoSrc }}" alt="ASEAN logo" style="width: 42px; height: 42px; display: block;" />
                                                     </td>
                                                     <td style="vertical-align: middle;">
                                                         <div style="font-size: 13px; font-weight: 700; color: #0f172a;">ASEAN Philippines 2026</div>
