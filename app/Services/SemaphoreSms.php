@@ -37,8 +37,11 @@ class SemaphoreSms
             'apikey' => $apiKey,
             'number' => $number,
             'message' => $this->sanitizeMessage($message, $asciiOnly, $maxLength),
-            'sendername' => $sender,
         ];
+
+        if (is_string($sender) && $sender !== '') {
+            $payload['sendername'] = $sender;
+        }
 
         $response = Http::asForm()
             ->timeout(10)
@@ -49,6 +52,7 @@ class SemaphoreSms
                 'status' => $response->status(),
                 'body' => $response->body(),
                 'number' => $number,
+                'payload' => $payload,
             ]);
         } else {
             $this->logSemaphoreFailure($response, $number);
