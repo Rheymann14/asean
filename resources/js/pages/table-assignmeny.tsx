@@ -70,6 +70,7 @@ type PageProps = {
     participants?: Participant[];
     events?: EventRow[];
     selected_event_id?: number | null;
+    view?: 'create' | 'assignment' | null;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Table Assignment', href: '/table-assignment' }];
@@ -247,18 +248,12 @@ function SearchableDropdown({
 
 
 export default function TableAssignmenyPage(props: PageProps) {
-    const page = usePage<SharedData & { url?: string }>();
-    const { auth } = page.props;
+    const { auth } = usePage<SharedData>().props;
     const userType = auth.user?.user_type ?? auth.user?.userType;
     const roleName = (userType?.name ?? '').toUpperCase();
     const roleSlug = (userType?.slug ?? '').toUpperCase();
     const isChed = roleName === 'CHED' || roleSlug === 'CHED';
-    const pageUrl = page.url ?? '';
-    const chedView = React.useMemo(() => {
-        const query = pageUrl.split('?')[1] ?? '';
-        const params = new URLSearchParams(query);
-        return params.get('view') === 'assignment' ? 'assignment' : 'create';
-    }, [pageUrl]);
+    const chedView = props.view === 'assignment' ? 'assignment' : 'create';
     const tables = props.tables ?? [];
     const participants = props.participants ?? [];
     const events = props.events ?? [];

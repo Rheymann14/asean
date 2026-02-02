@@ -37,12 +37,12 @@ export function AppSidebar() {
               },
               {
                   title: 'Create Table',
-                  href: '/table-assignment?view=create',
+                  href: '/table-assignment/create',
                   icon: Table,
               },
               {
                   title: 'Table Assignment',
-                  href: '/table-assignment?view=assignment',
+                  href: '/table-assignment/assignment',
                   icon: Table,
               },
               {

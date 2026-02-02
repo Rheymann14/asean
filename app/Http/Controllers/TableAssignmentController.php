@@ -25,6 +25,41 @@ class TableAssignmentController extends Controller
             return $this->participantIndex($request);
         }
 
+        return $this->chedIndex($request, 'create');
+    }
+
+    public function create(Request $request)
+    {
+        $user = $request->user();
+        $user->loadMissing('userType');
+        $roleName = Str::upper((string) ($user->userType->name ?? ''));
+        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
+        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
+
+        if (! $isChed) {
+            return $this->participantIndex($request);
+        }
+
+        return $this->chedIndex($request, 'create');
+    }
+
+    public function assignment(Request $request)
+    {
+        $user = $request->user();
+        $user->loadMissing('userType');
+        $roleName = Str::upper((string) ($user->userType->name ?? ''));
+        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
+        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
+
+        if (! $isChed) {
+            return $this->participantIndex($request);
+        }
+
+        return $this->chedIndex($request, 'assignment');
+    }
+
+    private function chedIndex(Request $request, string $view)
+    {
         $events = Programme::query()
             ->orderBy('starts_at')
             ->orderBy('title')
@@ -139,6 +174,7 @@ class TableAssignmentController extends Controller
                 'is_active' => $event->is_active,
             ]),
             'selected_event_id' => $selectedEventId ?: null,
+            'view' => $view,
         ]);
     }
 
