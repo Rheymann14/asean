@@ -345,6 +345,7 @@ export default function TableAssignmenyPage(props: PageProps) {
             programme_id: selectedEventId,
         }));
         tableForm.post(ENDPOINTS.tables.store, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success('Table added.');
                 tableForm.reset();
@@ -380,6 +381,7 @@ export default function TableAssignmenyPage(props: PageProps) {
         }));
 
         assignmentForm.post(ENDPOINTS.assignments.store, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success('Participants assigned to table.');
                 setSelectedParticipantIds(new Set());
@@ -399,6 +401,7 @@ export default function TableAssignmenyPage(props: PageProps) {
             ENDPOINTS.tables.update(tableId),
             { capacity },
             {
+                preserveScroll: true,
                 onSuccess: () => toast.success('Table capacity updated.'),
                 onError: () => toast.error('Unable to update capacity.'),
             },
@@ -422,6 +425,7 @@ export default function TableAssignmenyPage(props: PageProps) {
             ENDPOINTS.tables.update(tableId),
             { table_number: tableNumber, capacity },
             {
+                preserveScroll: true,
                 onSuccess: () => toast.success('Table updated.'),
                 onError: () => toast.error('Unable to update table.'),
             },
@@ -430,6 +434,7 @@ export default function TableAssignmenyPage(props: PageProps) {
 
     function removeTable(tableId: number) {
         router.delete(ENDPOINTS.tables.destroy(tableId), {
+            preserveScroll: true,
             onSuccess: () => toast.success('Table deleted.'),
             onError: () => toast.error('Unable to delete table.'),
         });
@@ -437,6 +442,7 @@ export default function TableAssignmenyPage(props: PageProps) {
 
     function removeAssignment(id: number) {
         router.delete(ENDPOINTS.assignments.destroy(id), {
+            preserveScroll: true,
             onSuccess: () => toast.success('Participant removed from table.'),
             onError: () => toast.error('Unable to remove participant.'),
         });
