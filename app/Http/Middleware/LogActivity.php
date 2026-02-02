@@ -194,8 +194,17 @@ class LogActivity
             $tableNumber = $table?->table_number;
 
             return $programmeTitle && $tableNumber
-                ? sprintf('Updated table %s capacity for event "%s".', $tableNumber, $programmeTitle)
-                : 'Updated table capacity.';
+                ? sprintf('Updated table %s for event "%s".', $tableNumber, $programmeTitle)
+                : 'Updated table.';
+        }
+
+        if ($routeName === 'table-assignment.tables.destroy') {
+            $table = $request->route()?->parameter('participantTable');
+            $tableNumber = $table?->table_number;
+
+            return $programmeTitle && $tableNumber
+                ? sprintf('Deleted table %s for event "%s".', $tableNumber, $programmeTitle)
+                : 'Deleted table for event.';
         }
 
         if ($routeName === 'table-assignment.assignments.store') {
