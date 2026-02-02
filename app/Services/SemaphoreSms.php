@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SemaphoreSms
 {
@@ -24,19 +26,33 @@ class SemaphoreSms
         $apiKey = config('services.semaphore.key');
         $sender = config('services.semaphore.sender', 'SEMAPHORE');
         $endpoint = config('services.semaphore.endpoint', 'https://semaphore.co/api/v4/messages');
+        $asciiOnly = (bool) config('services.semaphore.ascii_only', true);
+        $maxLength = (int) config('services.semaphore.max_length', 459);
 
         if (! $apiKey) {
             return null;
         }
 
-        return Http::asForm()
+        $payload = [
+            'apikey' => $apiKey,
+            'number' => $number,
+            'message' => $this->sanitizeMessage($message, $asciiOnly, $maxLength),
+            'sendername' => $sender,
+        ];
+
+        $response = Http::asForm()
             ->timeout(10)
-            ->post($endpoint, [
-                'apikey' => $apiKey,
+            ->post($endpoint, $payload);
+
+        if (! $response->successful()) {
+            Log::warning('Semaphore SMS send failed.', [
+                'status' => $response->status(),
+                'body' => $response->body(),
                 'number' => $number,
-                'message' => $message,
-                'sendername' => $sender,
             ]);
+        }
+
+        return $response;
     }
 
     private function buildWelcomeMessage(User $user): string
@@ -55,6 +71,13 @@ class SemaphoreSms
             '',
             'Welcome to ASEAN PH 2026 — thank you for registering!',
         ]);
+    }
+
+    private function sanitizeMessage(string $message, bool $asciiOnly, int $maxLength): string
+    {
+        $message = $asciiOnly ? Str::ascii($message) : $message;
+
+        return Str::limit($message, $maxLength, '');
     }
 
     private function normalizeNumber(?string $number): ?string
