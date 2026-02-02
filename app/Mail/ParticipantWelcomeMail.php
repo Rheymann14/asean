@@ -35,38 +35,45 @@ class ParticipantWelcomeMail extends Mailable implements ShouldQueue
         );
     }
 
-public function content(): Content
-{
-    $qrUrl = $this->qrUrl();
+    public function content(): Content
+    {
+        $qrUrl = $this->qrUrl();
 
-    $events = $this->user->joinedProgrammes
-        ->sortBy('starts_at')
-        ->values()
-        ->map(fn (Programme $event) => [
-            'id' => $event->id,
-            'title' => $event->title,
-            'starts_at' => $event->starts_at?->format('F j, Y g:i A'),
-            'ends_at' => $event->ends_at?->format('F j, Y g:i A'),
-        ]);
+        $events = $this->user->joinedProgrammes
+            ->sortBy('starts_at')
+            ->values()
+            ->map(fn (Programme $event) => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'starts_at' => $event->starts_at?->format('F j, Y g:i A'),
+                'ends_at' => $event->ends_at?->format('F j, Y g:i A'),
+            ]);
 
-    $assignments = $this->user->tableAssignments->keyBy('programme_id');
+        $assignments = $this->user->tableAssignments->keyBy('programme_id');
 
-    $appUrl = rtrim(config('app.url') ?: 'https://asean.chedro12.com', '/');
+        $appUrl = rtrim(config('app.url') ?: 'https://asean.chedro12.com', '/');
+        $bannerPath = public_path('img/asean_banner_logo.png');
+        $logoPath = public_path('img/asean_logo.png');
+        $bagongPilipinasPath = public_path('img/bagong_pilipinas.png');
 
-    return new Content(
-        view: 'emails.participant-welcome',
-        with: [
-            'appUrl' => $appUrl,
-            'bannerUrl' => $appUrl . '/img/asean_banner_logo.png',
-            'logoUrl'   => $appUrl . '/img/asean_logo.png',
-            'events' => $events,
-            'assignments' => $assignments,
-            'qrImage' => $this->fetchQrImage($qrUrl),
-            'qrUrl' => $qrUrl,
-            'user' => $this->user,
-        ],
-    );
-}
+        return new Content(
+            view: 'emails.participant-welcome',
+            with: [
+                'appUrl' => $appUrl,
+                'bannerUrl' => $appUrl . '/img/asean_banner_logo.png',
+                'logoUrl' => $appUrl . '/img/asean_logo.png',
+                'bannerPath' => is_file($bannerPath) ? $bannerPath : null,
+                'logoPath' => is_file($logoPath) ? $logoPath : null,
+                'bagongPilipinasUrl' => $appUrl . '/img/bagong_pilipinas.png',
+                'bagongPilipinasPath' => is_file($bagongPilipinasPath) ? $bagongPilipinasPath : null,
+                'events' => $events,
+                'assignments' => $assignments,
+                'qrImage' => $this->fetchQrImage($qrUrl),
+                'qrUrl' => $qrUrl,
+                'user' => $this->user,
+            ],
+        );
+    }
 
 
     public function attachments(): array
