@@ -788,11 +788,13 @@ export default function TableAssignmenyPage(props: PageProps) {
                             <div className="flex items-center gap-2">
                                 <TableIcon className="h-5 w-5 text-[#00359c]" />
                                 <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                                    Table Assignment
+                                    {isChed && chedView === 'create' ? 'Table Management' : 'Table Assignment'}
                                 </h1>
                             </div>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Assign participants to tables, manage capacities, and track seating.
+                                {isChed && chedView === 'create'
+                                    ? 'Create tables, set capacities, and review seating plans.'
+                                    : 'Assign participants to tables, manage capacities, and track seating.'}
                             </p>
                         </div>
                     </div>
@@ -803,13 +805,123 @@ export default function TableAssignmenyPage(props: PageProps) {
                 {isChed ? (
                     chedView === 'assignment' ? (
                         <>
-                            <div className="grid gap-6">{assignParticipantsCard}</div>
+                            <div className="grid gap-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base">Event filter</CardTitle>
+                                        <CardDescription>Filter assignments by event.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
+                                            <div className="space-y-1">
+                                                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                                    Event
+                                                </label>
+                                                <SearchableDropdown
+                                                    value={selectedEventId}
+                                                    onValueChange={(v) => setSelectedEventId(v === 'none' ? '' : v)}
+                                                    placeholder="Select event"
+                                                    searchPlaceholder="Search events..."
+                                                    emptyText="No events found."
+                                                    disabled={events.length === 0}
+                                                    items={
+                                                        events.length === 0
+                                                            ? [{ value: 'none', label: 'No events available', disabled: true }]
+                                                            : [
+                                                                  { value: '', label: 'Clear selection' },
+                                                                  ...events.map((event) => {
+                                                                      const phase = resolveEventPhase(event, Date.now());
+                                                                      const when = event.starts_at
+                                                                          ? formatDateTime(event.starts_at)
+                                                                          : 'Schedule TBA';
+                                                                      return {
+                                                                          value: String(event.id),
+                                                                          label: event.title,
+                                                                          description: `${phaseLabel(phase)} • ${when}`,
+                                                                      };
+                                                                  }),
+                                                              ]
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                {selectedEventId ? (
+                                                    (() => {
+                                                        if (!selectedEvent) {
+                                                            return <span className="text-slate-500">Event details unavailable.</span>;
+                                                        }
+                                                        const phase = selectedEventPhase ?? 'closed';
+                                                        return (
+                                                            <>
+                                                                <Badge className={phaseBadgeClass(phase)}>{phaseLabel(phase)}</Badge>
+                                                                <span className="text-slate-500">
+                                                                    {selectedEvent.starts_at
+                                                                        ? formatDateTime(selectedEvent.starts_at)
+                                                                        : 'Schedule TBA'}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    })()
+                                                ) : (
+                                                    <span className="text-slate-500">
+                                                        Choose an event to load tables and participants.
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {isEventClosed ? (
+                                            <p className="text-sm text-rose-600">
+                                                Table assignments are locked because this event is closed.
+                                            </p>
+                                        ) : null}
+                                    </CardContent>
+                                </Card>
+                                {assignParticipantsCard}
+                            </div>
                             {tablesAssignmentsSection}
                         </>
                     ) : (
                         <div className="grid gap-6">
                             {eventContextCard}
                             {createTableCard}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">Created tables</CardTitle>
+                                    <CardDescription>Review existing tables for the selected event.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow className="bg-slate-50 dark:bg-slate-900/40">
+                                                    <TableHead>Table name</TableHead>
+                                                    <TableHead className="w-[160px]">Capacity</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {tables.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={2} className="py-6 text-center text-sm text-slate-500">
+                                                            No tables created yet.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ) : (
+                                                    tables.map((table) => (
+                                                        <TableRow key={table.id}>
+                                                            <TableCell className="font-medium text-slate-900 dark:text-slate-100">
+                                                                {table.table_number}
+                                                            </TableCell>
+                                                            <TableCell className="text-slate-600 dark:text-slate-300">
+                                                                {table.capacity}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     )
                 ) : (
