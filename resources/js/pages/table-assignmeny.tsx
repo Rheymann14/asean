@@ -289,6 +289,8 @@ export default function TableAssignmenyPage(props: PageProps) {
         setCapacityDrafts(nextDrafts);
     }, [tables]);
 
+    const chedBasePath = chedView === 'assignment' ? '/table-assignment/assignment' : '/table-assignment/create';
+
     React.useEffect(() => {
         if (!hasHydrated.current) {
             hasHydrated.current = true;
@@ -301,11 +303,8 @@ export default function TableAssignmenyPage(props: PageProps) {
         tableForm.clearErrors();
         assignmentForm.clearErrors();
 
-        router.get(
-            '/table-assignment',
-            { event_id: selectedEventId || undefined },
-            { preserveScroll: true, preserveState: true, replace: true },
-        );
+        const destination = isChed ? chedBasePath : '/table-assignment';
+        router.get(destination, { event_id: selectedEventId || undefined }, { preserveScroll: true, preserveState: true, replace: true });
     }, [selectedEventId]);
 
     const allSelected = participants.length > 0 && participants.every((p) => selectedParticipantIds.has(p.id));
