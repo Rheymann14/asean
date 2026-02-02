@@ -54,6 +54,12 @@
                                                         @endphp
                                                         <img src="{{ $logoSrc }}" alt="ASEAN logo" style="width: 42px; height: 42px; display: block;" />
                                                     </td>
+                                                    <td style="width: 48px; vertical-align: middle;">
+                                                        @php
+                                                            $bagongPilipinasSrc = $bagongPilipinasPath ? $message->embed($bagongPilipinasPath) : $bagongPilipinasUrl;
+                                                        @endphp
+                                                        <img src="{{ $bagongPilipinasSrc }}" alt="Bagong Pilipinas logo" style="width: 42px; height: 42px; display: block;" />
+                                                    </td>
                                                     <td style="vertical-align: middle;">
                                                         <div style="font-size: 13px; font-weight: 700; color: #0f172a;">ASEAN Philippines 2026</div>
                                                         <div style="font-size: 11px; color: #475569;">Participant Identification</div>

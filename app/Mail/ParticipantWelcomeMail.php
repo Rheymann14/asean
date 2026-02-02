@@ -54,6 +54,7 @@ class ParticipantWelcomeMail extends Mailable implements ShouldQueue
         $appUrl = rtrim(config('app.url') ?: 'https://asean.chedro12.com', '/');
         $bannerPath = public_path('img/asean_banner_logo.png');
         $logoPath = public_path('img/asean_logo.png');
+        $bagongPilipinasPath = public_path('img/bagong_pilipinas.png');
 
         return new Content(
             view: 'emails.participant-welcome',
@@ -63,6 +64,8 @@ class ParticipantWelcomeMail extends Mailable implements ShouldQueue
                 'logoUrl' => $appUrl . '/img/asean_logo.png',
                 'bannerPath' => is_file($bannerPath) ? $bannerPath : null,
                 'logoPath' => is_file($logoPath) ? $logoPath : null,
+                'bagongPilipinasUrl' => $appUrl . '/img/bagong_pilipinas.png',
+                'bagongPilipinasPath' => is_file($bagongPilipinasPath) ? $bagongPilipinasPath : null,
                 'events' => $events,
                 'assignments' => $assignments,
                 'qrImage' => $this->fetchQrImage($qrUrl),
