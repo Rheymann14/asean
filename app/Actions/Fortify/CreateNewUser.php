@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Mail\ParticipantWelcomeMail;
 use App\Models\User;
+use App\Services\SemaphoreSms;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -56,6 +57,7 @@ class CreateNewUser implements CreatesNewUsers
         }
 
         Mail::to($user->email)->queue(new ParticipantWelcomeMail($user));
+        app(SemaphoreSms::class)->sendWelcome($user);
 
         return $user;
     }
