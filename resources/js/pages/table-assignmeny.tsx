@@ -451,8 +451,8 @@ export default function TableAssignmenyPage(props: PageProps) {
     const eventContextCard = (
         <Card>
             <CardHeader>
-                <CardTitle className="text-base">Event context</CardTitle>
-                <CardDescription>Pick the event to manage seating assignments.</CardDescription>
+                <CardTitle className="text-base">Event Filter</CardTitle>
+                <CardDescription></CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
                 <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
@@ -981,7 +981,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                                         variant="outline"
                                                                         onClick={() => updateTableInfo(table.id)}
                                                                     >
-                                                                        Edit
+                                                                        Update
                                                                     </Button>
                                                                     <Button
                                                                         type="button"
