@@ -14,7 +14,10 @@ import {
     Sparkles,
     ZoomIn,
     ImageOff,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-react';
+
 
 import {
     Dialog,
@@ -23,6 +26,8 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogFooter,
+    DialogClose,
 } from '@/components/ui/dialog';
 
 type ProgrammeRow = {
@@ -326,11 +331,120 @@ function ImagePreviewDialog({
                             </DialogDescription>
                         ) : null}
                     </DialogHeader>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">
+                                Close
+                            </Button>
+                        </DialogClose>
+                    </DialogFooter>
                 </div>
             </DialogContent>
         </Dialog>
     );
 }
+
+const CLAMP_CLASS: Record<number, string> = {
+    1: 'line-clamp-1',
+    2: 'line-clamp-2',
+    3: 'line-clamp-3',
+    4: 'line-clamp-4',
+    5: 'line-clamp-5',
+    6: 'line-clamp-6',
+};
+
+function ExpandableText({
+    id,
+    text,
+    lines = 3,
+    className,
+    tone = 'brand',
+}: {
+    id?: string;
+    text: string;
+    lines?: 1 | 2 | 3 | 4 | 5 | 6;
+    className?: string;
+    tone?: 'brand' | 'muted';
+}) {
+    const [expanded, setExpanded] = React.useState(false);
+    const [canToggle, setCanToggle] = React.useState(false);
+
+    const wrapRef = React.useRef<HTMLDivElement>(null);
+    const clampRef = React.useRef<HTMLParagraphElement>(null);
+    const fullRef = React.useRef<HTMLParagraphElement>(null);
+
+    const clampClass = CLAMP_CLASS[lines] ?? 'line-clamp-3';
+
+    React.useLayoutEffect(() => {
+        const wrap = wrapRef.current;
+        const clampEl = clampRef.current;
+        const fullEl = fullRef.current;
+        if (!wrap || !clampEl || !fullEl) return;
+
+        const compute = () => {
+            const clampH = clampEl.getBoundingClientRect().height;
+            const fullH = fullEl.getBoundingClientRect().height;
+
+            // If full height is meaningfully bigger than clamped height, we are truncating
+            setCanToggle(fullH - clampH > 1);
+        };
+
+        compute();
+
+        const ro = new ResizeObserver(() => compute());
+        ro.observe(wrap);
+
+        return () => ro.disconnect();
+    }, [text, lines]);
+
+    const btnTone =
+        tone === 'muted'
+            ? 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100'
+            : 'text-[#0033A0] hover:text-[#0033A0]/90 dark:text-[#b9ccff] dark:hover:text-[#cfe0ff]';
+
+    return (
+        <div ref={wrapRef} className="relative">
+            <p id={id} className={cn(className, !expanded && clampClass)}>
+                {text}
+            </p>
+
+            {canToggle ? (
+                <div className="mt-1 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={() => setExpanded((v) => !v)}
+                        aria-expanded={expanded}
+                        aria-controls={id}
+                        className={cn(
+                            'inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-semibold',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/30',
+                            btnTone,
+                        )}
+                    >
+                        {expanded ? 'Hide' : 'Show more'}
+                        {expanded ? (
+                            <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                    </button>
+                </div>
+            ) : null}
+
+            {/* hidden measurement nodes (do not affect layout) */}
+            <div aria-hidden className="pointer-events-none absolute left-0 top-0 -z-10 w-full opacity-0">
+                <p ref={clampRef} className={cn(className, clampClass)}>
+                    {text}
+                </p>
+                <p ref={fullRef} className={cn(className)}>
+                    {text}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 
 /** ✅ Compact grid tile: good for up to 20 events, responsive */
 function EventTile({
@@ -377,7 +491,7 @@ function EventTile({
 
             <div className={cn('relative p-3.5 sm:p-4', isClosed && 'opacity-90')}>
                 {/* image (click to preview) */}
-              
+
                 {imgOk && item.image ? (
                     <ImagePreviewDialog
                         src={item.image}
@@ -531,15 +645,19 @@ function EventTile({
                     {item.title}
                 </div>
 
-                <p
-                    className={cn(
-                        'mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300',
-                        'line-clamp-3',
-                        isClosed && 'text-slate-500 dark:text-slate-400',
-                    )}
-                >
-                    {item.body}
-                </p>
+                <div className="mt-2">
+                    <ExpandableText
+                        id={`event-desc-${item.id}`}
+                        text={item.body}
+                        lines={3}
+                        tone={isClosed ? 'muted' : 'brand'}
+                        className={cn(
+                            'text-sm leading-relaxed text-slate-600 dark:text-slate-300',
+                            isClosed && 'text-slate-500 dark:text-slate-400',
+                        )}
+                    />
+                </div>
+
 
                 {item.cta ? (
                     <div className="mt-4 flex justify-end">

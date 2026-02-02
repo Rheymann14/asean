@@ -33,8 +33,9 @@
 
         <title inertia>{{ config('app.name', 'ASEAN') }}</title>
 
+
         <link rel="icon" href="/logo.ico" sizes="any">
-        <link rel="icon" href="/logo.ico" type="image/svg+xml">
+        <link rel="icon" href="/logo.ico" type="image/x-icon">
         <link rel="apple-touch-icon" href="/logo.ico">
 
         <link rel="preconnect" href="https://fonts.bunny.net">

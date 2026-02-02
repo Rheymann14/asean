@@ -356,30 +356,40 @@ export default function Venue({ venues = [], section }: PageProps) {
                                 <div className="flex items-center justify-center">
                                     <TabsList
                                         className={[
-                                            'h-auto w-full max-w-6xl justify-start gap-1.5 rounded-2xl border border-slate-200/70 bg-white/70 p-1.5',
+                                            'h-auto w-full max-w-6xl justify-start items-stretch gap-1.5 rounded-2xl border border-slate-200/70 bg-white/70 p-1.5',
                                             'shadow-[0_10px_30px_-28px_rgba(2,6,23,0.25)] backdrop-blur-md',
                                             'overflow-x-auto overflow-y-hidden',
                                             '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
                                             'dark:border-white/10 dark:bg-slate-900/40',
                                         ].join(' ')}
                                     >
+
                                         {eventVenues.map((ev) => (
                                             <TabsTrigger
                                                 key={ev.id}
                                                 value={ev.id}
+                                                title={ev.label}
                                                 className={[
-                                                    'h-8 shrink-0 rounded-full px-2.5 text-[11px] font-semibold leading-none',
-                                                    'tracking-wide',
+                                                    // ✅ allow long titles (2 lines)
+                                                    'shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide leading-snug',
+                                                    'whitespace-normal text-center',
+                                                    // ✅ wider cap but still responsive
+                                                    'max-w-[min(18rem,calc(100vw-6rem))]',
+                                                    // ✅ states
                                                     'data-[state=inactive]:text-slate-700 data-[state=inactive]:hover:bg-slate-100/80',
                                                     'data-[state=active]:bg-[#0033A0] data-[state=active]:text-white',
                                                     'dark:data-[state=inactive]:text-slate-200 dark:data-[state=inactive]:hover:bg-white/10',
-                                                    'max-w-[160px] truncate',
+                                                    // ✅ accessibility
+                                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/35 focus-visible:ring-offset-2',
+                                                    'ring-offset-white dark:ring-offset-slate-950',
                                                 ].join(' ')}
-                                                title={ev.label}
                                             >
-                                                {ev.label}
+                                                <span className="block line-clamp-2 break-words [overflow-wrap:anywhere]">
+                                                    {ev.label}
+                                                </span>
                                             </TabsTrigger>
                                         ))}
+
                                     </TabsList>
                                 </div>
 

@@ -11,9 +11,17 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
 import { toast } from 'sonner';
-import { CheckCircle2, Plus, Users2, XCircle, Table as TableIcon } from 'lucide-react';
+import { CheckCircle2, Plus, Users2, XCircle, Table as TableIcon, Check, ChevronsUpDown } from 'lucide-react';
 
 type Country = {
     id: number;
@@ -143,6 +151,100 @@ function FlagThumb({ country, size = 18 }: { country: Country; size?: number }) 
         </div>
     );
 }
+
+type SearchItem = {
+    value: string;
+    label: string;
+    description?: string;
+    disabled?: boolean;
+};
+
+function SearchableDropdown({
+    value,
+    onValueChange,
+    items,
+    placeholder = 'Select...',
+    searchPlaceholder = 'Search...',
+    emptyText = 'No results found.',
+    disabled = false,
+    buttonClassName,
+}: {
+    value: string;
+    onValueChange: (next: string) => void;
+    items: SearchItem[];
+    placeholder?: string;
+    searchPlaceholder?: string;
+    emptyText?: string;
+    disabled?: boolean;
+    buttonClassName?: string;
+}) {
+    const [open, setOpen] = React.useState(false);
+
+    const selected = React.useMemo(
+        () => items.find((i) => i.value === value) ?? null,
+        [items, value],
+    );
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    disabled={disabled}
+                    className={cn('w-full justify-between gap-2', buttonClassName)}
+                >
+                    <span className={cn('min-w-0 truncate', !selected ? 'text-slate-500' : undefined)}>
+                        {selected ? selected.label : placeholder}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" />
+                </Button>
+            </PopoverTrigger>
+
+            <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder={searchPlaceholder} />
+                    <CommandEmpty>{emptyText}</CommandEmpty>
+
+                    <CommandList>
+                        <CommandGroup>
+                            {items.map((item) => (
+                                <CommandItem
+                                    key={item.value}
+                                    value={`${item.label} ${item.description ?? ''}`.trim()}
+                                    disabled={item.disabled}
+                                    onSelect={() => {
+                                        onValueChange(item.value);
+                                        setOpen(false);
+                                    }}
+                                    className="gap-2"
+                                >
+                                    <Check
+                                        className={cn(
+                                            'h-4 w-4',
+                                            value === item.value ? 'opacity-100' : 'opacity-0',
+                                        )}
+                                    />
+                                    <div className="min-w-0">
+                                        <div className="truncate">{item.label}</div>
+                                        {item.description ? (
+                                            <div className="truncate text-xs text-slate-500 dark:text-slate-400">
+                                                {item.description}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 
 export default function TableAssignmenyPage(props: PageProps) {
     const tables = props.tables ?? [];
@@ -319,7 +421,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                         </div>
                     </div>
 
-                    <Separator className="bg-slate-200/70 dark:bg-slate-800" />
+              
                 </div>
 
                 <div className="grid gap-6">
@@ -329,27 +431,34 @@ export default function TableAssignmenyPage(props: PageProps) {
                             <CardDescription>Pick the event to manage seating assignments.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                                <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
+                            <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
                                 <div className="space-y-1">
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Event</label>
-                                    <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select event" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {events.length === 0 ? (
-                                                <SelectItem value="none" disabled>
-                                                    No events available
-                                                </SelectItem>
-                                            ) : (
-                                                events.map((event) => (
-                                                    <SelectItem key={event.id} value={String(event.id)}>
-                                                        {event.title}
-                                                    </SelectItem>
-                                                ))
-                                            )}
-                                        </SelectContent>
-                                    </Select>
+                                    <SearchableDropdown
+                                        value={selectedEventId}
+                                        onValueChange={(v) => setSelectedEventId(v === 'none' ? '' : v)}
+                                        placeholder="Select event"
+                                        searchPlaceholder="Search events..."
+                                        emptyText="No events found."
+                                        disabled={events.length === 0}
+                                        items={
+                                            events.length === 0
+                                                ? [{ value: 'none', label: 'No events available', disabled: true }]
+                                                : [
+                                                    { value: '', label: 'Clear selection' },
+                                                    ...events.map((event) => {
+                                                        const phase = resolveEventPhase(event, Date.now());
+                                                        const when = event.starts_at ? formatDateTime(event.starts_at) : 'Schedule TBA';
+                                                        return {
+                                                            value: String(event.id),
+                                                            label: event.title,
+                                                            description: `${phaseLabel(phase)} • ${when}`,
+                                                        };
+                                                    }),
+                                                ]
+                                        }
+                                    />
+
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                                     {selectedEventId ? (
@@ -428,24 +537,30 @@ export default function TableAssignmenyPage(props: PageProps) {
                                 <div className="grid gap-4 md:grid-cols-[220px,1fr]">
                                     <div className="space-y-1">
                                         <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Table</label>
-                                        <Select value={selectedTableId} onValueChange={setSelectedTableId}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Choose table" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {tables.length === 0 ? (
-                                                    <SelectItem value="none" disabled>
-                                                        No tables yet
-                                                    </SelectItem>
-                                                ) : (
-                                                    tables.map((table) => (
-                                                        <SelectItem key={table.id} value={String(table.id)}>
-                                                            {table.table_number} ({table.assigned_count}/{table.capacity})
-                                                        </SelectItem>
-                                                    ))
-                                                )}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableDropdown
+                                            value={selectedTableId}
+                                            onValueChange={(v) => setSelectedTableId(v === 'none' ? '' : v)}
+                                            placeholder="Choose table"
+                                            searchPlaceholder="Search tables..."
+                                            emptyText="No tables found."
+                                            disabled={tables.length === 0 || !selectedEventId}
+                                            items={
+                                                tables.length === 0
+                                                    ? [{ value: 'none', label: 'No tables yet', disabled: true }]
+                                                    : [
+                                                        { value: '', label: 'Clear selection' },
+                                                        ...tables.map((table) => ({
+                                                            value: String(table.id),
+                                                            label: `${table.table_number} (${table.assigned_count}/${table.capacity})`,
+                                                            description:
+                                                                table.capacity - table.assigned_count > 0
+                                                                    ? `${table.capacity - table.assigned_count} seats left`
+                                                                    : 'Full',
+                                                        })),
+                                                    ]
+                                            }
+                                        />
+
                                         {assignmentForm.errors.participant_table_id ? (
                                             <p className="text-xs text-rose-500">{assignmentForm.errors.participant_table_id}</p>
                                         ) : null}
