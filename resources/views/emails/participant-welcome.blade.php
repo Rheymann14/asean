@@ -39,7 +39,7 @@
                   
                         <tr>
                             <td style="padding: 0 32px 24px;">
-                                <h2 style="margin: 0 0 12px; font-size: 16px; color: #0f172a;">System-generated Landscape ID</h2>
+                                <h2 style="margin: 0 0 12px; font-size: 16px; color: #0f172a;">System-generated ID</h2>
                                 @php
                                     $qrSrc = $qrImage ? $message->embedData($qrImage, 'participant-qr.png', 'image/png') : $qrUrl;
                                 @endphp
