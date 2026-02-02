@@ -73,7 +73,7 @@ class SemaphoreSms
             '',
             "System link: {$appUrl} — log in anytime to review your profile, joined events, and check-in updates. Your username is: {$email}",
             '',
-            'This is a no-reply message. For concerns.',
+            'This is a no-reply message.',
             '',
             'Welcome to ASEAN PH 2026 — thank you for registering!',
         ]);
