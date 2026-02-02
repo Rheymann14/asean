@@ -55,7 +55,7 @@ class CreateNewUser implements CreatesNewUsers
             $user->joinedProgrammes()->sync($programmeIds);
         }
 
-        Mail::to($user->email)->send(new ParticipantWelcomeMail($user));
+        Mail::to($user->email)->queue(new ParticipantWelcomeMail($user));
 
         return $user;
     }

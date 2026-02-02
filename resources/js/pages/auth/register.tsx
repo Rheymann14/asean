@@ -678,6 +678,14 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         )}
                                     </div>
 
+                                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-3 text-sm text-slate-600">
+                                        <p className="font-medium text-slate-700">Why registration can take a moment</p>
+                                        <p className="mt-1 text-sm leading-snug">
+                                            We generate your QR-enabled badge and send a confirmation email after you submit. This can take a few
+                                            extra seconds depending on email delivery.
+                                        </p>
+                                    </div>
+
                                     <Button
                                         type="submit"
                                         className="mt-1 h-11 w-full gap-2 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60"
@@ -695,8 +703,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         )}
                                     </Button>
                                     {processing && (
-                                        <p className="text-center text-sm text-slate-500">
-                                            Creating your account and sending your confirmation email. Please wait…
+                                        <p className="text-center text-sm text-slate-500" role="status" aria-live="polite">
+                                            Creating your account, generating your QR badge, and sending your confirmation email. Please wait…
                                         </p>
                                     )}
                                     <div className="mt-8 text-center text-sm text-muted-foreground">
