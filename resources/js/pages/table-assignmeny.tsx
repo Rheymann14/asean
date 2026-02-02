@@ -79,6 +79,7 @@ const ENDPOINTS = {
     tables: {
         store: '/table-assignment/tables',
         update: (id: number) => `/table-assignment/tables/${id}`,
+        destroy: (id: number) => `/table-assignment/tables/${id}`,
     },
     assignments: {
         store: '/table-assignment/assignments',
@@ -276,6 +277,7 @@ export default function TableAssignmenyPage(props: PageProps) {
     const [selectedTableId, setSelectedTableId] = React.useState<string>('');
     const [selectedParticipantIds, setSelectedParticipantIds] = React.useState<Set<number>>(new Set());
     const [capacityDrafts, setCapacityDrafts] = React.useState<Record<number, string>>({});
+    const [tableNumberDrafts, setTableNumberDrafts] = React.useState<Record<number, string>>({});
     const hasHydrated = React.useRef(false);
     const selectedEvent = selectedEventId ? events.find((event) => String(event.id) === selectedEventId) : null;
     const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, Date.now()) : null;
@@ -283,10 +285,13 @@ export default function TableAssignmenyPage(props: PageProps) {
 
     React.useEffect(() => {
         const nextDrafts: Record<number, string> = {};
+        const nextNumberDrafts: Record<number, string> = {};
         tables.forEach((table) => {
             nextDrafts[table.id] = String(table.capacity ?? '');
+            nextNumberDrafts[table.id] = table.table_number ?? '';
         });
         setCapacityDrafts(nextDrafts);
+        setTableNumberDrafts(nextNumberDrafts);
     }, [tables]);
 
     const chedBasePath = chedView === 'assignment' ? '/table-assignment/assignment' : '/table-assignment/create';
@@ -398,6 +403,36 @@ export default function TableAssignmenyPage(props: PageProps) {
                 onError: () => toast.error('Unable to update capacity.'),
             },
         );
+    }
+
+    function updateTableInfo(tableId: number) {
+        const capacity = Number(capacityDrafts[tableId]);
+        const tableNumber = tableNumberDrafts[tableId]?.trim();
+
+        if (!tableNumber) {
+            toast.error('Enter a table name.');
+            return;
+        }
+        if (!Number.isFinite(capacity) || capacity <= 0) {
+            toast.error('Enter a valid capacity.');
+            return;
+        }
+
+        router.patch(
+            ENDPOINTS.tables.update(tableId),
+            { table_number: tableNumber, capacity },
+            {
+                onSuccess: () => toast.success('Table updated.'),
+                onError: () => toast.error('Unable to update table.'),
+            },
+        );
+    }
+
+    function removeTable(tableId: number) {
+        router.delete(ENDPOINTS.tables.destroy(tableId), {
+            onSuccess: () => toast.success('Table deleted.'),
+            onError: () => toast.error('Unable to delete table.'),
+        });
     }
 
     function removeAssignment(id: number) {
@@ -896,23 +931,61 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                 <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                                     <TableHead>Table name</TableHead>
                                                     <TableHead className="w-[160px]">Capacity</TableHead>
+                                                    <TableHead className="w-[220px] text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {tables.length === 0 ? (
                                                     <TableRow>
-                                                        <TableCell colSpan={2} className="py-6 text-center text-sm text-slate-500">
+                                                        <TableCell colSpan={3} className="py-6 text-center text-sm text-slate-500">
                                                             No tables created yet.
                                                         </TableCell>
                                                     </TableRow>
                                                 ) : (
                                                     tables.map((table) => (
                                                         <TableRow key={table.id}>
-                                                            <TableCell className="font-medium text-slate-900 dark:text-slate-100">
-                                                                {table.table_number}
+                                                            <TableCell>
+                                                                <Input
+                                                                    value={tableNumberDrafts[table.id] ?? ''}
+                                                                    onChange={(e) =>
+                                                                        setTableNumberDrafts((prev) => ({
+                                                                            ...prev,
+                                                                            [table.id]: e.target.value,
+                                                                        }))
+                                                                    }
+                                                                />
                                                             </TableCell>
-                                                            <TableCell className="text-slate-600 dark:text-slate-300">
-                                                                {table.capacity}
+                                                            <TableCell>
+                                                                <Input
+                                                                    type="number"
+                                                                    min={1}
+                                                                    value={capacityDrafts[table.id] ?? ''}
+                                                                    onChange={(e) =>
+                                                                        setCapacityDrafts((prev) => ({
+                                                                            ...prev,
+                                                                            [table.id]: e.target.value,
+                                                                        }))
+                                                                    }
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex flex-wrap justify-end gap-2">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        onClick={() => updateTableInfo(table.id)}
+                                                                    >
+                                                                        Edit
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        className="text-rose-600 hover:text-rose-700"
+                                                                        onClick={() => removeTable(table.id)}
+                                                                    >
+                                                                        Delete
+                                                                    </Button>
+                                                                </div>
                                                             </TableCell>
                                                         </TableRow>
                                                     ))

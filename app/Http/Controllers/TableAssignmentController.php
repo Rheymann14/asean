@@ -241,12 +241,34 @@ class TableAssignmentController extends Controller
     public function updateTable(Request $request, ParticipantTable $participantTable)
     {
         $validated = $request->validate([
+            'table_number' => [
+                'sometimes',
+                'string',
+                'max:50',
+                Rule::unique('participant_tables', 'table_number')
+                    ->where('programme_id', $participantTable->programme_id)
+                    ->ignore($participantTable->id),
+            ],
             'capacity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $participantTable->update([
+        $payload = [
             'capacity' => $validated['capacity'],
-        ]);
+        ];
+
+        if (array_key_exists('table_number', $validated)) {
+            $payload['table_number'] = trim($validated['table_number']);
+        }
+
+        $participantTable->update($payload);
+
+        return back();
+    }
+
+    public function destroyTable(ParticipantTable $participantTable)
+    {
+        $participantTable->assignments()->delete();
+        $participantTable->delete();
 
         return back();
     }
@@ -345,12 +367,7 @@ class TableAssignmentController extends Controller
             return false;
         }
 
-        $startsAt = $event->starts_at;
         $endsAt = $event->ends_at;
-
-        if ($startsAt && $startsAt->isAfter($now)) {
-            return false;
-        }
 
         return ! $endsAt || $endsAt->isAfter($now) || $endsAt->equalTo($now);
     }
