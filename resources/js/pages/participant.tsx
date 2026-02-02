@@ -395,6 +395,14 @@ function isChedUserType(userType?: UserType | null) {
     return t === 'ched' || t.startsWith('ched ');
 }
 
+function isAdminUserType(userType?: UserType | null) {
+    const t = String(userType?.slug ?? userType?.name ?? '')
+        .toLowerCase()
+        .trim();
+
+    return t === 'admin' || t === 'administrator' || t.startsWith('admin ');
+}
+
 function isChedParticipant(p: ParticipantRow) {
     return isChedUserType(p.user_type);
 }
@@ -1857,42 +1865,62 @@ export default function ParticipantPage(props: PageProps) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {filteredUserTypes.map((u) => (
-                                                <TableRow key={u.id}>
-                                                    <TableCell className="font-medium text-slate-900 dark:text-slate-100">{u.name}</TableCell>
-                                                    <TableCell>
-                                                        <StatusBadge active={u.is_active} />
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="rounded-full">
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end" className="w-44">
-                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                <DropdownMenuItem onClick={() => openEditUserType(u)}>
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    Edit
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => toggleUserTypeActive(u)}>
-                                                                    <BadgeCheck className="mr-2 h-4 w-4" />
-                                                                    {u.is_active ? 'Set Inactive' : 'Set Active'}
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    className="text-red-600 focus:text-red-600"
-                                                                    onClick={() => requestDelete('userType', u.id, u.name)}
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                                    Delete
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
+                                            {filteredUserTypes.map((u) => {
+                                                const isAdmin = isAdminUserType(u);
+
+                                                return (
+                                                    <TableRow key={u.id}>
+                                                        <TableCell className="font-medium text-slate-900 dark:text-slate-100">{u.name}</TableCell>
+                                                        <TableCell>
+                                                            <StatusBadge active={u.is_active} />
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="rounded-full">
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-44">
+                                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                    <DropdownMenuItem
+                                                                        disabled={isAdmin}
+                                                                        onClick={() => {
+                                                                            if (isAdmin) return;
+                                                                            openEditUserType(u);
+                                                                        }}
+                                                                    >
+                                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                                        Edit
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        disabled={isAdmin}
+                                                                        onClick={() => {
+                                                                            if (isAdmin) return;
+                                                                            toggleUserTypeActive(u);
+                                                                        }}
+                                                                    >
+                                                                        <BadgeCheck className="mr-2 h-4 w-4" />
+                                                                        {u.is_active ? 'Set Inactive' : 'Set Active'}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        className="text-red-600 focus:text-red-600"
+                                                                        disabled={isAdmin}
+                                                                        onClick={() => {
+                                                                            if (isAdmin) return;
+                                                                            requestDelete('userType', u.id, u.name);
+                                                                        }}
+                                                                    >
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
                                         </TableBody>
                                     </Table>
                                 </div>
