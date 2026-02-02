@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ParticipantWelcomeMail;
 use App\Models\Country;
 use App\Models\ParticipantAttendance;
 use App\Models\Programme;
@@ -9,6 +10,7 @@ use App\Models\User;
 use App\Models\UserType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -135,7 +137,7 @@ class ParticipantController extends Controller
             'password' => ['nullable', 'string', 'min:8'],
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $validated['full_name'],
             'email' => $validated['email'],
             'contact_number' => $validated['contact_number'] ?? null,
@@ -143,7 +145,9 @@ class ParticipantController extends Controller
             'country_id' => $validated['country_id'] ?? null,
             'user_type_id' => $validated['user_type_id'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
-        ]);
+        ])->refresh();
+
+        Mail::to($user->email)->queue(new ParticipantWelcomeMail($user));
 
         return back();
     }
