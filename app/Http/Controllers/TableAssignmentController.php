@@ -25,6 +25,41 @@ class TableAssignmentController extends Controller
             return $this->participantIndex($request);
         }
 
+        return $this->chedIndex($request, 'create');
+    }
+
+    public function create(Request $request)
+    {
+        $user = $request->user();
+        $user->loadMissing('userType');
+        $roleName = Str::upper((string) ($user->userType->name ?? ''));
+        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
+        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
+
+        if (! $isChed) {
+            return $this->participantIndex($request);
+        }
+
+        return $this->chedIndex($request, 'create');
+    }
+
+    public function assignment(Request $request)
+    {
+        $user = $request->user();
+        $user->loadMissing('userType');
+        $roleName = Str::upper((string) ($user->userType->name ?? ''));
+        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
+        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
+
+        if (! $isChed) {
+            return $this->participantIndex($request);
+        }
+
+        return $this->chedIndex($request, 'assignment');
+    }
+
+    private function chedIndex(Request $request, string $view)
+    {
         $events = Programme::query()
             ->orderBy('starts_at')
             ->orderBy('title')
@@ -139,6 +174,7 @@ class TableAssignmentController extends Controller
                 'is_active' => $event->is_active,
             ]),
             'selected_event_id' => $selectedEventId ?: null,
+            'view' => $view,
         ]);
     }
 
@@ -205,12 +241,34 @@ class TableAssignmentController extends Controller
     public function updateTable(Request $request, ParticipantTable $participantTable)
     {
         $validated = $request->validate([
+            'table_number' => [
+                'sometimes',
+                'string',
+                'max:50',
+                Rule::unique('participant_tables', 'table_number')
+                    ->where('programme_id', $participantTable->programme_id)
+                    ->ignore($participantTable->id),
+            ],
             'capacity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $participantTable->update([
+        $payload = [
             'capacity' => $validated['capacity'],
-        ]);
+        ];
+
+        if (array_key_exists('table_number', $validated)) {
+            $payload['table_number'] = trim($validated['table_number']);
+        }
+
+        $participantTable->update($payload);
+
+        return back();
+    }
+
+    public function destroyTable(ParticipantTable $participantTable)
+    {
+        $participantTable->assignments()->delete();
+        $participantTable->delete();
 
         return back();
     }
@@ -309,12 +367,7 @@ class TableAssignmentController extends Controller
             return false;
         }
 
-        $startsAt = $event->starts_at;
         $endsAt = $event->ends_at;
-
-        if ($startsAt && $startsAt->isAfter($now)) {
-            return false;
-        }
 
         return ! $endsAt || $endsAt->isAfter($now) || $endsAt->equalTo($now);
     }

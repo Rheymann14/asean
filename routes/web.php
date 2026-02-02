@@ -48,6 +48,9 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
 
     Route::middleware(['auth'])->group(function () {
         Route::get('table-assignment', [TableAssignmentController::class, 'index'])->name('table-assignment');
+        Route::get('table-assignment/create', [TableAssignmentController::class, 'create'])->name('table-assignment.create');
+        Route::get('table-assignment/assignment', [TableAssignmentController::class, 'assignment'])
+            ->name('table-assignment.assignment');
 
         Route::middleware(['role:participant'])->group(function () {
             Route::get('participant-dashboard', function () {
@@ -102,6 +105,8 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
 
         Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
         Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');
+        Route::delete('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'destroyTable'])
+            ->name('table-assignment.tables.destroy');
         Route::post('table-assignment/assignments', [TableAssignmentController::class, 'storeAssignments'])->name('table-assignment.assignments.store');
         Route::delete('table-assignment/assignments/{participantTableAssignment}', [TableAssignmentController::class, 'destroyAssignment'])
             ->name('table-assignment.assignments.destroy');
