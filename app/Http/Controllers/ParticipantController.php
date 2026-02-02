@@ -8,6 +8,7 @@ use App\Models\ParticipantAttendance;
 use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
+use App\Services\SemaphoreSms;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -148,6 +149,7 @@ class ParticipantController extends Controller
         ])->refresh();
 
         Mail::to($user->email)->queue(new ParticipantWelcomeMail($user));
+        app(SemaphoreSms::class)->sendWelcome($user);
 
         return back();
     }
