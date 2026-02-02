@@ -36,8 +36,13 @@ export function AppSidebar() {
                   icon: Users,
               },
               {
+                  title: 'Create Table',
+                  href: '/table-assignment/create',
+                  icon: Table,
+              },
+              {
                   title: 'Table Assignment',
-                  href: '/table-assignment',
+                  href: '/table-assignment/assignment',
                   icon: Table,
               },
               {
