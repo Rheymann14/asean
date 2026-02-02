@@ -426,7 +426,7 @@ function ParticipantIdPrintCard({
     const isLandscape = orientation === 'landscape';
 
     // ✅ final physical print sizes
-    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.3in] print:h-[5.3in]';
+    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.1in] print:h-[5.05in]';
 
     /**
      * ✅ IMPORTANT:
@@ -439,7 +439,7 @@ function ParticipantIdPrintCard({
     const designWrap = isLandscape ? 'w-[520px] aspect-[3.37/2.125]' : 'w-[360px] aspect-[3.46/5.51]';
 
     // CSS px/in ≈ 96. These scale factors keep final printed size correct.
-    const printScale = isLandscape ? 'print:scale-[0.6222]' : 'print:scale-[0.88]'; // 3.37in*96/520, 3.3in*96/360
+    const printScale = isLandscape ? 'print:scale-[0.6222]' : 'print:scale-[0.8267]'; // 3.37in*96/520, 3.1in*96/360
     const printLayout = 'print:absolute print:left-0 print:top-0 print:origin-top-left';
 
     // ✅ changed
@@ -2433,12 +2433,12 @@ export default function ParticipantPage(props: PageProps) {
 
                       .print-grid {
                           display: grid;
-                          gap: ${printOrientation === 'landscape' ? '0.12in' : '0.1in'};
+                          gap: ${printOrientation === 'landscape' ? '0.12in' : '0.08in'};
                           align-content: start;
                           justify-content: start;
-                          grid-template-columns: repeat(${printOrientation === 'landscape' ? 3 : 2}, ${printOrientation === 'landscape' ? '3.37in' : '3.3in'});
-                          grid-auto-rows: ${printOrientation === 'landscape' ? '2.125in' : '5.3in'};
-                          max-width: ${printOrientation === 'landscape' ? '10.35in' : '6.7in'};
+                          grid-template-columns: repeat(${printOrientation === 'landscape' ? 3 : 2}, ${printOrientation === 'landscape' ? '3.37in' : '3.1in'});
+                          grid-auto-rows: ${printOrientation === 'landscape' ? '2.125in' : '5.05in'};
+                          max-width: ${printOrientation === 'landscape' ? '10.35in' : '6.28in'};
                       }
 
                       .id-print-card { break-inside: avoid; page-break-inside: avoid; box-sizing: border-box; box-shadow: none !important; }
