@@ -2430,7 +2430,15 @@ export default function ParticipantPage(props: PageProps) {
                       .print-page { box-sizing: border-box; padding: 0.25in; page-break-after: always; break-after: page; }
                       .print-page:last-of-type { page-break-after: auto; break-after: auto; }
 
-                      .print-grid { display: flex; flex-wrap: wrap; gap: 0.12in; align-content: flex-start; justify-content: flex-start; max-width: ${printOrientation === 'landscape' ? '10.35in' : '7.04in'}; }
+                      .print-grid {
+                          display: grid;
+                          gap: ${printOrientation === 'landscape' ? '0.12in' : '0.1in'};
+                          align-content: start;
+                          justify-content: start;
+                          grid-template-columns: repeat(${printOrientation === 'landscape' ? 3 : 2}, ${printOrientation === 'landscape' ? '3.37in' : '3.46in'});
+                          grid-auto-rows: ${printOrientation === 'landscape' ? '2.125in' : '5.51in'};
+                          max-width: ${printOrientation === 'landscape' ? '10.35in' : '7.04in'};
+                      }
 
                       .id-print-card { break-inside: avoid; page-break-inside: avoid; box-sizing: border-box; box-shadow: none !important; }
 
