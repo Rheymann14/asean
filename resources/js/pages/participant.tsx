@@ -440,9 +440,7 @@ function ParticipantIdPrintCard({
 
     // CSS px/in ≈ 96. These scale factors keep final printed size correct.
     const printScale = isLandscape ? 'print:scale-[0.6222]' : ''; // 3.37in*96/520
-    const printLayout = isLandscape
-        ? 'print:absolute print:left-0 print:top-0 print:origin-top-left'
-        : 'print:h-full print:w-full';
+    const printLayout = isLandscape ? 'print:absolute print:left-0 print:top-0 print:origin-top-left' : '';
 
     // ✅ changed
     const pad = isLandscape ? 'px-4 pt-3 pb-2' : 'p-4';
@@ -470,7 +468,7 @@ function ParticipantIdPrintCard({
             {/* This inner card is EXACTLY the Virtual ID layout, scaled down for print */}
             <div
                 className={cn(
-                    'relative',
+                    'id-print-card-inner relative',
                     designWrap,
                     // in print: use scaling only for landscape to avoid portrait print clipping
                     printLayout,
@@ -2420,7 +2418,7 @@ export default function ParticipantPage(props: PageProps) {
 
             {printMounted
                 ? createPortal(
-                    <div id="participant-print-root" className="hidden print:block">
+                    <div id="participant-print-root" data-orientation={printOrientation} className="hidden print:block">
                         <style>{`
                   @media print {
                       @page { size: ${printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm'}; margin: 0; }
@@ -2447,6 +2445,16 @@ export default function ParticipantPage(props: PageProps) {
 
                       /* ✅ EXTRA PRINT SAFETY (prevents missing layers) */
                       .id-print-card { isolation: isolate; }
+
+                      #participant-print-root[data-orientation="portrait"] .id-print-card-inner {
+                          width: 100% !important;
+                          height: 100% !important;
+                          aspect-ratio: auto !important;
+                          transform: none !important;
+                          position: relative !important;
+                          left: auto !important;
+                          top: auto !important;
+                      }
                   }
               `}</style>
 
