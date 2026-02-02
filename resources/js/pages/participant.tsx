@@ -439,7 +439,10 @@ function ParticipantIdPrintCard({
     const designWrap = isLandscape ? 'w-[520px] aspect-[3.37/2.125]' : 'w-[360px] aspect-[3.46/5.51]';
 
     // CSS px/in ≈ 96. These scale factors keep final printed size correct.
-    const printScale = isLandscape ? 'print:scale-[0.6222]' : 'print:scale-[0.9227]'; // 3.37in*96/520, 3.46in*96/360
+    const printScale = isLandscape ? 'print:scale-[0.6222]' : ''; // 3.37in*96/520
+    const printLayout = isLandscape
+        ? 'print:absolute print:left-0 print:top-0 print:origin-top-left'
+        : 'print:h-full print:w-full';
 
     // ✅ changed
     const pad = isLandscape ? 'px-4 pt-3 pb-2' : 'p-4';
@@ -469,8 +472,8 @@ function ParticipantIdPrintCard({
                 className={cn(
                     'relative',
                     designWrap,
-                    // in print: pin top-left + scale, so it does NOT reflow
-                    'print:absolute print:left-0 print:top-0 print:origin-top-left',
+                    // in print: use scaling only for landscape to avoid portrait print clipping
+                    printLayout,
                     printScale,
                 )}
             >
