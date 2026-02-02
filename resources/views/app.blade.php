@@ -4,6 +4,19 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:title" content="{{ config('app.name', 'ASEAN') }}">
+        <meta property="og:image" content="{{ secure_url('/og/asean_banner_logo.png') }}">
+        <meta property="og:image:secure_url" content="{{ secure_url('/og/asean_banner_logo.png') }}">
+        <meta property="og:image:type" content="image/png">
+        <meta property="og:image:width" content="2799">
+        <meta property="og:image:height" content="667">
+        <meta property="og:image:alt" content="{{ config('app.name', 'ASEAN') }} banner logo">
+        <meta property="og:image" content="{{ secure_asset('img/asean_banner_logo.png') }}">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:image" content="{{ secure_url('/og/asean_banner_logo.png') }}">
+        <meta name="twitter:image:alt" content="{{ config('app.name', 'ASEAN') }} banner logo">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
