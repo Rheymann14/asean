@@ -50,6 +50,8 @@ class SemaphoreSms
                 'body' => $response->body(),
                 'number' => $number,
             ]);
+        } else {
+            $this->logSemaphoreFailure($response, $number);
         }
 
         return $response;
@@ -80,6 +82,31 @@ class SemaphoreSms
         return Str::limit($message, $maxLength, '');
     }
 
+    private function logSemaphoreFailure(Response $response, string $number): void
+    {
+        $payload = $response->json();
+
+        if (! is_array($payload)) {
+            return;
+        }
+
+        $entries = array_filter($payload, fn ($item) => is_array($item));
+
+        foreach ($entries as $entry) {
+            $status = strtolower((string) ($entry['status'] ?? ''));
+
+            if ($status === 'failed') {
+                Log::warning('Semaphore SMS reported failure.', [
+                    'status' => $entry['status'] ?? null,
+                    'message_id' => $entry['message_id'] ?? null,
+                    'number' => $number,
+                    'error' => $entry['message'] ?? null,
+                    'raw' => $entry,
+                ]);
+            }
+        }
+    }
+
     private function normalizeNumber(?string $number): ?string
     {
         $number = trim((string) $number);
@@ -88,6 +115,32 @@ class SemaphoreSms
             return null;
         }
 
-        return $number;
+        $normalized = str_replace([' ', '-', '(', ')'], '', $number);
+
+        if (Str::startsWith($normalized, '+')) {
+            $normalized = substr($normalized, 1);
+        } elseif (Str::startsWith($normalized, '00')) {
+            $normalized = substr($normalized, 2);
+        }
+
+        $digits = preg_replace('/\\D+/', '', $normalized);
+
+        if (! $digits) {
+            return null;
+        }
+
+        if (Str::startsWith($digits, '63')) {
+            return $digits;
+        }
+
+        if (Str::startsWith($digits, '09')) {
+            return '63' . substr($digits, 1);
+        }
+
+        if (Str::startsWith($digits, '9') && strlen($digits) === 10) {
+            return '63' . $digits;
+        }
+
+        return $digits;
     }
 }
