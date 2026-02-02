@@ -2418,7 +2418,7 @@ export default function ParticipantPage(props: PageProps) {
 
             {printMounted
                 ? createPortal(
-                    <div id="participant-print-root" className="hidden print:block">
+                    <div id="participant-print-root" data-orientation={printOrientation} className="hidden print:block">
                         <style>{`
                   @media print {
                       @page { size: ${printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm'}; margin: 0; }
