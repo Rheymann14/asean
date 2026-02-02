@@ -59,6 +59,12 @@ class SemaphoreSms
 
     private function buildWelcomeMessage(User $user): string
     {
+        $simpleMessage = config('services.semaphore.simple_message');
+
+        if (is_string($simpleMessage) && $simpleMessage !== '') {
+            return $simpleMessage;
+        }
+
         $appUrl = rtrim(config('app.url') ?: 'http://localhost:8000', '/');
         $name = $user->name;
         $email = $user->email;

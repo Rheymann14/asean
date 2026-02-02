@@ -41,6 +41,7 @@ return [
         'endpoint' => env('SEMAPHORE_ENDPOINT', 'https://semaphore.co/api/v4/messages'),
         'ascii_only' => env('SEMAPHORE_ASCII_ONLY', true),
         'max_length' => env('SEMAPHORE_MAX_LENGTH', 459),
+        'simple_message' => env('SEMAPHORE_SIMPLE_MESSAGE'),
     ],
 
 ];
