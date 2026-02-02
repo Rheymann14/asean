@@ -398,9 +398,10 @@ function isChedUserType(userType?: UserType | null) {
 function isAdminUserType(userType?: UserType | null) {
     const t = String(userType?.slug ?? userType?.name ?? '')
         .toLowerCase()
+        .replace(/[_-]+/g, ' ')
         .trim();
 
-    return t === 'admin' || t === 'administrator' || t.startsWith('admin ');
+    return t.includes('admin') || t.includes('administrator') || t === 'ched' || t.startsWith('ched ');
 }
 
 function isChedParticipant(p: ParticipantRow) {
