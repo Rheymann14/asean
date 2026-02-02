@@ -2126,6 +2126,11 @@ export default function ParticipantPage(props: PageProps) {
                                     onChange={(e) => participantForm.setData('email', e.target.value)}
                                     placeholder="e.g. juan@example.com"
                                 />
+                                {!editingParticipant ? (
+                                    <div className="text-xs text-slate-500">
+                                        We will send the welcome email with the participant QR badge after you create the record.
+                                    </div>
+                                ) : null}
                                 {participantForm.errors.email ? <div className="text-xs text-red-600">{participantForm.errors.email}</div> : null}
                             </div>
 
