@@ -1009,11 +1009,25 @@ export default function EventManagement(props: PageProps) {
                                             </div>
                                         ) : null}
                                         {signatorySignature ? (
-                                            <Button type="button" size="sm" variant="ghost" onClick={handleSignatureRemove}>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-red-600 hover:text-red-700"
+                                                onClick={handleSignatureRemove}
+                                            >
                                                 Remove
                                             </Button>
                                         ) : null}
                                     </div>
+                                    {signatorySignature ? (
+                                        <div className="flex items-center gap-3">
+                                            <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                <img src={signatorySignature} alt="Signature preview" className="h-10 w-auto object-contain" />
+                                            </div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400">Preview</div>
+                                        </div>
+                                    ) : null}
                                     <div className="text-xs text-slate-500 dark:text-slate-400">
                                         Upload a signature image to embed in the certificate PDF view.
                                     </div>
