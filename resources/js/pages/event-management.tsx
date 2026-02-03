@@ -562,7 +562,7 @@ export default function EventManagement(props: PageProps) {
                     ? `has appeared during the conduct of <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`
                     : `for actively participating in <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`;
             const logo =
-                type === 'appearance' ? '/img/ched_logo_bagong_pilipinas.png' : '/img/asean_banner_logo.png';
+                type === 'appearance' ? '/img/ched_logo_bagong_pilipinas.png' : '/img/ched_logo_bagong_pilipinas_asean.png';
 
             return `
                 <section class="certificate certificate--${type}">
