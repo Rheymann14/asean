@@ -76,6 +76,9 @@ type ProgrammeRow = {
 
     image_url: string | null; // server-provided
     pdf_url: string | null; // server-provided (for "View more")
+    signatory_name?: string | null;
+    signatory_title?: string | null;
+    signatory_signature_url?: string | null;
 
     is_active: boolean;
     updated_at?: string | null;
@@ -195,6 +198,12 @@ function resolveImageUrl(imageUrl?: string | null) {
     return `/event-images/${imageUrl}`;
 }
 
+function resolveSignatureUrl(signatureUrl?: string | null) {
+    if (!signatureUrl) return null;
+    if (signatureUrl.startsWith('http') || signatureUrl.startsWith('/')) return signatureUrl;
+    return `/signatures/${signatureUrl}`;
+}
+
 function getEventStatus(starts_at?: string | null, ends_at?: string | null) {
     if (!starts_at) return 'upcoming';
     const start = new Date(starts_at);
@@ -308,6 +317,8 @@ export default function EventManagement(props: PageProps) {
     const [signatoryTitle, setSignatoryTitle] = React.useState('CHED Chairperson');
     const [signatorySignature, setSignatorySignature] = React.useState<string | null>(null);
     const [signatorySignatureLabel, setSignatorySignatureLabel] = React.useState<string>('');
+    const signatorySyncEnabledRef = React.useRef(false);
+    const signatorySyncTimeoutRef = React.useRef<number | null>(null);
 
     // ✅ existing file urls (server) when editing
     const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
@@ -326,18 +337,110 @@ export default function EventManagement(props: PageProps) {
     }, [imagePreview]);
 
     React.useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const savedName = window.localStorage.getItem('event-management.signatoryName');
-        const savedTitle = window.localStorage.getItem('event-management.signatoryTitle');
-        if (savedName) setSignatoryName(savedName);
-        if (savedTitle) setSignatoryTitle(savedTitle);
-    }, []);
+        if (!participantsTarget) return;
+        signatorySyncEnabledRef.current = false;
+
+        const defaultName = 'Shirley C. Agrupis, Ph.D.';
+        const defaultTitle = 'CHED Chairperson';
+        const signatureUrl = resolveSignatureUrl(participantsTarget.signatory_signature_url);
+
+        if (signatorySignature?.startsWith('blob:')) {
+            URL.revokeObjectURL(signatorySignature);
+        }
+
+        setSignatoryName(participantsTarget.signatory_name ?? defaultName);
+        setSignatoryTitle(participantsTarget.signatory_title ?? defaultTitle);
+        setSignatorySignature(signatureUrl);
+        setSignatorySignatureLabel(signatureUrl ? basename(signatureUrl) : '');
+
+        const enableTimeout = window.setTimeout(() => {
+            signatorySyncEnabledRef.current = true;
+        }, 0);
+
+        return () => {
+            window.clearTimeout(enableTimeout);
+        };
+    }, [participantsTarget?.id]);
 
     React.useEffect(() => {
-        if (typeof window === 'undefined') return;
-        window.localStorage.setItem('event-management.signatoryName', signatoryName);
-        window.localStorage.setItem('event-management.signatoryTitle', signatoryTitle);
-    }, [signatoryName, signatoryTitle]);
+        return () => {
+            if (signatorySignature?.startsWith('blob:')) URL.revokeObjectURL(signatorySignature);
+        };
+    }, [signatorySignature]);
+
+    React.useEffect(() => {
+        if (!participantsTarget || !participantsOpen || !signatorySyncEnabledRef.current) return;
+        if (signatorySyncTimeoutRef.current) {
+            window.clearTimeout(signatorySyncTimeoutRef.current);
+        }
+
+        signatorySyncTimeoutRef.current = window.setTimeout(() => {
+            persistSignatoryData({
+                name: signatoryName,
+                title: signatoryTitle,
+            });
+        }, 700);
+
+        return () => {
+            if (signatorySyncTimeoutRef.current) {
+                window.clearTimeout(signatorySyncTimeoutRef.current);
+            }
+        };
+    }, [participantsOpen, participantsTarget?.id, signatoryName, signatoryTitle]);
+
+    function persistSignatoryData({
+        name,
+        title,
+        signatureFile,
+        removeSignature,
+    }: {
+        name?: string;
+        title?: string;
+        signatureFile?: File | null;
+        removeSignature?: boolean;
+    }) {
+        if (!participantsTarget) return;
+
+        const payload = new FormData();
+        payload.append('_method', 'patch');
+        payload.append('signatory_name', name ?? signatoryName ?? '');
+        payload.append('signatory_title', title ?? signatoryTitle ?? '');
+        if (signatureFile) payload.append('signatory_signature', signatureFile);
+        if (removeSignature) payload.append('signatory_signature_remove', '1');
+
+        router.post(ENDPOINTS.programmes.update(participantsTarget.id), payload, {
+            preserveScroll: true,
+            forceFormData: true,
+            onError: () => toast.error('Unable to save signatory details.'),
+        });
+    }
+
+    function handleSignatureUpload(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file for the signature.');
+            return;
+        }
+        const previewUrl = URL.createObjectURL(file);
+        setSignatorySignature((prev) => {
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return previewUrl;
+        });
+        setSignatorySignatureLabel(file.name);
+        persistSignatoryData({ signatureFile: file });
+        toast.success('Signature attached.');
+    }
+
+    function handleSignatureRemove() {
+        if (signatorySignature?.startsWith('blob:')) {
+            URL.revokeObjectURL(signatorySignature);
+        }
+        setSignatorySignature(null);
+        setSignatorySignatureLabel('');
+        persistSignatoryData({ removeSignature: true });
+        toast.success('Signature removed.');
+    }
 
     function handleSignatureUpload(event: React.ChangeEvent<HTMLInputElement>) {
         const file = event.target.files?.[0];

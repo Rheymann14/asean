@@ -47,6 +47,9 @@ class ProgrammeController extends Controller
                         : null,
                     'image_url' => $programme->image_url,
                     'pdf_url' => $programme->pdf_url,
+                    'signatory_name' => $programme->signatory_name,
+                    'signatory_title' => $programme->signatory_title,
+                    'signatory_signature_url' => $programme->signatory_signature_url,
                     'is_active' => $programme->is_active,
                     'updated_at' => $programme->updated_at?->toISOString(),
                     'created_by' => $programme->user
@@ -199,6 +202,9 @@ class ProgrammeController extends Controller
             'location' => ['nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'max:10240'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
+            'signatory_name' => ['nullable', 'string', 'max:255'],
+            'signatory_title' => ['nullable', 'string', 'max:255'],
+            'signatory_signature' => ['nullable', 'image', 'max:10240'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
@@ -228,6 +234,19 @@ class ProgrammeController extends Controller
             $file->move($destination, $pdfName);
         }
 
+        $signatureName = null;
+        if ($request->hasFile('signatory_signature')) {
+            $file = $request->file('signatory_signature');
+            $signatureName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
+            $destination = public_path('signatures');
+
+            if (!File::exists($destination)) {
+                File::makeDirectory($destination, 0755, true);
+            }
+
+            $file->move($destination, $signatureName);
+        }
+
         Programme::create([
             'user_id' => $request->user()->id,
             'tag' => $validated['tag'] ?? '',
@@ -238,6 +257,9 @@ class ProgrammeController extends Controller
             'location' => $validated['location'] ?? '',
             'image_url' => $imageName,
             'pdf_url' => $pdfName,
+            'signatory_name' => $validated['signatory_name'] ?? null,
+            'signatory_title' => $validated['signatory_title'] ?? null,
+            'signatory_signature_url' => $signatureName,
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
@@ -255,6 +277,10 @@ class ProgrammeController extends Controller
             'location' => ['sometimes', 'nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'max:10240'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
+            'signatory_name' => ['nullable', 'string', 'max:255'],
+            'signatory_title' => ['nullable', 'string', 'max:255'],
+            'signatory_signature' => ['nullable', 'image', 'max:10240'],
+            'signatory_signature_remove' => ['nullable', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
@@ -300,6 +326,37 @@ class ProgrammeController extends Controller
             $validated['pdf_url'] = $pdfName;
         }
 
+        if ($request->boolean('signatory_signature_remove')) {
+            if ($programme->signatory_signature_url) {
+                $existing = public_path('signatures/' . ltrim($programme->signatory_signature_url, '/'));
+                if (File::exists($existing)) {
+                    File::delete($existing);
+                }
+            }
+            $validated['signatory_signature_url'] = null;
+        }
+
+        if ($request->hasFile('signatory_signature')) {
+            $file = $request->file('signatory_signature');
+            $signatureName = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
+            $destination = public_path('signatures');
+
+            if (!File::exists($destination)) {
+                File::makeDirectory($destination, 0755, true);
+            }
+
+            $file->move($destination, $signatureName);
+
+            if ($programme->signatory_signature_url) {
+                $existing = public_path('signatures/' . ltrim($programme->signatory_signature_url, '/'));
+                if (File::exists($existing)) {
+                    File::delete($existing);
+                }
+            }
+
+            $validated['signatory_signature_url'] = $signatureName;
+        }
+
         $programme->update($validated);
 
         return back();
@@ -316,6 +373,13 @@ class ProgrammeController extends Controller
 
         if ($programme->pdf_url) {
             $existing = public_path('downloadables/' . ltrim($programme->pdf_url, '/'));
+            if (File::exists($existing)) {
+                File::delete($existing);
+            }
+        }
+
+        if ($programme->signatory_signature_url) {
+            $existing = public_path('signatures/' . ltrim($programme->signatory_signature_url, '/'));
             if (File::exists($existing)) {
                 File::delete($existing);
             }
