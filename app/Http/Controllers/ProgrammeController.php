@@ -19,12 +19,17 @@ class ProgrammeController extends Controller
             ->groupBy('programme_id');
 
         $programmes = Programme::query()
-            ->with(['user', 'participants'])
+            ->with([
+                'user',
+                'participants',
+                'venues' => fn ($query) => $query->where('is_active', true)->orderBy('id'),
+            ])
             ->latest('starts_at')
             ->get()
             ->map(function (Programme $programme) use ($attendanceByProgramme) {
                 $attendanceEntries = $attendanceByProgramme->get($programme->id, collect());
                 $attendanceByUser = $attendanceEntries->keyBy('user_id');
+                $venue = $programme->venues->first();
 
                 return [
                     'id' => $programme->id,
@@ -34,6 +39,12 @@ class ProgrammeController extends Controller
                     'starts_at' => $programme->starts_at?->toISOString(),
                     'ends_at' => $programme->ends_at?->toISOString(),
                     'location' => $programme->location,
+                    'venue' => $venue
+                        ? [
+                            'name' => $venue->name,
+                            'address' => $venue->address,
+                        ]
+                        : null,
                     'image_url' => $programme->image_url,
                     'pdf_url' => $programme->pdf_url,
                     'is_active' => $programme->is_active,

@@ -68,6 +68,10 @@ type ProgrammeRow = {
     starts_at: string | null; // ISO string
     ends_at: string | null; // ISO string
     location?: string | null;
+    venue?: {
+        name: string;
+        address?: string | null;
+    } | null;
 
     image_url: string | null; // server-provided
     pdf_url: string | null; // server-provided (for "View more")
@@ -155,6 +159,13 @@ function formatGivenDate(starts_at?: string | null) {
     const start = new Date(starts_at);
     if (Number.isNaN(start.getTime())) return '—';
     return new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(start);
+}
+
+function formatVenueLabel(programme: ProgrammeRow) {
+    if (programme.venue?.name) {
+        return programme.venue.address ? `${programme.venue.name}, ${programme.venue.address}` : programme.venue.name;
+    }
+    return programme.location || '—';
 }
 
 function toLocalInputValue(iso: string | null | undefined) {
@@ -493,7 +504,7 @@ export default function EventManagement(props: PageProps) {
         const eventName = certificateProgramme.title;
         const eventDate = formatDateRange(certificateProgramme.starts_at, certificateProgramme.ends_at);
         const givenDate = formatGivenDate(certificateProgramme.ends_at ?? certificateProgramme.starts_at);
-        const venue = certificateProgramme.location || '—';
+        const venue = formatVenueLabel(certificateProgramme);
         const participantName = certificateParticipant.name;
         const typeTitle = certificateType === 'appearance' ? 'CERTIFICATE OF APPEARANCE' : 'CERTIFICATE OF PARTICIPATION';
         const bodyText =
@@ -513,7 +524,9 @@ export default function EventManagement(props: PageProps) {
                     <style>
                         @page { size: A4; margin: 24mm; }
                         body { font-family: "Times New Roman", serif; color: #111; }
-                        .sheet { width: 210mm; min-height: 297mm; padding: 12mm; box-sizing: border-box; }
+                        .toolbar { position: fixed; top: 16px; right: 16px; z-index: 10; }
+                        .toolbar button { padding: 8px 14px; font-size: 14px; cursor: pointer; }
+                        .sheet { width: 210mm; min-height: 297mm; padding: 12mm; box-sizing: border-box; margin: 0 auto; }
                         .title { text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 1px; margin-bottom: 24px; }
                         .subtitle { text-align: center; font-size: 16px; margin-bottom: 8px; }
                         .text { text-align: center; font-size: 16px; line-height: 1.7; margin: 16px auto; max-width: 620px; }
@@ -522,9 +535,11 @@ export default function EventManagement(props: PageProps) {
                         .signatory { margin-top: 48px; text-align: center; }
                         .sign-name { font-size: 16px; font-weight: 700; }
                         .sign-title { font-size: 14px; }
+                        @media print { .toolbar { display: none; } }
                     </style>
                 </head>
                 <body>
+                    <div class="toolbar"><button onclick="window.print()">Print</button></div>
                     <div class="sheet">
                         <div class="subtitle">Commission on Higher Education</div>
                         <div class="subtitle">Regional Office XII</div>
@@ -541,7 +556,6 @@ export default function EventManagement(props: PageProps) {
         `);
         printWindow.document.close();
         printWindow.focus();
-        printWindow.print();
     }
 
     const participantsList = participantsTarget?.participants ?? [];
@@ -989,7 +1003,11 @@ export default function EventManagement(props: PageProps) {
                                             <span className="font-semibold">
                                                 {formatDateRange(certificateProgramme?.starts_at, certificateProgramme?.ends_at)}
                                             </span>{' '}
-                                            at <span className="font-semibold">{certificateProgramme?.location ?? 'Event venue'}</span>.
+                                            at{' '}
+                                            <span className="font-semibold">
+                                                {certificateProgramme ? formatVenueLabel(certificateProgramme) : 'Event venue'}
+                                            </span>
+                                            .
                                         </>
                                     ) : (
                                         <>
@@ -998,13 +1016,17 @@ export default function EventManagement(props: PageProps) {
                                             <span className="font-semibold">
                                                 {formatDateRange(certificateProgramme?.starts_at, certificateProgramme?.ends_at)}
                                             </span>{' '}
-                                            at <span className="font-semibold">{certificateProgramme?.location ?? 'Event venue'}</span>.
+                                            at{' '}
+                                            <span className="font-semibold">
+                                                {certificateProgramme ? formatVenueLabel(certificateProgramme) : 'Event venue'}
+                                            </span>
+                                            .
                                         </>
                                     )}
                                 </div>
                                 <div className="mt-6 text-sm text-slate-600 dark:text-slate-300">
                                     Given this {formatGivenDate(certificateProgramme?.ends_at ?? certificateProgramme?.starts_at)} at{' '}
-                                    {certificateProgramme?.location ?? 'Event venue'}.
+                                    {certificateProgramme ? formatVenueLabel(certificateProgramme) : 'Event venue'}.
                                 </div>
                                 <div className="mt-10">
                                     <div className="text-sm font-semibold">{signatoryName || 'Signatory name'}</div>
