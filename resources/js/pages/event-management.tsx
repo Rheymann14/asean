@@ -591,13 +591,24 @@ export default function EventManagement(props: PageProps) {
         `;
     }
 
-    function printCertificate() {
-        if (!certificateProgramme || !certificateParticipant) return;
+    function writePrintWindow(html: string) {
         const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=800');
-        if (!printWindow) return;
-        printWindow.document.write(buildCertificatePrintHtml(certificateProgramme, [certificateParticipant]));
+        if (!printWindow) return null;
+        printWindow.document.open();
+        printWindow.document.write(html);
         printWindow.document.close();
         printWindow.focus();
+        return printWindow;
+    }
+
+    function printCertificate() {
+        if (!certificateProgramme || !certificateParticipant) return;
+        const html = buildCertificatePrintHtml(certificateProgramme, [certificateParticipant]);
+        if (!html) {
+            toast.error('Unable to generate certificates.');
+            return;
+        }
+        writePrintWindow(html);
     }
 
     function printAllCertificates() {
@@ -607,11 +618,12 @@ export default function EventManagement(props: PageProps) {
             toast.error('No checked-in participants to print.');
             return;
         }
-        const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=800');
-        if (!printWindow) return;
-        printWindow.document.write(buildCertificatePrintHtml(participantsTarget, checkedInParticipants));
-        printWindow.document.close();
-        printWindow.focus();
+        const html = buildCertificatePrintHtml(participantsTarget, checkedInParticipants);
+        if (!html) {
+            toast.error('Unable to generate certificates.');
+            return;
+        }
+        writePrintWindow(html);
     }
 
     const participantsList = participantsTarget?.participants ?? [];
