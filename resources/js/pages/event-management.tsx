@@ -515,6 +515,14 @@ export default function EventManagement(props: PageProps) {
         body { font-family: "Times New Roman", serif; color: #111; margin: 0; }
         .page { width: 210mm; min-height: 297mm; margin: 0 auto 12mm; display: flex; flex-direction: column; gap: 10mm; }
         .certificate { flex: 1; border: 1px solid #e5e7eb; padding: 10mm; display: flex; flex-direction: column; justify-content: center; }
+        .certificate--participation {
+            background: url('/img/bg.png') center/cover no-repeat;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .certificate-logo { display: block; max-width: 100%; margin: 0 auto 10px; }
+        .certificate-logo--appearance { max-height: 64px; }
+        .certificate-logo--participation { max-height: 54px; }
         .title { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 14px; }
         .subtitle { text-align: center; font-size: 14px; margin-bottom: 4px; }
         .lead { text-align: center; font-size: 15px; margin-top: 6px; }
@@ -546,10 +554,12 @@ export default function EventManagement(props: PageProps) {
                 type === 'appearance'
                     ? `has appeared during the conduct of <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`
                     : `for actively participating in <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`;
+            const logo =
+                type === 'appearance' ? '/img/ched_logo_bagong_pilipinas.png' : '/img/asean_banner_logo.png';
 
             return `
-                <section class="certificate">
-           
+                <section class="certificate certificate--${type}">
+                    <img class="certificate-logo certificate-logo--${type}" src="${logo}" alt="" />
                     <div class="title">${typeTitle}</div>
                     <div class="lead">${lead}</div>
                     <div class="recipient">${participantName}</div>
@@ -1039,8 +1049,28 @@ export default function EventManagement(props: PageProps) {
                                     key={type}
                                     className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                                 >
-                                    <div className="mx-auto max-w-[760px] rounded-xl border border-dashed border-slate-200 p-6 text-center text-slate-900 dark:border-slate-800 dark:text-slate-100">
-                                     
+                                    <div
+                                        className="mx-auto max-w-[760px] rounded-xl border border-dashed border-slate-200 p-6 text-center text-slate-900 dark:border-slate-800 dark:text-slate-100"
+                                        style={
+                                            type === 'participation'
+                                                ? {
+                                                      backgroundImage: "url('/img/bg.png')",
+                                                      backgroundPosition: 'center',
+                                                      backgroundRepeat: 'no-repeat',
+                                                      backgroundSize: 'cover',
+                                                  }
+                                                : undefined
+                                        }
+                                    >
+                                        <img
+                                            src={
+                                                type === 'appearance'
+                                                    ? '/img/ched_logo_bagong_pilipinas.png'
+                                                    : '/img/asean_banner_logo.png'
+                                            }
+                                            alt=""
+                                            className={type === 'appearance' ? 'mx-auto h-16 w-auto' : 'mx-auto h-12 w-auto'}
+                                        />
                                         <div className="mt-6 text-3xl font-semibold">
                                             {type === 'appearance' ? 'Certificate of Appearance' : 'Certificate of Participation'}
                                         </div>
