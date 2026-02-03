@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
 import { cn } from '@/lib/utils';
+import printJS from '@/lib/print-js';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -509,7 +510,29 @@ export default function EventManagement(props: PageProps) {
         setCertificateOpen(true);
     }
 
-    function buildCertificatePrintHtml(programme: ProgrammeRow, participants: ProgrammeParticipant[]) {
+    const printStyles = `
+        @page { size: A4 portrait; margin: 12mm; }
+        body { font-family: "Times New Roman", serif; color: #111; margin: 0; }
+        .page { width: 210mm; min-height: 297mm; margin: 0 auto 12mm; display: flex; flex-direction: column; gap: 10mm; }
+        .certificate { flex: 1; border: 1px solid #e5e7eb; padding: 10mm; display: flex; flex-direction: column; justify-content: center; }
+        .title { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 14px; }
+        .subtitle { text-align: center; font-size: 14px; margin-bottom: 4px; }
+        .lead { text-align: center; font-size: 15px; margin-top: 6px; }
+        .recipient { text-align: center; font-size: 20px; font-weight: 700; margin-top: 6px; }
+        .text { text-align: center; font-size: 15px; line-height: 1.6; margin: 10px auto 0; max-width: 620px; }
+        .value { font-weight: 700; }
+        .given { text-align: center; font-size: 14px; margin-top: 16px; }
+        .signatory { margin-top: 24px; text-align: center; }
+        .sign-name { font-size: 15px; font-weight: 700; }
+        .sign-title { font-size: 13px; }
+        .page:last-child { margin-bottom: 0; }
+        @media print {
+            .page { margin: 0 auto; page-break-after: always; }
+            .page:last-child { page-break-after: auto; }
+        }
+    `;
+
+    function buildCertificatePrintBody(programme: ProgrammeRow, participants: ProgrammeParticipant[]) {
         const eventName = programme.title;
         const eventDate = formatDateRange(programme.starts_at, programme.ends_at);
         const givenDate = formatGivenDate(programme.ends_at ?? programme.starts_at);
@@ -552,63 +575,17 @@ export default function EventManagement(props: PageProps) {
             })
             .join('');
 
-        return `
-            <!doctype html>
-            <html>
-                <head>
-                    <meta charset="utf-8" />
-                    <title>Certificates</title>
-                    <style>
-                        @page { size: A4 portrait; margin: 12mm; }
-                        body { font-family: "Times New Roman", serif; color: #111; margin: 0; }
-                        .toolbar { position: fixed; top: 16px; right: 16px; z-index: 10; }
-                        .toolbar button { padding: 8px 14px; font-size: 14px; cursor: pointer; }
-                        .page { width: 210mm; min-height: 297mm; margin: 0 auto 12mm; display: flex; flex-direction: column; gap: 10mm; }
-                        .certificate { flex: 1; border: 1px solid #e5e7eb; padding: 10mm; display: flex; flex-direction: column; justify-content: center; }
-                        .title { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 14px; }
-                        .subtitle { text-align: center; font-size: 14px; margin-bottom: 4px; }
-                        .lead { text-align: center; font-size: 15px; margin-top: 6px; }
-                        .recipient { text-align: center; font-size: 20px; font-weight: 700; margin-top: 6px; }
-                        .text { text-align: center; font-size: 15px; line-height: 1.6; margin: 10px auto 0; max-width: 620px; }
-                        .value { font-weight: 700; }
-                        .given { text-align: center; font-size: 14px; margin-top: 16px; }
-                        .signatory { margin-top: 24px; text-align: center; }
-                        .sign-name { font-size: 15px; font-weight: 700; }
-                        .sign-title { font-size: 13px; }
-                        .page:last-child { margin-bottom: 0; }
-                        @media print {
-                            .toolbar { display: none; }
-                            .page { margin: 0 auto; page-break-after: always; }
-                            .page:last-child { page-break-after: auto; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="toolbar"><button onclick="window.print()">Print</button></div>
-                    ${pages}
-                </body>
-            </html>
-        `;
-    }
-
-    function writePrintWindow(html: string) {
-        const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=800');
-        if (!printWindow) return null;
-        printWindow.document.open();
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.focus();
-        return printWindow;
+        return pages;
     }
 
     function printCertificate() {
         if (!certificateProgramme || !certificateParticipant) return;
-        const html = buildCertificatePrintHtml(certificateProgramme, [certificateParticipant]);
-        if (!html) {
+        const html = buildCertificatePrintBody(certificateProgramme, [certificateParticipant]);
+        if (!html.trim()) {
             toast.error('Unable to generate certificates.');
             return;
         }
-        writePrintWindow(html);
+        printJS({ printable: html, type: 'raw-html', style: printStyles, documentTitle: 'Certificates' });
     }
 
     function printAllCertificates() {
@@ -618,12 +595,12 @@ export default function EventManagement(props: PageProps) {
             toast.error('No checked-in participants to print.');
             return;
         }
-        const html = buildCertificatePrintHtml(participantsTarget, checkedInParticipants);
-        if (!html) {
+        const html = buildCertificatePrintBody(participantsTarget, checkedInParticipants);
+        if (!html.trim()) {
             toast.error('Unable to generate certificates.');
             return;
         }
-        writePrintWindow(html);
+        printJS({ printable: html, type: 'raw-html', style: printStyles, documentTitle: 'Certificates' });
     }
 
     const participantsList = participantsTarget?.participants ?? [];
