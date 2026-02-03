@@ -358,6 +358,12 @@ export default function EventManagement(props: PageProps) {
         reader.readAsDataURL(file);
     }
 
+    function handleSignatureRemove() {
+        setSignatorySignature(null);
+        setSignatorySignatureLabel('');
+        toast.success('Signature removed.');
+    }
+
     const form = useForm<{
         title: string;
         description: string;
@@ -559,7 +565,7 @@ export default function EventManagement(props: PageProps) {
         .value { font-weight: 700; }
         .given { text-align: center; font-size: 14px; margin-top: 16px; }
         .signatory { margin-top: 24px; text-align: center; }
-        .signatory-signature { display: block; margin: 0 auto 8px; max-height: 60px; object-fit: contain; }
+        .signatory-signature { display: block; margin: 0 auto -6px; max-height: 60px; object-fit: contain; }
         .sign-name { font-size: 15px; font-weight: 700; }
         .sign-title { font-size: 13px; }
         .page:last-child { margin-bottom: 0; }
@@ -1001,6 +1007,11 @@ export default function EventManagement(props: PageProps) {
                                             <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
                                                 <span className="truncate">{signatorySignatureLabel || 'Signature attached'}</span>
                                             </div>
+                                        ) : null}
+                                        {signatorySignature ? (
+                                            <Button type="button" size="sm" variant="ghost" onClick={handleSignatureRemove}>
+                                                Remove
+                                            </Button>
                                         ) : null}
                                     </div>
                                     <div className="text-xs text-slate-500 dark:text-slate-400">
