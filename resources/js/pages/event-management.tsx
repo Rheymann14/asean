@@ -442,6 +442,31 @@ export default function EventManagement(props: PageProps) {
         toast.success('Signature removed.');
     }
 
+    function handleSignatureUpload(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file for the signature.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = typeof reader.result === 'string' ? reader.result : null;
+            if (!result) return;
+            setSignatorySignature(result);
+            setSignatorySignatureLabel(file.name);
+            toast.success('Signature attached.');
+        };
+        reader.onerror = () => toast.error('Unable to read signature file.');
+        reader.readAsDataURL(file);
+    }
+
+    function handleSignatureRemove() {
+        setSignatorySignature(null);
+        setSignatorySignatureLabel('');
+        toast.success('Signature removed.');
+    }
+
     const form = useForm<{
         title: string;
         description: string;
