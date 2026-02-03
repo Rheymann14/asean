@@ -49,6 +49,14 @@ import {
     XCircle,
 } from 'lucide-react';
 
+type ProgrammeParticipant = {
+    id: number;
+    name: string;
+    email?: string | null;
+    display_id?: string | null;
+    checked_in_at?: string | null;
+};
+
 type ProgrammeRow = {
     id: number;
     title: string;
@@ -59,19 +67,14 @@ type ProgrammeRow = {
 
     starts_at: string | null; // ISO string
     ends_at: string | null; // ISO string
+    location?: string | null;
 
     image_url: string | null; // server-provided
     pdf_url: string | null; // server-provided (for "View more")
 
     is_active: boolean;
     updated_at?: string | null;
-    participants?: {
-        id: number;
-        name: string;
-        email?: string | null;
-        display_id?: string | null;
-        checked_in_at?: string | null;
-    }[];
+    participants?: ProgrammeParticipant[];
 };
 
 type PageProps = {
@@ -131,6 +134,27 @@ function formatDateTimeSafe(value?: string | null) {
         hour: '2-digit',
         minute: '2-digit',
     }).format(d);
+}
+
+function formatDateRange(starts_at?: string | null, ends_at?: string | null) {
+    if (!starts_at) return '—';
+    const start = new Date(starts_at);
+    if (Number.isNaN(start.getTime())) return '—';
+    const end = ends_at ? new Date(ends_at) : null;
+    const sameDay = end && !Number.isNaN(end.getTime()) && start.toDateString() === end.toDateString();
+    const date = new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(start);
+    if (!end || Number.isNaN(end.getTime()) || sameDay) {
+        return date;
+    }
+    const endDate = new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(end);
+    return `${date} – ${endDate}`;
+}
+
+function formatGivenDate(starts_at?: string | null) {
+    if (!starts_at) return '—';
+    const start = new Date(starts_at);
+    if (Number.isNaN(start.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(start);
 }
 
 function toLocalInputValue(iso: string | null | undefined) {
@@ -268,6 +292,12 @@ export default function EventManagement(props: PageProps) {
     // participants dialog
     const [participantsOpen, setParticipantsOpen] = React.useState(false);
     const [participantsTarget, setParticipantsTarget] = React.useState<ProgrammeRow | null>(null);
+    const [certificateOpen, setCertificateOpen] = React.useState(false);
+    const [certificateType, setCertificateType] = React.useState<'appearance' | 'participation'>('appearance');
+    const [certificateParticipant, setCertificateParticipant] = React.useState<ProgrammeParticipant | null>(null);
+    const [certificateProgramme, setCertificateProgramme] = React.useState<ProgrammeRow | null>(null);
+    const [signatoryName, setSignatoryName] = React.useState('Rody P. Garcia, MDM, JD, Ed.D.');
+    const [signatoryTitle, setSignatoryTitle] = React.useState('Regional Director');
 
     // ✅ existing file urls (server) when editing
     const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
@@ -444,6 +474,74 @@ export default function EventManagement(props: PageProps) {
     function openParticipants(item: ProgrammeRow) {
         setParticipantsTarget(item);
         setParticipantsOpen(true);
+    }
+
+    function openCertificate(
+        programme: ProgrammeRow,
+        participant: ProgrammeParticipant,
+        type: 'appearance' | 'participation',
+    ) {
+        setCertificateProgramme(programme);
+        setCertificateParticipant(participant);
+        setCertificateType(type);
+        setCertificateOpen(true);
+    }
+
+    function printCertificate() {
+        if (!certificateProgramme || !certificateParticipant) return;
+
+        const eventName = certificateProgramme.title;
+        const eventDate = formatDateRange(certificateProgramme.starts_at, certificateProgramme.ends_at);
+        const givenDate = formatGivenDate(certificateProgramme.ends_at ?? certificateProgramme.starts_at);
+        const venue = certificateProgramme.location || '—';
+        const participantName = certificateParticipant.name;
+        const typeTitle = certificateType === 'appearance' ? 'CERTIFICATE OF APPEARANCE' : 'CERTIFICATE OF PARTICIPATION';
+        const bodyText =
+            certificateType === 'appearance'
+                ? `This is to certify that <span class="value">${participantName}</span> has appeared during the conduct of <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`
+                : `This <span class="value">${typeTitle.toLowerCase()}</span> is hereby given to <span class="value">${participantName}</span> for actively participating in <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`;
+
+        const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=800');
+        if (!printWindow) return;
+
+        printWindow.document.write(`
+            <!doctype html>
+            <html>
+                <head>
+                    <meta charset="utf-8" />
+                    <title>${typeTitle}</title>
+                    <style>
+                        @page { size: A4; margin: 24mm; }
+                        body { font-family: "Times New Roman", serif; color: #111; }
+                        .sheet { width: 210mm; min-height: 297mm; padding: 12mm; box-sizing: border-box; }
+                        .title { text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 1px; margin-bottom: 24px; }
+                        .subtitle { text-align: center; font-size: 16px; margin-bottom: 8px; }
+                        .text { text-align: center; font-size: 16px; line-height: 1.7; margin: 16px auto; max-width: 620px; }
+                        .value { font-weight: 700; }
+                        .given { text-align: center; font-size: 15px; margin-top: 24px; }
+                        .signatory { margin-top: 48px; text-align: center; }
+                        .sign-name { font-size: 16px; font-weight: 700; }
+                        .sign-title { font-size: 14px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="sheet">
+                        <div class="subtitle">Commission on Higher Education</div>
+                        <div class="subtitle">Regional Office XII</div>
+                        <div class="title">${typeTitle}</div>
+                        <div class="text">${bodyText}</div>
+                        <div class="given">Given this ${givenDate} at ${venue}.</div>
+                        <div class="signatory">
+                            <div class="sign-name">${signatoryName}</div>
+                            <div class="sign-title">${signatoryTitle}</div>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
     }
 
     const participantsList = participantsTarget?.participants ?? [];
@@ -776,7 +874,7 @@ export default function EventManagement(props: PageProps) {
             </Dialog>
 
             <Dialog open={participantsOpen} onOpenChange={setParticipantsOpen}>
-                <DialogContent className="sm:max-w-[560px]">
+                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[920px] max-h-[90vh] overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>Participants</DialogTitle>
                         <DialogDescription>
@@ -784,7 +882,7 @@ export default function EventManagement(props: PageProps) {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+                    <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
                         {participantsList.length === 0 ? (
                             <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800">
                                 No participants have joined this event yet.
@@ -802,16 +900,36 @@ export default function EventManagement(props: PageProps) {
                                                 {participant.display_id || participant.email || '—'}
                                             </div>
                                         </div>
-                                        {participant.checked_in_at ? (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                                Checked in
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                                                Not checked in
-                                            </span>
-                                        )}
+                                        <div className="flex flex-col items-end gap-2">
+                                            {participant.checked_in_at ? (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                                    Checked in
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                                                    Not checked in
+                                                </span>
+                                            )}
+                                            <div className="flex flex-wrap justify-end gap-2">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => openCertificate(participantsTarget!, participant, 'appearance')}
+                                                >
+                                                    Print Appearance
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => openCertificate(participantsTarget!, participant, 'participation')}
+                                                >
+                                                    Print Participation
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                     {participant.checked_in_at ? (
                                         <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -822,6 +940,88 @@ export default function EventManagement(props: PageProps) {
                             ))
                         )}
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={certificateOpen} onOpenChange={setCertificateOpen}>
+                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[980px] max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {certificateType === 'appearance' ? 'Certificate of Appearance' : 'Certificate of Participation'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {certificateParticipant?.name ?? 'Participant'} · {certificateProgramme?.title ?? 'Event'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex flex-col gap-4 overflow-y-auto pr-1 sm:max-h-[72vh]">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signatory name</div>
+                                <Input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} placeholder="Signatory name" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signatory title</div>
+                                <Input value={signatoryTitle} onChange={(e) => setSignatoryTitle(e.target.value)} placeholder="Signatory title" />
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                            <div className="mx-auto max-w-[760px] rounded-xl border border-dashed border-slate-200 p-6 text-center text-slate-900 dark:border-slate-800 dark:text-slate-100">
+                                <div className="text-xs uppercase tracking-[0.3em] text-slate-500">Commission on Higher Education</div>
+                                <div className="mt-1 text-xs uppercase tracking-[0.3em] text-slate-500">Regional Office XII</div>
+                                <div className="mt-6 text-3xl font-semibold">
+                                    {certificateType === 'appearance' ? 'Certificate of Appearance' : 'Certificate of Participation'}
+                                </div>
+                                <div className="mt-6 text-sm text-slate-600 dark:text-slate-300">
+                                    {certificateType === 'appearance'
+                                        ? 'This is to certify that'
+                                        : 'This certificate is hereby given to'}
+                                </div>
+                                <div className="mt-2 text-xl font-semibold">
+                                    {certificateParticipant?.name ?? 'Participant Name'}
+                                </div>
+                                <div className="mt-4 text-sm text-slate-600 dark:text-slate-300">
+                                    {certificateType === 'appearance' ? (
+                                        <>
+                                            has appeared during the conduct of{' '}
+                                            <span className="font-semibold">{certificateProgramme?.title ?? 'Event name'}</span> on{' '}
+                                            <span className="font-semibold">
+                                                {formatDateRange(certificateProgramme?.starts_at, certificateProgramme?.ends_at)}
+                                            </span>{' '}
+                                            at <span className="font-semibold">{certificateProgramme?.location ?? 'Event venue'}</span>.
+                                        </>
+                                    ) : (
+                                        <>
+                                            for actively participating in{' '}
+                                            <span className="font-semibold">{certificateProgramme?.title ?? 'Event name'}</span> on{' '}
+                                            <span className="font-semibold">
+                                                {formatDateRange(certificateProgramme?.starts_at, certificateProgramme?.ends_at)}
+                                            </span>{' '}
+                                            at <span className="font-semibold">{certificateProgramme?.location ?? 'Event venue'}</span>.
+                                        </>
+                                    )}
+                                </div>
+                                <div className="mt-6 text-sm text-slate-600 dark:text-slate-300">
+                                    Given this {formatGivenDate(certificateProgramme?.ends_at ?? certificateProgramme?.starts_at)} at{' '}
+                                    {certificateProgramme?.location ?? 'Event venue'}.
+                                </div>
+                                <div className="mt-10">
+                                    <div className="text-sm font-semibold">{signatoryName || 'Signatory name'}</div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">{signatoryTitle || 'Signatory title'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2">
+                        <Button type="button" variant="outline" onClick={() => setCertificateOpen(false)}>
+                            Close
+                        </Button>
+                        <Button type="button" className={PRIMARY_BTN} onClick={printCertificate}>
+                            Print Certificate
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
