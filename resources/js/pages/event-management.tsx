@@ -1071,7 +1071,7 @@ export default function EventManagement(props: PageProps) {
                                                       backgroundImage: "url('/img/appearance_bg.png')",
                                                       backgroundPosition: 'center',
                                                       backgroundRepeat: 'no-repeat',
-                                                      backgroundSize: 'cover',
+                                                      backgroundSize: 'contain',
                                                   }
                                         }
                                     >
