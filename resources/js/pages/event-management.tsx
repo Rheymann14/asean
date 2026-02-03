@@ -306,6 +306,8 @@ export default function EventManagement(props: PageProps) {
     const [participantsTarget, setParticipantsTarget] = React.useState<ProgrammeRow | null>(null);
     const [signatoryName, setSignatoryName] = React.useState('Shirley C. Agrupis, Ph.D.');
     const [signatoryTitle, setSignatoryTitle] = React.useState('CHED Chairperson');
+    const [signatorySignature, setSignatorySignature] = React.useState<string | null>(null);
+    const [signatorySignatureLabel, setSignatorySignatureLabel] = React.useState<string>('');
 
     // ✅ existing file urls (server) when editing
     const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
@@ -336,6 +338,31 @@ export default function EventManagement(props: PageProps) {
         window.localStorage.setItem('event-management.signatoryName', signatoryName);
         window.localStorage.setItem('event-management.signatoryTitle', signatoryTitle);
     }, [signatoryName, signatoryTitle]);
+
+    function handleSignatureUpload(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file for the signature.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = typeof reader.result === 'string' ? reader.result : null;
+            if (!result) return;
+            setSignatorySignature(result);
+            setSignatorySignatureLabel(file.name);
+            toast.success('Signature attached.');
+        };
+        reader.onerror = () => toast.error('Unable to read signature file.');
+        reader.readAsDataURL(file);
+    }
+
+    function handleSignatureRemove() {
+        setSignatorySignature(null);
+        setSignatorySignatureLabel('');
+        toast.success('Signature removed.');
+    }
 
     const form = useForm<{
         title: string;
@@ -538,6 +565,7 @@ export default function EventManagement(props: PageProps) {
         .value { font-weight: 700; }
         .given { text-align: center; font-size: 14px; margin-top: 16px; }
         .signatory { margin-top: 24px; text-align: center; }
+        .signatory-signature { display: block; margin: 0 auto -6px; max-height: 60px; object-fit: contain; }
         .sign-name { font-size: 15px; font-weight: 700; }
         .sign-title { font-size: 13px; }
         .page:last-child { margin-bottom: 0; }
@@ -573,6 +601,7 @@ export default function EventManagement(props: PageProps) {
                     <div class="text">${body}</div>
                     <div class="given">Given this ${givenDate} at ${venue}.</div>
                     <div class="signatory">
+                        ${signatorySignature ? `<img class="signatory-signature" src="${signatorySignature}" alt="Signature" />` : ''}
                         <div class="sign-name">${signatoryName}</div>
                         <div class="sign-title">${signatoryTitle}</div>
                     </div>
@@ -969,6 +998,39 @@ export default function EventManagement(props: PageProps) {
                                         onChange={(e) => setSignatoryTitle(e.target.value)}
                                         placeholder="Signatory title"
                                     />
+                                </div>
+                                <div className="space-y-1.5 sm:col-span-2">
+                                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signature upload</div>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <Input type="file" accept="image/*" onChange={handleSignatureUpload} />
+                                        {signatorySignature ? (
+                                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                                                <span className="truncate">{signatorySignatureLabel || 'Signature attached'}</span>
+                                            </div>
+                                        ) : null}
+                                        {signatorySignature ? (
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-red-600 hover:text-red-700"
+                                                onClick={handleSignatureRemove}
+                                            >
+                                                Remove
+                                            </Button>
+                                        ) : null}
+                                    </div>
+                                    {signatorySignature ? (
+                                        <div className="flex items-center gap-3">
+                                            <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                <img src={signatorySignature} alt="Signature preview" className="h-10 w-auto object-contain" />
+                                            </div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400">Preview</div>
+                                        </div>
+                                    ) : null}
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                        Upload a signature image to embed in the certificate PDF view.
+                                    </div>
                                 </div>
                             </div>
                         </div>
