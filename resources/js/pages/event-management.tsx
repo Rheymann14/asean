@@ -65,6 +65,13 @@ type ProgrammeRow = {
 
     is_active: boolean;
     updated_at?: string | null;
+    participants?: {
+        id: number;
+        name: string;
+        email?: string | null;
+        display_id?: string | null;
+        checked_in_at?: string | null;
+    }[];
 };
 
 type PageProps = {
@@ -258,6 +265,10 @@ export default function EventManagement(props: PageProps) {
     const [deleteOpen, setDeleteOpen] = React.useState(false);
     const [deleteTarget, setDeleteTarget] = React.useState<ProgrammeRow | null>(null);
 
+    // participants dialog
+    const [participantsOpen, setParticipantsOpen] = React.useState(false);
+    const [participantsTarget, setParticipantsTarget] = React.useState<ProgrammeRow | null>(null);
+
     // ✅ existing file urls (server) when editing
     const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
     const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null);
@@ -430,6 +441,13 @@ export default function EventManagement(props: PageProps) {
         });
     }
 
+    function openParticipants(item: ProgrammeRow) {
+        setParticipantsTarget(item);
+        setParticipantsOpen(true);
+    }
+
+    const participantsList = participantsTarget?.participants ?? [];
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Event Management" />
@@ -507,7 +525,7 @@ export default function EventManagement(props: PageProps) {
                         ) : (
                             // ✅ scrollbar only in table area
                             <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
-                                <Table className="min-w-[1280px]">
+                                <Table className="min-w-[1480px]">
                                     <TableHeader>
                                         <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                             <TableHead className="min-w-[360px]">Event</TableHead>
@@ -516,6 +534,7 @@ export default function EventManagement(props: PageProps) {
                                             <TableHead className="min-w-[220px]">View more (PDF)</TableHead>
                                             <TableHead className="w-[160px]">Event Status</TableHead>
                                             <TableHead className="w-[140px]">Status</TableHead>
+                                            <TableHead className="w-[200px]">Participants</TableHead>
                                             <TableHead className="w-[180px]">Updated</TableHead>
                                             <TableHead className="w-[120px] text-right">Action</TableHead>
                                         </TableRow>
@@ -585,6 +604,16 @@ export default function EventManagement(props: PageProps) {
 
                                                 <TableCell>
                                                     <StatusBadge active={p.is_active} />
+                                                </TableCell>
+
+                                                <TableCell>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openParticipants(p)}
+                                                        className="inline-flex items-center gap-2 text-sm font-semibold text-[#00359c] underline-offset-4 hover:underline"
+                                                    >
+                                                        {(p.participants?.length ?? 0).toLocaleString()} joined
+                                                    </button>
                                                 </TableCell>
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">{formatDateTimeSafe(p.updated_at)}</TableCell>
@@ -743,6 +772,56 @@ export default function EventManagement(props: PageProps) {
                             </DialogFooter>
                         </div>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={participantsOpen} onOpenChange={setParticipantsOpen}>
+                <DialogContent className="sm:max-w-[560px]">
+                    <DialogHeader>
+                        <DialogTitle>Participants</DialogTitle>
+                        <DialogDescription>
+                            {participantsTarget?.title ?? 'Event'} · {participantsList.length.toLocaleString()} joined
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+                        {participantsList.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800">
+                                No participants have joined this event yet.
+                            </div>
+                        ) : (
+                            participantsList.map((participant) => (
+                                <div
+                                    key={participant.id}
+                                    className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="font-semibold text-slate-900 dark:text-slate-100">{participant.name}</div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                {participant.display_id || participant.email || '—'}
+                                            </div>
+                                        </div>
+                                        {participant.checked_in_at ? (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                                Checked in
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                                                Not checked in
+                                            </span>
+                                        )}
+                                    </div>
+                                    {participant.checked_in_at ? (
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                                            Scanned {formatDateTimeSafe(participant.checked_in_at)}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
 
