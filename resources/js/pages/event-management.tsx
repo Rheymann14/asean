@@ -515,8 +515,15 @@ export default function EventManagement(props: PageProps) {
         body { font-family: "Times New Roman", serif; color: #111; margin: 0; }
         .page { width: 210mm; min-height: 297mm; margin: 0 auto 12mm; display: flex; flex-direction: column; gap: 10mm; }
         .certificate { flex: 1; border: 1px solid #e5e7eb; padding: 10mm; display: flex; flex-direction: column; justify-content: center; }
+        .certificate--appearance {
+            background: url('/img/appearance_bg.png') center/cover no-repeat;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
         .certificate--participation {
-            background: url('/img/bg.png') center/cover no-repeat;
+            background:
+                linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)),
+                url('/img/bg.png') center/cover no-repeat;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -1054,12 +1061,18 @@ export default function EventManagement(props: PageProps) {
                                         style={
                                             type === 'participation'
                                                 ? {
-                                                      backgroundImage: "url('/img/bg.png')",
+                                                      backgroundImage:
+                                                          "linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)), url('/img/bg.png')",
                                                       backgroundPosition: 'center',
                                                       backgroundRepeat: 'no-repeat',
                                                       backgroundSize: 'cover',
                                                   }
-                                                : undefined
+                                                : {
+                                                      backgroundImage: "url('/img/appearance_bg.png')",
+                                                      backgroundPosition: 'center',
+                                                      backgroundRepeat: 'no-repeat',
+                                                      backgroundSize: 'cover',
+                                                  }
                                         }
                                     >
                                         <img
