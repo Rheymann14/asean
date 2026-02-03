@@ -307,8 +307,8 @@ export default function EventManagement(props: PageProps) {
     const [certificateOpen, setCertificateOpen] = React.useState(false);
     const [certificateParticipant, setCertificateParticipant] = React.useState<ProgrammeParticipant | null>(null);
     const [certificateProgramme, setCertificateProgramme] = React.useState<ProgrammeRow | null>(null);
-    const [signatoryName, setSignatoryName] = React.useState('Rody P. Garcia, MDM, JD, Ed.D.');
-    const [signatoryTitle, setSignatoryTitle] = React.useState('Regional Director');
+    const [signatoryName, setSignatoryName] = React.useState('Shirley C. Agrupis, Ph.D.');
+    const [signatoryTitle, setSignatoryTitle] = React.useState('CHED Chairperson');
 
     // ✅ existing file urls (server) when editing
     const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
@@ -549,8 +549,7 @@ export default function EventManagement(props: PageProps) {
 
             return `
                 <section class="certificate">
-                    <div class="subtitle">Commission on Higher Education</div>
-                    <div class="subtitle">Regional Office XII</div>
+           
                     <div class="title">${typeTitle}</div>
                     <div class="lead">${lead}</div>
                     <div class="recipient">${participantName}</div>
@@ -687,7 +686,7 @@ export default function EventManagement(props: PageProps) {
                                     <TableHeader>
                                         <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                             <TableHead className="min-w-[360px]">Event</TableHead>
-                              
+
                                             <TableHead className="min-w-[260px]">Schedule</TableHead>
                                             <TableHead className="min-w-[220px]">View more (PDF)</TableHead>
                                             <TableHead className="w-[160px]">Event Status</TableHead>
@@ -728,7 +727,7 @@ export default function EventManagement(props: PageProps) {
                                                     </div>
                                                 </TableCell>
 
-                                      
+
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
                                                     <div className="font-medium">{formatDatePill(p.starts_at, p.ends_at)}</div>
@@ -768,11 +767,13 @@ export default function EventManagement(props: PageProps) {
                                                     <button
                                                         type="button"
                                                         onClick={() => openParticipants(p)}
-                                                        className="inline-flex items-center gap-2 text-sm font-semibold text-[#00359c] underline-offset-4 hover:underline"
+                                                        className="inline-flex items-center gap-2 rounded-full border border-[#00359c]/20 bg-[#00359c]/5 px-3 py-1 text-sm font-semibold text-[#00359c] shadow-sm hover:bg-[#00359c]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00359c]/30"
                                                     >
                                                         {(p.participants?.length ?? 0).toLocaleString()} joined
+                                                        <span className="text-xs font-medium opacity-70">View</span>
                                                     </button>
                                                 </TableCell>
+
 
                                                 <TableCell className="text-slate-700 dark:text-slate-300">{formatDateTimeSafe(p.updated_at)}</TableCell>
 
@@ -1039,10 +1040,7 @@ export default function EventManagement(props: PageProps) {
                                     className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                                 >
                                     <div className="mx-auto max-w-[760px] rounded-xl border border-dashed border-slate-200 p-6 text-center text-slate-900 dark:border-slate-800 dark:text-slate-100">
-                                        <div className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                                            Commission on Higher Education
-                                        </div>
-                                        <div className="mt-1 text-xs uppercase tracking-[0.3em] text-slate-500">Regional Office XII</div>
+                                     
                                         <div className="mt-6 text-3xl font-semibold">
                                             {type === 'appearance' ? 'Certificate of Appearance' : 'Certificate of Participation'}
                                         </div>
