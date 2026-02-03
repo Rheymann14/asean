@@ -515,8 +515,14 @@ export default function EventManagement(props: PageProps) {
         body { font-family: "Times New Roman", serif; color: #111; margin: 0; }
         .page { width: 210mm; min-height: 297mm; margin: 0 auto 12mm; display: flex; flex-direction: column; gap: 10mm; }
         .certificate { flex: 1; border: 1px solid #e5e7eb; padding: 10mm; display: flex; flex-direction: column; justify-content: center; }
-        .certificate--participation { background: url('/img/bg.png') center/cover no-repeat; }
-        .certificate-logo { display: block; max-height: 54px; max-width: 100%; margin: 0 auto 10px; }
+        .certificate--participation {
+            background: url('/img/bg.png') center/cover no-repeat;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .certificate-logo { display: block; max-width: 100%; margin: 0 auto 10px; }
+        .certificate-logo--appearance { max-height: 64px; }
+        .certificate-logo--participation { max-height: 54px; }
         .title { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 14px; }
         .subtitle { text-align: center; font-size: 14px; margin-bottom: 4px; }
         .lead { text-align: center; font-size: 15px; margin-top: 6px; }
@@ -553,7 +559,7 @@ export default function EventManagement(props: PageProps) {
 
             return `
                 <section class="certificate certificate--${type}">
-                    <img class="certificate-logo" src="${logo}" alt="" />
+                    <img class="certificate-logo certificate-logo--${type}" src="${logo}" alt="" />
                     <div class="title">${typeTitle}</div>
                     <div class="lead">${lead}</div>
                     <div class="recipient">${participantName}</div>
@@ -1063,7 +1069,7 @@ export default function EventManagement(props: PageProps) {
                                                     : '/img/asean_banner_logo.png'
                                             }
                                             alt=""
-                                            className="mx-auto h-12 w-auto"
+                                            className={type === 'appearance' ? 'mx-auto h-16 w-auto' : 'mx-auto h-12 w-auto'}
                                         />
                                         <div className="mt-6 text-3xl font-semibold">
                                             {type === 'appearance' ? 'Certificate of Appearance' : 'Certificate of Participation'}
