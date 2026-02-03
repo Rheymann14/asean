@@ -378,6 +378,7 @@ export default function EventManagement(props: PageProps) {
             persistSignatoryData({
                 name: signatoryName,
                 title: signatoryTitle,
+                successMessage: 'Signatory details updated.',
             });
         }, 700);
 
@@ -393,11 +394,13 @@ export default function EventManagement(props: PageProps) {
         title,
         signatureFile,
         removeSignature,
+        successMessage,
     }: {
         name?: string;
         title?: string;
         signatureFile?: File | null;
         removeSignature?: boolean;
+        successMessage?: string;
     }) {
         if (!participantsTarget) return;
 
@@ -411,6 +414,11 @@ export default function EventManagement(props: PageProps) {
         router.post(ENDPOINTS.programmes.update(participantsTarget.id), payload, {
             preserveScroll: true,
             forceFormData: true,
+            onSuccess: () => {
+                if (successMessage) {
+                    toast.success(successMessage);
+                }
+            },
             onError: () => toast.error('Unable to save signatory details.'),
         });
     }
@@ -439,31 +447,6 @@ export default function EventManagement(props: PageProps) {
         setSignatorySignature(null);
         setSignatorySignatureLabel('');
         persistSignatoryData({ removeSignature: true });
-        toast.success('Signature removed.');
-    }
-
-    function handleSignatureUpload(event: React.ChangeEvent<HTMLInputElement>) {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            toast.error('Please upload an image file for the signature.');
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = () => {
-            const result = typeof reader.result === 'string' ? reader.result : null;
-            if (!result) return;
-            setSignatorySignature(result);
-            setSignatorySignatureLabel(file.name);
-            toast.success('Signature attached.');
-        };
-        reader.onerror = () => toast.error('Unable to read signature file.');
-        reader.readAsDataURL(file);
-    }
-
-    function handleSignatureRemove() {
-        setSignatorySignature(null);
-        setSignatorySignatureLabel('');
         toast.success('Signature removed.');
     }
 
