@@ -22,6 +22,9 @@ class Programme extends Model
         'location',
         'image_url',
         'pdf_url',
+        'signatory_name',
+        'signatory_title',
+        'signatory_signature_url',
         'is_active',
     ];
 
