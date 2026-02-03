@@ -13,28 +13,63 @@ class ProgrammeController extends Controller
 {
     public function index()
     {
+        $attendanceByProgramme = ParticipantAttendance::query()
+            ->select(['programme_id', 'user_id', 'scanned_at'])
+            ->get()
+            ->groupBy('programme_id');
+
         $programmes = Programme::query()
-            ->with('user')
+            ->with([
+                'user',
+                'participants',
+                'venues' => fn ($query) => $query->where('is_active', true)->orderBy('id'),
+            ])
             ->latest('starts_at')
             ->get()
-            ->map(fn (Programme $programme) => [
-                'id' => $programme->id,
-                'tag' => $programme->tag,
-                'title' => $programme->title,
-                'description' => $programme->description,
-                'starts_at' => $programme->starts_at?->toISOString(),
-                'ends_at' => $programme->ends_at?->toISOString(),
-                'location' => $programme->location,
-                'image_url' => $programme->image_url,
-                'pdf_url' => $programme->pdf_url,
-                'is_active' => $programme->is_active,
-                'updated_at' => $programme->updated_at?->toISOString(),
-                'created_by' => $programme->user
-                    ? [
-                        'name' => $programme->user->name,
-                    ]
-                    : null,
-            ]);
+            ->map(function (Programme $programme) use ($attendanceByProgramme) {
+                $attendanceEntries = $attendanceByProgramme->get($programme->id, collect());
+                $attendanceByUser = $attendanceEntries->keyBy('user_id');
+                $venue = $programme->venues->first();
+
+                return [
+                    'id' => $programme->id,
+                    'tag' => $programme->tag,
+                    'title' => $programme->title,
+                    'description' => $programme->description,
+                    'starts_at' => $programme->starts_at?->toISOString(),
+                    'ends_at' => $programme->ends_at?->toISOString(),
+                    'location' => $programme->location,
+                    'venue' => $venue
+                        ? [
+                            'name' => $venue->name,
+                            'address' => $venue->address,
+                        ]
+                        : null,
+                    'image_url' => $programme->image_url,
+                    'pdf_url' => $programme->pdf_url,
+                    'is_active' => $programme->is_active,
+                    'updated_at' => $programme->updated_at?->toISOString(),
+                    'created_by' => $programme->user
+                        ? [
+                            'name' => $programme->user->name,
+                        ]
+                        : null,
+                    'participants' => $programme->participants
+                        ->map(function ($participant) use ($attendanceByUser) {
+                            $attendance = $attendanceByUser->get($participant->id);
+
+                            return [
+                                'id' => $participant->id,
+                                'name' => $participant->name,
+                                'email' => $participant->email,
+                                'display_id' => $participant->display_id,
+                                'checked_in_at' => $attendance?->scanned_at?->toISOString(),
+                            ];
+                        })
+                        ->values()
+                        ->all(),
+                ];
+            });
 
         return Inertia::render('event-management', [
             'programmes' => $programmes,
