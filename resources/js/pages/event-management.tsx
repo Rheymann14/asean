@@ -76,6 +76,9 @@ type ProgrammeRow = {
 
     image_url: string | null; // server-provided
     pdf_url: string | null; // server-provided (for "View more")
+    signatory_name?: string | null;
+    signatory_title?: string | null;
+    signatory_signature_url?: string | null;
 
     is_active: boolean;
     updated_at?: string | null;
@@ -195,6 +198,12 @@ function resolveImageUrl(imageUrl?: string | null) {
     return `/event-images/${imageUrl}`;
 }
 
+function resolveSignatureUrl(signatureUrl?: string | null) {
+    if (!signatureUrl) return null;
+    if (signatureUrl.startsWith('http') || signatureUrl.startsWith('/')) return signatureUrl;
+    return `/signatures/${signatureUrl}`;
+}
+
 function getEventStatus(starts_at?: string | null, ends_at?: string | null) {
     if (!starts_at) return 'upcoming';
     const start = new Date(starts_at);
@@ -306,6 +315,10 @@ export default function EventManagement(props: PageProps) {
     const [participantsTarget, setParticipantsTarget] = React.useState<ProgrammeRow | null>(null);
     const [signatoryName, setSignatoryName] = React.useState('Shirley C. Agrupis, Ph.D.');
     const [signatoryTitle, setSignatoryTitle] = React.useState('CHED Chairperson');
+    const [signatorySignature, setSignatorySignature] = React.useState<string | null>(null);
+    const [signatorySignatureLabel, setSignatorySignatureLabel] = React.useState<string>('');
+    const signatorySyncEnabledRef = React.useRef(false);
+    const signatorySyncTimeoutRef = React.useRef<number | null>(null);
 
     // ✅ existing file urls (server) when editing
     const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
@@ -324,18 +337,118 @@ export default function EventManagement(props: PageProps) {
     }, [imagePreview]);
 
     React.useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const savedName = window.localStorage.getItem('event-management.signatoryName');
-        const savedTitle = window.localStorage.getItem('event-management.signatoryTitle');
-        if (savedName) setSignatoryName(savedName);
-        if (savedTitle) setSignatoryTitle(savedTitle);
-    }, []);
+        if (!participantsTarget) return;
+        signatorySyncEnabledRef.current = false;
+
+        const defaultName = 'Shirley C. Agrupis, Ph.D.';
+        const defaultTitle = 'CHED Chairperson';
+        const signatureUrl = resolveSignatureUrl(participantsTarget.signatory_signature_url);
+
+        if (signatorySignature?.startsWith('blob:')) {
+            URL.revokeObjectURL(signatorySignature);
+        }
+
+        setSignatoryName(participantsTarget.signatory_name ?? defaultName);
+        setSignatoryTitle(participantsTarget.signatory_title ?? defaultTitle);
+        setSignatorySignature(signatureUrl);
+        setSignatorySignatureLabel(signatureUrl ? basename(signatureUrl) : '');
+
+        const enableTimeout = window.setTimeout(() => {
+            signatorySyncEnabledRef.current = true;
+        }, 0);
+
+        return () => {
+            window.clearTimeout(enableTimeout);
+        };
+    }, [participantsTarget?.id]);
 
     React.useEffect(() => {
-        if (typeof window === 'undefined') return;
-        window.localStorage.setItem('event-management.signatoryName', signatoryName);
-        window.localStorage.setItem('event-management.signatoryTitle', signatoryTitle);
-    }, [signatoryName, signatoryTitle]);
+        return () => {
+            if (signatorySignature?.startsWith('blob:')) URL.revokeObjectURL(signatorySignature);
+        };
+    }, [signatorySignature]);
+
+    React.useEffect(() => {
+        if (!participantsTarget || !participantsOpen || !signatorySyncEnabledRef.current) return;
+        if (signatorySyncTimeoutRef.current) {
+            window.clearTimeout(signatorySyncTimeoutRef.current);
+        }
+
+        signatorySyncTimeoutRef.current = window.setTimeout(() => {
+            persistSignatoryData({
+                name: signatoryName,
+                title: signatoryTitle,
+                successMessage: 'Signatory details updated.',
+            });
+        }, 700);
+
+        return () => {
+            if (signatorySyncTimeoutRef.current) {
+                window.clearTimeout(signatorySyncTimeoutRef.current);
+            }
+        };
+    }, [participantsOpen, participantsTarget?.id, signatoryName, signatoryTitle]);
+
+    function persistSignatoryData({
+        name,
+        title,
+        signatureFile,
+        removeSignature,
+        successMessage,
+    }: {
+        name?: string;
+        title?: string;
+        signatureFile?: File | null;
+        removeSignature?: boolean;
+        successMessage?: string;
+    }) {
+        if (!participantsTarget) return;
+
+        const payload = new FormData();
+        payload.append('_method', 'patch');
+        payload.append('signatory_name', name ?? signatoryName ?? '');
+        payload.append('signatory_title', title ?? signatoryTitle ?? '');
+        if (signatureFile) payload.append('signatory_signature', signatureFile);
+        if (removeSignature) payload.append('signatory_signature_remove', '1');
+
+        router.post(ENDPOINTS.programmes.update(participantsTarget.id), payload, {
+            preserveScroll: true,
+            forceFormData: true,
+            onSuccess: () => {
+                if (successMessage) {
+                    toast.success(successMessage);
+                }
+            },
+            onError: () => toast.error('Unable to save signatory details.'),
+        });
+    }
+
+    function handleSignatureUpload(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file for the signature.');
+            return;
+        }
+        const previewUrl = URL.createObjectURL(file);
+        setSignatorySignature((prev) => {
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return previewUrl;
+        });
+        setSignatorySignatureLabel(file.name);
+        persistSignatoryData({ signatureFile: file });
+        toast.success('Signature attached.');
+    }
+
+    function handleSignatureRemove() {
+        if (signatorySignature?.startsWith('blob:')) {
+            URL.revokeObjectURL(signatorySignature);
+        }
+        setSignatorySignature(null);
+        setSignatorySignatureLabel('');
+        persistSignatoryData({ removeSignature: true });
+        toast.success('Signature removed.');
+    }
 
     const form = useForm<{
         title: string;
@@ -538,6 +651,7 @@ export default function EventManagement(props: PageProps) {
         .value { font-weight: 700; }
         .given { text-align: center; font-size: 14px; margin-top: 16px; }
         .signatory { margin-top: 24px; text-align: center; }
+        .signatory-signature { display: block; margin: 0 auto -6px; max-height: 60px; object-fit: contain; }
         .sign-name { font-size: 15px; font-weight: 700; }
         .sign-title { font-size: 13px; }
         .page:last-child { margin-bottom: 0; }
@@ -573,6 +687,7 @@ export default function EventManagement(props: PageProps) {
                     <div class="text">${body}</div>
                     <div class="given">Given this ${givenDate} at ${venue}.</div>
                     <div class="signatory">
+                        ${signatorySignature ? `<img class="signatory-signature" src="${signatorySignature}" alt="Signature" />` : ''}
                         <div class="sign-name">${signatoryName}</div>
                         <div class="sign-title">${signatoryTitle}</div>
                     </div>
@@ -969,6 +1084,39 @@ export default function EventManagement(props: PageProps) {
                                         onChange={(e) => setSignatoryTitle(e.target.value)}
                                         placeholder="Signatory title"
                                     />
+                                </div>
+                                <div className="space-y-1.5 sm:col-span-2">
+                                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signature upload</div>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <Input type="file" accept="image/*" onChange={handleSignatureUpload} />
+                                        {signatorySignature ? (
+                                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                                                <span className="truncate">{signatorySignatureLabel || 'Signature attached'}</span>
+                                            </div>
+                                        ) : null}
+                                        {signatorySignature ? (
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-red-600 hover:text-red-700"
+                                                onClick={handleSignatureRemove}
+                                            >
+                                                Remove
+                                            </Button>
+                                        ) : null}
+                                    </div>
+                                    {signatorySignature ? (
+                                        <div className="flex items-center gap-3">
+                                            <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                <img src={signatorySignature} alt="Signature preview" className="h-10 w-auto object-contain" />
+                                            </div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400">Preview</div>
+                                        </div>
+                                    ) : null}
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                        Upload a signature image to embed in the certificate PDF view.
+                                    </div>
                                 </div>
                             </div>
                         </div>
