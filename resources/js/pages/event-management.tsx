@@ -304,9 +304,6 @@ export default function EventManagement(props: PageProps) {
     // participants dialog
     const [participantsOpen, setParticipantsOpen] = React.useState(false);
     const [participantsTarget, setParticipantsTarget] = React.useState<ProgrammeRow | null>(null);
-    const [certificateOpen, setCertificateOpen] = React.useState(false);
-    const [certificateParticipant, setCertificateParticipant] = React.useState<ProgrammeParticipant | null>(null);
-    const [certificateProgramme, setCertificateProgramme] = React.useState<ProgrammeRow | null>(null);
     const [signatoryName, setSignatoryName] = React.useState('Shirley C. Agrupis, Ph.D.');
     const [signatoryTitle, setSignatoryTitle] = React.useState('CHED Chairperson');
 
@@ -501,13 +498,16 @@ export default function EventManagement(props: PageProps) {
         setParticipantsOpen(true);
     }
 
-    function openCertificate(
+    function printParticipantCertificates(
         programme: ProgrammeRow,
         participant: ProgrammeParticipant,
     ) {
-        setCertificateProgramme(programme);
-        setCertificateParticipant(participant);
-        setCertificateOpen(true);
+        const html = buildCertificatePrintBody(programme, [participant]);
+        if (!html.trim()) {
+            toast.error('Unable to generate certificates.');
+            return;
+        }
+        printJS({ printable: html, type: 'raw-html', style: printStyles, documentTitle: 'Certificates' });
     }
 
     const printStyles = `
@@ -515,6 +515,21 @@ export default function EventManagement(props: PageProps) {
         body { font-family: "Times New Roman", serif; color: #111; margin: 0; }
         .page { width: 210mm; min-height: 297mm; margin: 0 auto 12mm; display: flex; flex-direction: column; gap: 10mm; }
         .certificate { flex: 1; border: 1px solid #e5e7eb; padding: 10mm; display: flex; flex-direction: column; justify-content: center; }
+        .certificate--appearance {
+            background: url('/img/appearance_bg.png') center/cover no-repeat;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .certificate--participation {
+            background:
+                linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)),
+                url('/img/bg.png') center/cover no-repeat;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .certificate-logo { display: block; max-width: 100%; margin: 0 auto 10px; }
+        .certificate-logo--appearance { max-height: 64px; }
+        .certificate-logo--participation { max-height: 54px; }
         .title { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 14px; }
         .subtitle { text-align: center; font-size: 14px; margin-bottom: 4px; }
         .lead { text-align: center; font-size: 15px; margin-top: 6px; }
@@ -546,10 +561,12 @@ export default function EventManagement(props: PageProps) {
                 type === 'appearance'
                     ? `has appeared during the conduct of <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`
                     : `for actively participating in <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`;
+            const logo =
+                type === 'appearance' ? '/img/ched_logo_bagong_pilipinas.png' : '/img/asean_banner_logo.png';
 
             return `
-                <section class="certificate">
-           
+                <section class="certificate certificate--${type}">
+                    <img class="certificate-logo certificate-logo--${type}" src="${logo}" alt="" />
                     <div class="title">${typeTitle}</div>
                     <div class="lead">${lead}</div>
                     <div class="recipient">${participantName}</div>
@@ -575,16 +592,6 @@ export default function EventManagement(props: PageProps) {
             .join('');
 
         return pages;
-    }
-
-    function printCertificate() {
-        if (!certificateProgramme || !certificateParticipant) return;
-        const html = buildCertificatePrintBody(certificateProgramme, [certificateParticipant]);
-        if (!html.trim()) {
-            toast.error('Unable to generate certificates.');
-            return;
-        }
-        printJS({ printable: html, type: 'raw-html', style: printStyles, documentTitle: 'Certificates' });
     }
 
     function printAllCertificates() {
@@ -945,6 +952,26 @@ export default function EventManagement(props: PageProps) {
                     </DialogHeader>
 
                     <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
+                        <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-950">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="space-y-1.5">
+                                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signatory name</div>
+                                    <Input
+                                        value={signatoryName}
+                                        onChange={(e) => setSignatoryName(e.target.value)}
+                                        placeholder="Signatory name"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signatory title</div>
+                                    <Input
+                                        value={signatoryTitle}
+                                        onChange={(e) => setSignatoryTitle(e.target.value)}
+                                        placeholder="Signatory title"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-900/40">
                             <div className="text-slate-600 dark:text-slate-300">
                                 Print certificates for checked-in participants only.
@@ -992,7 +1019,7 @@ export default function EventManagement(props: PageProps) {
                                                     type="button"
                                                     size="sm"
                                                     variant="outline"
-                                                    onClick={() => openCertificate(participantsTarget!, participant)}
+                                                    onClick={() => printParticipantCertificates(participantsTarget!, participant)}
                                                     disabled={!participant.checked_in_at}
                                                 >
                                                     Print Certificates
@@ -1009,103 +1036,6 @@ export default function EventManagement(props: PageProps) {
                             ))
                         )}
                     </div>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={certificateOpen} onOpenChange={setCertificateOpen}>
-                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[980px] max-h-[90vh] overflow-hidden">
-                    <DialogHeader>
-                        <DialogTitle>Certificates</DialogTitle>
-                        <DialogDescription>
-                            {certificateParticipant?.name ?? 'Participant'} · {certificateProgramme?.title ?? 'Event'}
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="flex flex-col gap-4 overflow-y-auto pr-1 sm:max-h-[72vh]">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="space-y-1.5">
-                                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signatory name</div>
-                                <Input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} placeholder="Signatory name" />
-                            </div>
-                            <div className="space-y-1.5">
-                                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signatory title</div>
-                                <Input value={signatoryTitle} onChange={(e) => setSignatoryTitle(e.target.value)} placeholder="Signatory title" />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4">
-                            {(['appearance', 'participation'] as const).map((type) => (
-                                <div
-                                    key={type}
-                                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
-                                >
-                                    <div className="mx-auto max-w-[760px] rounded-xl border border-dashed border-slate-200 p-6 text-center text-slate-900 dark:border-slate-800 dark:text-slate-100">
-                                     
-                                        <div className="mt-6 text-3xl font-semibold">
-                                            {type === 'appearance' ? 'Certificate of Appearance' : 'Certificate of Participation'}
-                                        </div>
-                                        <div className="mt-6 text-sm text-slate-600 dark:text-slate-300">
-                                            {type === 'appearance'
-                                                ? 'This is to certify that'
-                                                : 'This certificate is hereby given to'}
-                                        </div>
-                                        <div className="mt-2 text-xl font-semibold">
-                                            {certificateParticipant?.name ?? 'Participant Name'}
-                                        </div>
-                                        <div className="mt-4 text-sm text-slate-600 dark:text-slate-300">
-                                            {type === 'appearance' ? (
-                                                <>
-                                                    has appeared during the conduct of{' '}
-                                                    <span className="font-semibold">{certificateProgramme?.title ?? 'Event name'}</span> on{' '}
-                                                    <span className="font-semibold">
-                                                        {formatDateRange(certificateProgramme?.starts_at, certificateProgramme?.ends_at)}
-                                                    </span>{' '}
-                                                    at{' '}
-                                                    <span className="font-semibold">
-                                                        {certificateProgramme ? formatVenueLabel(certificateProgramme) : 'Event venue'}
-                                                    </span>
-                                                    .
-                                                </>
-                                            ) : (
-                                                <>
-                                                    for actively participating in{' '}
-                                                    <span className="font-semibold">{certificateProgramme?.title ?? 'Event name'}</span> on{' '}
-                                                    <span className="font-semibold">
-                                                        {formatDateRange(certificateProgramme?.starts_at, certificateProgramme?.ends_at)}
-                                                    </span>{' '}
-                                                    at{' '}
-                                                    <span className="font-semibold">
-                                                        {certificateProgramme ? formatVenueLabel(certificateProgramme) : 'Event venue'}
-                                                    </span>
-                                                    .
-                                                </>
-                                            )}
-                                        </div>
-                                        <div className="mt-6 text-sm text-slate-600 dark:text-slate-300">
-                                            Given this{' '}
-                                            {formatGivenDate(certificateProgramme?.ends_at ?? certificateProgramme?.starts_at)} at{' '}
-                                            {certificateProgramme ? formatVenueLabel(certificateProgramme) : 'Event venue'}.
-                                        </div>
-                                        <div className="mt-10">
-                                            <div className="text-sm font-semibold">{signatoryName || 'Signatory name'}</div>
-                                            <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                {signatoryTitle || 'Signatory title'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <DialogFooter className="gap-2">
-                        <Button type="button" variant="outline" onClick={() => setCertificateOpen(false)}>
-                            Close
-                        </Button>
-                        <Button type="button" className={PRIMARY_BTN} onClick={printCertificate}>
-                            Print Certificates
-                        </Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
