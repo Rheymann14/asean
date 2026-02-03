@@ -95,7 +95,6 @@ function PdfThumb({ href, title }: { href: string; title: string }) {
 function IssuanceTile({ item }: { item: Issuance }) {
     return (
         <div className="group">
-            {/* Click area only for open, buttons for actions */}
             <div className="relative">
                 <a
                     href={item.href}
@@ -108,29 +107,51 @@ function IssuanceTile({ item }: { item: Issuance }) {
                     <PdfThumb href={item.href} title={item.title} />
                 </a>
 
-                {/* Hover overlay */}
+                {/* Actions overlay
+                    - Mobile: always visible (no hover on touch)
+                    - Desktop: show on hover/focus
+                 */}
                 <div
                     className={cn(
-                        'absolute inset-0 rounded-2xl',
-                        'opacity-0 transition',
-                        'group-hover:opacity-100 group-focus-within:opacity-100'
+                        'absolute inset-0 rounded-2xl transition-opacity',
+                        'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100'
                     )}
                 >
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-slate-950/40 via-slate-950/10 to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-                        <Button asChild size="sm" className="h-9 rounded-full">
-                            <a href={item.href} download>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download
-                            </a>
-                        </Button>
+                    {/* gradient only for sm+ so the preview stays clean on mobile */}
+                    <div className="pointer-events-none absolute inset-0 rounded-2xl sm:bg-gradient-to-t sm:from-slate-950/40 sm:via-slate-950/10 sm:to-transparent" />
 
-                        <Button asChild size="sm" variant="secondary" className="h-9 rounded-full">
-                            <a href={item.href} target="_blank" rel="noreferrer">
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                Open
-                            </a>
-                        </Button>
+                    {/* Bottom action bar */}
+                    <div className="absolute bottom-3 left-3 right-3">
+                        <div
+                            className={cn(
+                                'pointer-events-auto flex gap-2',
+                                'flex-col sm:flex-row sm:items-center sm:justify-between'
+                            )}
+                        >
+                            <Button asChild size="sm" className="h-9 w-full rounded-full sm:w-auto">
+                                <a href={item.href} download aria-label={`Download ${item.title}`}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Download
+                                </a>
+                            </Button>
+
+                            <Button
+                                asChild
+                                size="sm"
+                                variant="secondary"
+                                className="h-9 w-full rounded-full sm:w-auto"
+                            >
+                                <a
+                                    href={item.href}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    aria-label={`Open ${item.title}`}
+                                >
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Open
+                                </a>
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -138,8 +159,6 @@ function IssuanceTile({ item }: { item: Issuance }) {
             {/* Meta */}
             <div className="mt-3 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-
-
                     {isNew(item.issued_at) ? (
                         <Badge className="rounded-full bg-[#FCD116] text-slate-900 hover:bg-[#FCD116]">New</Badge>
                     ) : null}
@@ -155,6 +174,7 @@ function IssuanceTile({ item }: { item: Issuance }) {
         </div>
     );
 }
+
 
 export default function Issuances(props: PageProps) {
     const [q, setQ] = React.useState('');

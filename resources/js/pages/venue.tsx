@@ -359,7 +359,7 @@ export default function Venue({ venues = [], section }: PageProps) {
                                             'h-auto w-full max-w-6xl justify-start items-stretch gap-1.5 rounded-2xl border border-slate-200/70 bg-white/70 p-1.5',
                                             'shadow-[0_10px_30px_-28px_rgba(2,6,23,0.25)] backdrop-blur-md',
                                             'overflow-x-auto overflow-y-hidden',
-                                            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                                            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-we {item.title}bkit-scrollbar]:hidden',
                                             'dark:border-white/10 dark:bg-slate-900/40',
                                         ].join(' ')}
                                     >
@@ -470,14 +470,28 @@ export default function Venue({ venues = [], section }: PageProps) {
 
                                                         <div className="absolute inset-x-0 bottom-0 p-5">
                                                             <div className="min-w-0 text-left">
-                                                                <h3 className="line-clamp-2 break-words [overflow-wrap:anywhere] text-lg font-semibold text-white drop-shadow-sm md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:group-hover:translate-y-0 md:group-hover:opacity-100">
+                                                                <h3
+                                                                    className={[
+                                                                        'line-clamp-2 break-words [overflow-wrap:anywhere] text-lg font-semibold text-white drop-shadow-sm',
+                                                                        // ✅ always visible on desktop
+                                                                        'md:translate-y-0 md:opacity-100 md:transition md:duration-300',
+                                                                    ].join(' ')}
+                                                                >
                                                                     {item.title}
                                                                 </h3>
+
                                                                 {item.description ? (
-                                                                    <p className="mt-1 line-clamp-2 break-words [overflow-wrap:anywhere] text-sm text-white/85 md:translate-y-3 md:opacity-0 md:transition md:duration-300 md:delay-75 md:group-hover:translate-y-0 md:group-hover:opacity-100">
+                                                                    <p
+                                                                        className={[
+                                                                            'mt-1 line-clamp-2 break-words [overflow-wrap:anywhere] text-sm text-white/85',
+                                                                            // ✅ always visible on desktop
+                                                                            'md:translate-y-0 md:opacity-100 md:transition md:duration-300 md:delay-75',
+                                                                        ].join(' ')}
+                                                                    >
                                                                         {item.description}
                                                                     </p>
                                                                 ) : null}
+
                                                             </div>
                                                         </div>
 
@@ -497,120 +511,161 @@ export default function Venue({ venues = [], section }: PageProps) {
                 </section>
             </PublicLayout>
 
-            {/* ✅ FIXED: remove the built-in dialog X (double X issue) + add fallback icon */}
+            {/* ✅ Section details dialog — desktop stays old, mobile gets sticky actions */}
             <Dialog open={!!activeItem} onOpenChange={(open) => (!open ? setActiveItem(null) : null)}>
                 <DialogContent
                     className={[
-                        // ✅ large width
+                        // ✅ width
                         'w-[calc(100%-1.5rem)] sm:max-w-4xl',
-                        // ✅ prevent overflow
+                        // ✅ height & overflow
                         'max-h-[90vh] overflow-hidden',
                         // ✅ polish
                         'rounded-2xl p-0',
-
-
                     ].join(' ')}
                 >
-                    {/* header top bar */}
-                    <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
-                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Section details</p>
+                    {/* Outer shell */}
+                    <div className="flex max-h-[90vh] flex-col">
+                        {/* Header (fixed) */}
+                        <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Section details</p>
+                        </div>
 
-                    </div>
+                        {/* Body:
+               - Mobile: whole body scrolls (so actions stay visible)
+               - Desktop: body doesn't scroll, only right panel scrolls (old behavior)
+            */}
+                        <div className="min-h-0 flex-1 overflow-y-auto md:overflow-hidden">
+                            <div className="grid grid-cols-1 md:grid-cols-2 md:h-full">
+                                {/* Left: image */}
+                                <div className="bg-slate-50 p-4 sm:p-6 dark:bg-slate-950/30">
+                                    <div className="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900">
+                                        <div className="relative flex min-h-[220px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-3 dark:bg-slate-800/40 md:max-h-[60vh]">
+                                            {!activeImageSrc || imgError ? (
+                                                <NoImageFallback
+                                                    label={!activeImageSrc ? 'No image uploaded' : 'Image failed to load'}
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={activeImageSrc}
+                                                    alt={activeItem?.title ?? 'Section image'}
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    className="max-h-[56vh] w-full object-contain"
+                                                    draggable={false}
+                                                    onError={() => setImgError(true)}
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2">
-                        {/* Left: image bounded */}
-                        <div className="bg-slate-50 p-4 sm:p-6 dark:bg-slate-950/30">
-                            <div className="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900">
-                                <div className="relative flex max-h-[60vh] min-h-[220px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-3 dark:bg-slate-800/40">
-                                    {!activeImageSrc || imgError ? (
-                                        <NoImageFallback label={!activeImageSrc ? 'No image uploaded' : 'Image failed to load'} />
-                                    ) : (
-                                        <img
-                                            src={activeImageSrc}
-                                            alt={activeItem?.title ?? 'Section image'}
-                                            loading="lazy"
-                                            decoding="async"
-                                            className="max-h-[56vh] w-full object-contain"
-                                            draggable={false}
-                                            onError={() => setImgError(true)}
-                                        />
-                                    )}
+                                    {/* ✅ Desktop: keep old close button here */}
+                                    <div className="mt-4 hidden justify-end md:flex">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-10 rounded-xl"
+                                            onClick={() => setActiveItem(null)}
+                                        >
+                                            Close
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Right: content
+                       - Desktop: this panel scrolls (old)
+                       - Mobile: it flows naturally; whole body scrolls instead
+                    */}
+                                <div className="relative p-5 sm:p-6 md:max-h-[calc(90vh-52px)] md:overflow-y-auto md:pb-28">
+                                    <DialogHeader className="space-y-3 text-left">
+                                        <DialogTitle className="min-w-0 text-xl font-semibold leading-snug tracking-tight text-slate-900 sm:text-2xl dark:text-slate-50">
+                                            {activeItem?.title ? (
+                                                <TruncateWithToggle
+                                                    text={activeItem.title}
+                                                    lines={2}
+                                                    expanded={titleExpanded}
+                                                    onToggle={() => setTitleExpanded((v) => !v)}
+                                                    threshold={90}
+                                                    className="text-slate-900 dark:text-slate-50"
+                                                />
+                                            ) : null}
+                                        </DialogTitle>
+
+                                        {activeItem?.description ? (
+                                            <DialogDescription className="text-base leading-relaxed text-slate-600 dark:text-slate-300">
+                                                <TruncateWithToggle
+                                                    text={activeItem.description}
+                                                    lines={4}
+                                                    expanded={descExpanded}
+                                                    onToggle={() => setDescExpanded((v) => !v)}
+                                                    threshold={160}
+                                                    className="text-slate-600 dark:text-slate-300"
+                                                />
+                                            </DialogDescription>
+                                        ) : (
+                                            <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
+                                                No description provided.
+                                            </DialogDescription>
+                                        )}
+                                    </DialogHeader>
+
+                                    {/* ✅ Desktop: keep old "Read more" floating bottom-right */}
+                                    {activeReadMoreLink ? (
+                                        <div className="hidden md:block">
+                                            <div className="absolute bottom-6 right-6">
+                                                <Button
+                                                    asChild
+                                                    className="h-9 rounded-xl bg-[#0033A0] px-3 text-xs font-semibold text-white hover:opacity-95"
+                                                >
+                                                    <a href={activeReadMoreLink} target="_blank" rel="noopener noreferrer">
+                                                        Read more
+                                                        <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                                                    </a>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="mt-4 hidden justify-end md:flex">
+                        {/* ✅ Mobile-only sticky action bar (always visible) */}
+                        <div className="md:hidden border-t border-slate-200/70 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-slate-950/75 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+                            {activeReadMoreLink ? (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button
+                                        asChild
+                                        className="h-11 rounded-2xl bg-[#0033A0] text-sm font-semibold text-white hover:opacity-95"
+                                    >
+                                        <a href={activeReadMoreLink} target="_blank" rel="noopener noreferrer">
+                                            Read more
+                                            <ExternalLink className="ml-2 h-4 w-4" />
+                                        </a>
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-11 rounded-2xl"
+                                        onClick={() => setActiveItem(null)}
+                                    >
+                                        Close
+                                    </Button>
+                                </div>
+                            ) : (
                                 <Button
                                     type="button"
-                                    variant="outline"
-                                    className="h-10 rounded-xl"
+                                    className="h-11 w-full rounded-2xl bg-[#0033A0] text-white hover:opacity-95"
                                     onClick={() => setActiveItem(null)}
                                 >
                                     Close
                                 </Button>
-                            </div>
-                        </div>
-
-                        {/* Right: content scrollable */}
-                        <div className="relative max-h-[calc(90vh-52px)] overflow-y-auto p-5 pb-24 sm:p-6 sm:pb-28">
-
-                            <DialogHeader className="space-y-3 text-left">
-                                <DialogTitle className="min-w-0 text-xl font-semibold leading-snug tracking-tight text-slate-900 sm:text-2xl dark:text-slate-50">
-                                    {activeItem?.title ? (
-                                        <TruncateWithToggle
-                                            text={activeItem.title}
-                                            lines={2}
-                                            expanded={titleExpanded}
-                                            onToggle={() => setTitleExpanded((v) => !v)}
-                                            threshold={90}
-                                            className="text-slate-900 dark:text-slate-50"
-                                        />
-                                    ) : null}
-                                </DialogTitle>
-
-                                {activeItem?.description ? (
-                                    <DialogDescription className="text-base leading-relaxed text-slate-600 dark:text-slate-300">
-                                        <TruncateWithToggle
-                                            text={activeItem.description}
-                                            lines={4}
-                                            expanded={descExpanded}
-                                            onToggle={() => setDescExpanded((v) => !v)}
-                                            threshold={160}
-                                            className="text-slate-600 dark:text-slate-300"
-                                        />
-                                    </DialogDescription>
-                                ) : (
-                                    <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
-                                        No description provided.
-                                    </DialogDescription>
-                                )}
-                            </DialogHeader>
-
-                            {activeReadMoreLink ? (
-                                <div className="absolute bottom-5 right-5 sm:bottom-6 sm:right-6">
-                                    <Button
-                                        asChild
-                                        className="h-9 rounded-xl bg-[#0033A0] px-3 text-xs font-semibold text-white hover:opacity-95"
-                                    >
-                                        <a href={activeReadMoreLink} target="_blank" rel="noopener noreferrer">
-                                            Read more
-                                            <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-                                        </a>
-                                    </Button>
-                                </div>
-                            ) : null}
-
-                            <Button
-                                type="button"
-                                className="mt-6 h-11 w-full rounded-2xl bg-[#0033A0] text-white hover:opacity-95 md:hidden"
-                                onClick={() => setActiveItem(null)}
-                            >
-                                Close
-                            </Button>
-
+                            )}
                         </div>
                     </div>
                 </DialogContent>
             </Dialog>
+
+
         </>
     );
 }
