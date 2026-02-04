@@ -4,6 +4,7 @@ import PublicLayout from '@/layouts/public-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
     ArrowRight,
     CalendarDays,
@@ -60,6 +61,9 @@ type PageProps = {
     checked_in_programmes: Programme[];
 };
 
+const DEFAULT_SIGNATORY_NAME = 'Shirley C. Agrupis, Ph.D.';
+const DEFAULT_SIGNATORY_TITLE = 'CHED Chairperson';
+
 function resolvePdfUrl(pdfUrl?: string | null) {
     if (!pdfUrl) return null;
     if (pdfUrl.startsWith('http') || pdfUrl.startsWith('/')) return pdfUrl;
@@ -76,6 +80,10 @@ function resolveSignatureUrl(signatureUrl?: string | null) {
     if (!signatureUrl) return null;
     if (signatureUrl.startsWith('http') || signatureUrl.startsWith('/')) return signatureUrl;
     return `/signatures/${signatureUrl}`;
+}
+
+function basename(url: string) {
+    return url.split('/').pop() ?? url;
 }
 
 function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
@@ -132,7 +140,13 @@ export default function EventKitMaterials() {
 
     const hasAttendance = Boolean(attendance?.scanned_at);
     const pdfUrl = resolvePdfUrl(programme.pdf_url);
-    const signatorySignature = resolveSignatureUrl(programme.signatory_signature_url);
+    const signatorySignatureUrl = resolveSignatureUrl(programme.signatory_signature_url);
+    const [signatoryName, setSignatoryName] = React.useState(programme.signatory_name ?? DEFAULT_SIGNATORY_NAME);
+    const [signatoryTitle, setSignatoryTitle] = React.useState(programme.signatory_title ?? DEFAULT_SIGNATORY_TITLE);
+    const [signatorySignature, setSignatorySignature] = React.useState<string | null>(signatorySignatureUrl);
+    const [signatorySignatureLabel, setSignatorySignatureLabel] = React.useState(
+        signatorySignatureUrl ? basename(signatorySignatureUrl) : '',
+    );
 
     const materials = programme.materials.map((material) => ({
         ...material,
@@ -145,6 +159,47 @@ export default function EventKitMaterials() {
     const givenDateLabel = formatGivenDate(programme.ends_at ?? programme.starts_at);
     const venue = programme.location || '—';
 
+    React.useEffect(() => {
+        setSignatoryName(programme.signatory_name ?? DEFAULT_SIGNATORY_NAME);
+        setSignatoryTitle(programme.signatory_title ?? DEFAULT_SIGNATORY_TITLE);
+        setSignatorySignature((prev) => {
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return signatorySignatureUrl;
+        });
+        setSignatorySignatureLabel(signatorySignatureUrl ? basename(signatorySignatureUrl) : '');
+    }, [programme.id, programme.signatory_name, programme.signatory_title, signatorySignatureUrl]);
+
+    React.useEffect(() => {
+        return () => {
+            if (signatorySignature?.startsWith('blob:')) URL.revokeObjectURL(signatorySignature);
+        };
+    }, [signatorySignature]);
+
+    const handleSignatureUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file for the signature.');
+            return;
+        }
+        const previewUrl = URL.createObjectURL(file);
+        setSignatorySignature((prev) => {
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return previewUrl;
+        });
+        setSignatorySignatureLabel(file.name);
+        toast.success('Signature attached for printing.');
+    };
+
+    const handleSignatureRemove = () => {
+        setSignatorySignature((prev) => {
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return null;
+        });
+        setSignatorySignatureLabel('');
+        toast.success('Signature removed.');
+    };
+
     const handlePrint = () => {
         if (!hasAttendance) return;
 
@@ -154,8 +209,8 @@ export default function EventKitMaterials() {
                 eventDate,
                 givenDate: givenDateLabel,
                 venue,
-                signatoryName: programme.signatory_name ?? '',
-                signatoryTitle: programme.signatory_title ?? '',
+                signatoryName,
+                signatoryTitle,
                 signatorySignature,
             },
             participants: [{ name: participant.name }],
@@ -392,6 +447,85 @@ export default function EventKitMaterials() {
 
                         {/* Right: Certificates + reset */}
                         <div className="space-y-4">
+                            <Card className="border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:p-5">
+                                <div className="space-y-3">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                            Certificate signatory
+                                        </h3>
+                                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                                            Update the signatory details used for printing certificates on this page.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div className="space-y-1">
+                                            <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                                                Signatory name
+                                            </div>
+                                            <Input
+                                                className="h-9 text-xs"
+                                                value={signatoryName}
+                                                onChange={(event) => setSignatoryName(event.target.value)}
+                                                placeholder="Signatory name"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                                                Signatory title
+                                            </div>
+                                            <Input
+                                                className="h-9 text-xs"
+                                                value={signatoryTitle}
+                                                onChange={(event) => setSignatoryTitle(event.target.value)}
+                                                placeholder="Signatory title"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-medium text-slate-700 dark:text-slate-200">Signature</div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Input className="h-9 text-xs" type="file" accept="image/*" onChange={handleSignatureUpload} />
+                                            {signatorySignature ? (
+                                                <>
+                                                    <div className="inline-flex max-w-[220px] items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                                                        <span className="truncate">
+                                                            {signatorySignatureLabel || 'Signature attached'}
+                                                        </span>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-8 px-2 text-xs text-red-600 hover:text-red-700"
+                                                        onClick={handleSignatureRemove}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                            <img
+                                                                src={signatorySignature}
+                                                                alt="Signature preview"
+                                                                className="h-8 w-auto object-contain"
+                                                            />
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                            Preview
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : null}
+                                        </div>
+                                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                            Signature changes here only apply to the current print session.
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+
                             <Card className="border-slate-200/70 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:p-5">
                                 <div className="flex items-start gap-3">
                                     <div className="mt-1 rounded-xl bg-emerald-500/10 p-2 text-emerald-600">

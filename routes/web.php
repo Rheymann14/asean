@@ -100,6 +100,8 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         Route::patch('contact-details/{contactDetail}', [ContactDetailController::class, 'update'])->name('contact-details.update');
 
         Route::get('event-management', [ProgrammeController::class, 'index'])->name('event-management');
+        Route::get('event-management/{programme}/participants', [ProgrammeController::class, 'participants'])
+            ->name('event-management.participants');
         Route::resource('programmes', ProgrammeController::class)->only(['store', 'update', 'destroy']);
 
         Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
