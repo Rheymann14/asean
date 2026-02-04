@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import QRCode from 'qrcode';
 import {
     ArrowRight,
     CalendarClock,
@@ -16,6 +17,7 @@ import {
     ImageOff,
     ChevronDown,
     ChevronUp,
+    QrCode,
 } from 'lucide-react';
 
 
@@ -761,6 +763,8 @@ function ProgrammeGroups({ items, query }: { items: FlexHoverItem[]; query: stri
 
 export default function Programme({ programmes = [] }: PageProps) {
     const [query, setQuery] = React.useState('');
+    const [kitQr, setKitQr] = React.useState<string | null>(null);
+    const [kitUrl, setKitUrl] = React.useState('/event-kit');
     const items = React.useMemo<FlexHoverItem[]>(() => {
         return programmes.map((programme, index) => {
             const pdfUrl = resolvePdfUrl(programme.pdf_url);
@@ -778,6 +782,22 @@ export default function Programme({ programmes = [] }: PageProps) {
             };
         });
     }, [programmes]);
+
+    React.useEffect(() => {
+        const url = `${window.location.origin}/event-kit`;
+        setKitUrl(url);
+
+        QRCode.toDataURL(url, {
+            width: 200,
+            margin: 1,
+            color: {
+                dark: '#0033A0',
+                light: '#ffffff',
+            },
+        })
+            .then((dataUrl) => setKitQr(dataUrl))
+            .catch(() => setKitQr(null));
+    }, []);
 
     return (
         <>
@@ -816,6 +836,48 @@ export default function Programme({ programmes = [] }: PageProps) {
                             <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
                             <span className="h-2 w-2 rounded-full bg-[#FCD116] shadow-[0_0_0_6px_rgba(252,209,22,0.12)]" />
                             <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
+                        </div>
+                    </div>
+
+                    <div className="mx-auto mt-8 grid max-w-5xl gap-4 sm:grid-cols-[1.1fr_0.9fr]">
+                        <div className="rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/40">
+                            <div className="flex items-start gap-3">
+                                <div className="mt-1 rounded-xl bg-[#0033A0]/10 p-2 text-[#0033A0]">
+                                    <QrCode className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                        Event Kit & Certificates
+                                    </h3>
+                                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                                        Scan the QR code or click the link to access the event questionnaire, download materials, and
+                                        claim certificates.
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                                        <Button asChild className="h-9 bg-[#0033A0] text-white hover:bg-[#0033A0]/90">
+                                            <a href="/event-kit">
+                                                Access event kit
+                                                <ArrowRight className="ml-2 h-4 w-4" />
+                                            </a>
+                                        </Button>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">{kitUrl}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/60 p-5 text-center dark:border-slate-700 dark:bg-slate-900/30">
+                            {kitQr ? (
+                                <img
+                                    src={kitQr}
+                                    alt="Event kit QR code"
+                                    className="h-40 w-40 rounded-2xl bg-white p-2 shadow-sm"
+                                />
+                            ) : (
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    QR code unavailable. Use the link to access the event kit.
+                                </div>
+                            )}
                         </div>
                     </div>
 
