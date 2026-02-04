@@ -46,6 +46,7 @@ import {
     ImageUp,
     FileText,
     XCircle,
+    CheckCircle2,
 } from 'lucide-react';
 
 type ProgrammeParticipant = {
