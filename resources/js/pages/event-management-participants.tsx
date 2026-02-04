@@ -291,7 +291,7 @@ export default function EventManagementParticipants() {
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                         <Users className="h-5 w-5 text-[#00359c]" />
-                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Participants</h1>
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Participants Certificates</h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                         Manage signatory details and print certificates for this programme.
