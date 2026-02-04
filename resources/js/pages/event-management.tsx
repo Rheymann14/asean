@@ -744,7 +744,7 @@ export default function EventManagement(props: PageProps) {
                             <div className="mt-4 grid gap-4">
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Title (big text)</div>
+                                        <div className="text-sm font-medium">Title</div>
                                         <Input value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} placeholder="e.g. Track Discussions" />
                                         {form.errors.title ? <div className="text-xs text-red-600">{form.errors.title}</div> : null}
                                     </div>

@@ -250,7 +250,7 @@ function EventCombobox({
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between"
+                    className="w-full min-w-0 justify-between"
                 >
                     <span className={cn('truncate', !selected && 'text-muted-foreground')}>
                         {selected ? selected.title : 'Select event'}
@@ -259,7 +259,12 @@ function EventCombobox({
                 </Button>
             </PopoverTrigger>
 
-            <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+            <PopoverContent
+                align="start"
+                sideOffset={6}
+                collisionPadding={12}
+                className="w-[min(var(--radix-popover-trigger-width),36rem)] p-0"
+            >
                 <Command>
                     <CommandInput placeholder="Search event..." />
                     <CommandList>
@@ -319,20 +324,41 @@ export default function VenueManagement(props: PageProps) {
     const programmeById = React.useMemo(() => new Map(programmes.map((p) => [p.id, p])), [programmes]);
 
     const resolvedVenues = React.useMemo(() => {
-        return venues.map((v) => ({
-            ...v,
-            programme: v.programme ?? (v.programme_id ? programmeById.get(v.programme_id) ?? null : null),
-        }));
+        const toId = (val: unknown): number | null => {
+            if (val == null) return null;
+            const n = typeof val === 'number' ? val : Number(val);
+            return Number.isFinite(n) ? n : null;
+        };
+
+        return venues.map((v) => {
+            // handle snake_case, camelCase, or missing
+            const rawProgrammeId = (v as any).programme_id ?? (v as any).programmeId ?? null;
+            const programmeId = toId(rawProgrammeId) ?? toId(v.programme?.id);
+
+            return {
+                ...v,
+                programme_id: programmeId,
+                programme: v.programme ?? (programmeId ? programmeById.get(programmeId) ?? null : null),
+            };
+        });
     }, [venues, programmeById]);
+
 
     // ✅ which programmes already have a venue (used to disable options in Add dialog)
     const programmesWithVenue = React.useMemo(() => {
         const set = new Set<number>();
+
         for (const v of resolvedVenues) {
-            if (typeof v.programme_id === 'number') set.add(v.programme_id);
+            const pid = v.programme_id ?? v.programme?.id;
+            if (pid != null) {
+                const n = typeof pid === 'number' ? pid : Number(pid);
+                if (Number.isFinite(n)) set.add(n);
+            }
         }
+
         return set;
     }, [resolvedVenues]);
+
 
     const [q, setQ] = React.useState('');
     const [eventFilter, setEventFilter] = React.useState<string>('all');
@@ -635,14 +661,13 @@ export default function VenueManagement(props: PageProps) {
 
             {/* Add/Edit Dialog */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="sm:max-w-[980px]">
+                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[980px]">
+
                     <DialogHeader>
                         <DialogTitle>{editing ? 'Edit Venue' : 'Add Venue'}</DialogTitle>
                         <DialogDescription>
                             Set venue details for a specific event, including Google Maps link and Embed URL.
-                            <span className="mt-1 block text-xs text-slate-600 dark:text-slate-400">
-                                Events marked <span className="font-medium">Has venue</span> are disabled to prevent duplicate venue assignments.
-                            </span>
+                          
                         </DialogDescription>
                     </DialogHeader>
 
