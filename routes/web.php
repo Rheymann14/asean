@@ -17,6 +17,8 @@ use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TableAssignmentController;
 use App\Http\Controllers\EventKitController;
+use App\Http\Controllers\VehicleAssignmentController;
+use App\Http\Controllers\TransportVehicleController;
 
 
 
@@ -103,6 +105,12 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         Route::get('event-management/{programme}/participants', [ProgrammeController::class, 'participants'])
             ->name('event-management.participants');
         Route::resource('programmes', ProgrammeController::class)->only(['store', 'update', 'destroy']);
+
+        Route::get('vehicle-management', [VehicleAssignmentController::class, 'index'])->name('vehicle-management');
+        Route::post('vehicle-assignments', [VehicleAssignmentController::class, 'store'])
+            ->name('vehicle-assignments.store');
+        Route::post('transport-vehicles', [TransportVehicleController::class, 'store'])
+            ->name('transport-vehicles.store');
 
         Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
         Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');
