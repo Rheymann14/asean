@@ -1,5 +1,21 @@
 <?php
 
+$scheme = env('MAIL_SCHEME');
+$encryption = env('MAIL_ENCRYPTION');
+$normalizedScheme = match (strtolower((string) ($scheme ?: $encryption))) {
+    'tls' => 'smtp',
+    'ssl' => 'smtps',
+    default => $scheme ?: $encryption ?: null,
+};
+$fromAddress = env('MAIL_FROM_ADDRESS');
+$defaultEhloDomain = $fromAddress && str_contains($fromAddress, '@')
+    ? substr($fromAddress, strrpos($fromAddress, '@') + 1)
+    : null;
+$localDomain = env(
+    'MAIL_EHLO_DOMAIN',
+    $defaultEhloDomain ?: parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST),
+);
+
 return [
 
     /*
@@ -39,14 +55,14 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            'scheme' => $normalizedScheme,
             'url' => env('MAIL_URL'),
             'host' => env('MAIL_HOST', '127.0.0.1'),
             'port' => env('MAIL_PORT', 2525),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
-            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+            'local_domain' => $localDomain,
         ],
 
         'ses' => [
