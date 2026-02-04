@@ -3,8 +3,6 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
 import { cn } from '@/lib/utils';
-import printJS from '@/lib/print-js';
-import { buildCertificatePrintBody, CERTIFICATE_PRINT_STYLES } from '@/lib/certificates';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +45,6 @@ import {
     CalendarDays,
     ImageUp,
     FileText,
-    CheckCircle2,
     XCircle,
 } from 'lucide-react';
 
@@ -151,34 +148,6 @@ function formatDateTimeSafe(value?: string | null) {
     }).format(d);
 }
 
-function formatDateRange(starts_at?: string | null, ends_at?: string | null) {
-    if (!starts_at) return '—';
-    const start = new Date(starts_at);
-    if (Number.isNaN(start.getTime())) return '—';
-    const end = ends_at ? new Date(ends_at) : null;
-    const sameDay = end && !Number.isNaN(end.getTime()) && start.toDateString() === end.toDateString();
-    const date = new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(start);
-    if (!end || Number.isNaN(end.getTime()) || sameDay) {
-        return date;
-    }
-    const endDate = new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(end);
-    return `${date} – ${endDate}`;
-}
-
-function formatGivenDate(starts_at?: string | null) {
-    if (!starts_at) return '—';
-    const start = new Date(starts_at);
-    if (Number.isNaN(start.getTime())) return '—';
-    return new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(start);
-}
-
-function formatVenueLabel(programme: ProgrammeRow) {
-    if (programme.venue?.name) {
-        return programme.venue.address ? `${programme.venue.name}, ${programme.venue.address}` : programme.venue.name;
-    }
-    return programme.location || '—';
-}
-
 function toLocalInputValue(iso: string | null | undefined) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -203,12 +172,6 @@ function resolveImageUrl(imageUrl?: string | null) {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
     return `/event-images/${imageUrl}`;
-}
-
-function resolveSignatureUrl(signatureUrl?: string | null) {
-    if (!signatureUrl) return null;
-    if (signatureUrl.startsWith('http') || signatureUrl.startsWith('/')) return signatureUrl;
-    return `/signatures/${signatureUrl}`;
 }
 
 function getEventStatus(starts_at?: string | null, ends_at?: string | null) {
@@ -334,16 +297,6 @@ export default function EventManagement(props: PageProps) {
     }
 
 
-    // participants dialog
-    const [participantsOpen, setParticipantsOpen] = React.useState(false);
-    const [participantsTarget, setParticipantsTarget] = React.useState<ProgrammeRow | null>(null);
-    const [signatoryName, setSignatoryName] = React.useState('Juan Dela Cruz');
-    const [signatoryTitle, setSignatoryTitle] = React.useState('Head of Agency');
-    const [signatorySignature, setSignatorySignature] = React.useState<string | null>(null);
-    const [signatorySignatureLabel, setSignatorySignatureLabel] = React.useState<string>('');
-    const signatorySyncEnabledRef = React.useRef(false);
-    const signatorySyncTimeoutRef = React.useRef<number | null>(null);
-
     // ✅ existing file urls (server) when editing
     const [currentImageUrl, setCurrentImageUrl] = React.useState<string | null>(null);
     const [currentPdfUrl, setCurrentPdfUrl] = React.useState<string | null>(null);
@@ -360,120 +313,6 @@ export default function EventManagement(props: PageProps) {
             if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
         };
     }, [imagePreview]);
-
-    React.useEffect(() => {
-        if (!participantsTarget) return;
-        signatorySyncEnabledRef.current = false;
-
-        const defaultName = 'Shirley C. Agrupis, Ph.D.';
-        const defaultTitle = 'CHED Chairperson';
-        const signatureUrl = resolveSignatureUrl(participantsTarget.signatory_signature_url);
-
-        if (signatorySignature?.startsWith('blob:')) {
-            URL.revokeObjectURL(signatorySignature);
-        }
-
-        setSignatoryName(participantsTarget.signatory_name ?? defaultName);
-        setSignatoryTitle(participantsTarget.signatory_title ?? defaultTitle);
-        setSignatorySignature(signatureUrl);
-        setSignatorySignatureLabel(signatureUrl ? basename(signatureUrl) : '');
-
-        const enableTimeout = window.setTimeout(() => {
-            signatorySyncEnabledRef.current = true;
-        }, 0);
-
-        return () => {
-            window.clearTimeout(enableTimeout);
-        };
-    }, [participantsTarget?.id]);
-
-    React.useEffect(() => {
-        return () => {
-            if (signatorySignature?.startsWith('blob:')) URL.revokeObjectURL(signatorySignature);
-        };
-    }, [signatorySignature]);
-
-    React.useEffect(() => {
-        if (!participantsTarget || !participantsOpen || !signatorySyncEnabledRef.current) return;
-        if (signatorySyncTimeoutRef.current) {
-            window.clearTimeout(signatorySyncTimeoutRef.current);
-        }
-
-        signatorySyncTimeoutRef.current = window.setTimeout(() => {
-            persistSignatoryData({
-                name: signatoryName,
-                title: signatoryTitle,
-                successMessage: 'Signatory details updated.',
-            });
-        }, 700);
-
-        return () => {
-            if (signatorySyncTimeoutRef.current) {
-                window.clearTimeout(signatorySyncTimeoutRef.current);
-            }
-        };
-    }, [participantsOpen, participantsTarget?.id, signatoryName, signatoryTitle]);
-
-    function persistSignatoryData({
-        name,
-        title,
-        signatureFile,
-        removeSignature,
-        successMessage,
-    }: {
-        name?: string;
-        title?: string;
-        signatureFile?: File | null;
-        removeSignature?: boolean;
-        successMessage?: string;
-    }) {
-        if (!participantsTarget) return;
-
-        const payload = new FormData();
-        payload.append('_method', 'patch');
-        payload.append('signatory_name', name ?? signatoryName ?? '');
-        payload.append('signatory_title', title ?? signatoryTitle ?? '');
-        if (signatureFile) payload.append('signatory_signature', signatureFile);
-        if (removeSignature) payload.append('signatory_signature_remove', '1');
-
-        router.post(ENDPOINTS.programmes.update(participantsTarget.id), payload, {
-            preserveScroll: true,
-            forceFormData: true,
-            onSuccess: () => {
-                if (successMessage) {
-                    toast.success(successMessage);
-                }
-            },
-            onError: () => toast.error('Unable to save signatory details.'),
-        });
-    }
-
-    function handleSignatureUpload(event: React.ChangeEvent<HTMLInputElement>) {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            toast.error('Please upload an image file for the signature.');
-            return;
-        }
-        const previewUrl = URL.createObjectURL(file);
-        setSignatorySignature((prev) => {
-            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
-            return previewUrl;
-        });
-        setSignatorySignatureLabel(file.name);
-        persistSignatoryData({ signatureFile: file });
-        toast.success('Signature attached.');
-    }
-
-    function handleSignatureRemove() {
-        if (signatorySignature?.startsWith('blob:')) {
-            URL.revokeObjectURL(signatorySignature);
-        }
-        setSignatorySignature(null);
-        setSignatorySignatureLabel('');
-        persistSignatoryData({ removeSignature: true });
-        toast.success('Signature removed.');
-    }
 
 
 
@@ -678,81 +517,8 @@ export default function EventManagement(props: PageProps) {
     }
 
     function openParticipants(item: ProgrammeRow) {
-        setParticipantsTarget(item);
-        setParticipantsOpen(true);
+        router.get(`/event-management/${item.id}/participants`);
     }
-
-    function formatPrintName(name?: string | null) {
-    return (name ?? '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLocaleUpperCase('en-PH');
-}
-
-function printParticipantCertificates(programme: ProgrammeRow, participant: ProgrammeParticipant) {
-    const html = buildCertificatePrintBody({
-        data: {
-            eventName: programme.title,
-            eventDate: formatDateRange(programme.starts_at, programme.ends_at),
-            givenDate: formatGivenDate(programme.ends_at ?? programme.starts_at),
-            venue: formatVenueLabel(programme),
-            signatoryName: signatoryName,
-            signatoryTitle: signatoryTitle,
-            signatorySignature: signatorySignature,
-        },
-        participants: [
-            {
-                ...participant,
-                name: formatPrintName(participant.name),
-            },
-        ],
-    });
-
-    if (!html.trim()) {
-        toast.error('Unable to generate certificates.');
-        return;
-    }
-
-    printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificates' });
-}
-
-function printAllCertificates() {
-    if (!participantsTarget) return;
-
-    const checkedInParticipants = (participantsTarget.participants ?? []).filter((p) => p.checked_in_at);
-
-    if (checkedInParticipants.length === 0) {
-        toast.error('No checked-in participants to print.');
-        return;
-    }
-
-    const html = buildCertificatePrintBody({
-        data: {
-            eventName: participantsTarget.title,
-            eventDate: formatDateRange(participantsTarget.starts_at, participantsTarget.ends_at),
-            givenDate: formatGivenDate(participantsTarget.ends_at ?? participantsTarget.starts_at),
-            venue: formatVenueLabel(participantsTarget),
-            signatoryName: signatoryName,
-            signatoryTitle: signatoryTitle,
-            signatorySignature: signatorySignature,
-        },
-        participants: checkedInParticipants.map((p) => ({
-            ...p,
-            name: formatPrintName(p.name),
-        })),
-    });
-
-    if (!html.trim()) {
-        toast.error('Unable to generate certificates.');
-        return;
-    }
-
-    printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificates' });
-}
-
-
-    const participantsList = participantsTarget?.participants ?? [];
-    const checkedInCount = participantsList.filter((participant) => participant.checked_in_at).length;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -1248,160 +1014,6 @@ function printAllCertificates() {
                     </form>
                 </DialogContent>
             </Dialog>
-
-            <Dialog open={participantsOpen} onOpenChange={setParticipantsOpen}>
-                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[920px] max-h-[90vh] overflow-hidden p-0">
-                    {/* Sticky header */}
-                    <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
-                        <DialogHeader className="space-y-1">
-                            <DialogTitle className="text-base">Participants</DialogTitle>
-                            <DialogDescription className="text-xs">
-                                {participantsTarget?.title ?? 'Event'} · {participantsList.length.toLocaleString()} joined ·{' '}
-                                {checkedInCount.toLocaleString()} checked in
-                            </DialogDescription>
-                        </DialogHeader>
-                    </div>
-
-                    {/* Scroll area */}
-                    <div className="max-h-[calc(90vh-56px)] overflow-y-auto px-4 py-3">
-                        <div className="space-y-2">
-                            {/* Compact form */}
-                            <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs dark:border-slate-800 dark:bg-slate-950">
-                                <div className="grid gap-2 sm:grid-cols-2">
-                                    <div className="space-y-1">
-                                        <div className="font-medium text-slate-700 dark:text-slate-200">Signatory name</div>
-                                        <Input
-                                            className="h-8 text-xs"
-                                            value={signatoryName}
-                                            onChange={(e) => setSignatoryName(e.target.value)}
-                                            placeholder="Signatory name"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <div className="font-medium text-slate-700 dark:text-slate-200">Signatory title</div>
-                                        <Input
-                                            className="h-8 text-xs"
-                                            value={signatoryTitle}
-                                            onChange={(e) => setSignatoryTitle(e.target.value)}
-                                            placeholder="Signatory title"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1 sm:col-span-2">
-                                        <div className="font-medium text-slate-700 dark:text-slate-200">Signature</div>
-
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <Input className="h-8 text-xs" type="file" accept="image/*" onChange={handleSignatureUpload} />
-
-                                            {signatorySignature ? (
-                                                <>
-                                                    <div className="inline-flex max-w-[260px] items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                                        <span className="truncate">{signatorySignatureLabel || 'Signature attached'}</span>
-                                                    </div>
-
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        className="h-8 px-2 text-xs text-red-600 hover:text-red-700"
-                                                        onClick={handleSignatureRemove}
-                                                    >
-                                                        Remove
-                                                    </Button>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                            <img
-                                                                src={signatorySignature}
-                                                                alt="Signature preview"
-                                                                className="h-8 w-auto object-contain"
-                                                            />
-                                                        </div>
-                                                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Preview</div>
-                                                    </div>
-                                                </>
-                                            ) : null}
-                                        </div>
-
-                                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                            Upload a signature image to embed in the certificate PDF view.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Sticky compact action bar */}
-                            <div className="sticky top-[56px] z-10 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-900/40">
-                                <div className="text-slate-600 dark:text-slate-300">Print checked-in only.</div>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    className={PRIMARY_BTN + ' h-8 px-3 text-xs'}
-                                    onClick={printAllCertificates}
-                                    disabled={checkedInCount === 0}
-                                >
-                                    Print All
-                                </Button>
-                            </div>
-
-                            {/* List */}
-                            {participantsList.length === 0 ? (
-                                <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800">
-                                    No participants have joined this event yet.
-                                </div>
-                            ) : (
-                                <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950">
-                                    {participantsList.map((participant) => {
-                                        const checked = !!participant.checked_in_at;
-
-                                        return (
-                                            <div key={participant.id} className="flex items-center gap-3 px-3 py-2">
-                                                {/* Left */}
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                        {participant.name}
-                                                    </div>
-                                                    <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                                                        {participant.display_id || participant.email || '—'}
-                                                        {checked ? ` · Scanned ${formatDateTimeSafe(participant.checked_in_at)}` : ''}
-                                                    </div>
-                                                </div>
-
-                                                {/* Right */}
-                                                <div className="flex shrink-0 items-center gap-2">
-                                                    {checked ? (
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                                            Checked
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                                                            Not yet
-                                                        </span>
-                                                    )}
-
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="h-8 px-2 text-xs"
-                                                        onClick={() => printParticipantCertificates(participantsTarget!, participant)}
-                                                        disabled={!checked}
-                                                    >
-                                                        Print
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
 
             {/* Delete Confirm */}
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

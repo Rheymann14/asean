@@ -114,6 +114,56 @@ class ProgrammeController extends Controller
         ]);
     }
 
+    public function participants(Programme $programme)
+    {
+        $attendanceByUser = ParticipantAttendance::query()
+            ->select(['user_id', 'scanned_at'])
+            ->where('programme_id', $programme->id)
+            ->get()
+            ->keyBy('user_id');
+
+        $programme->load([
+            'venues' => fn ($query) => $query->where('is_active', true)->orderBy('id'),
+            'participants',
+        ]);
+
+        $venue = $programme->venues->first();
+
+        return Inertia::render('event-management-participants', [
+            'programme' => [
+                'id' => $programme->id,
+                'title' => $programme->title,
+                'description' => $programme->description,
+                'starts_at' => $programme->starts_at?->toISOString(),
+                'ends_at' => $programme->ends_at?->toISOString(),
+                'location' => $programme->location,
+                'venue' => $venue
+                    ? [
+                        'name' => $venue->name,
+                        'address' => $venue->address,
+                    ]
+                    : null,
+                'signatory_name' => $programme->signatory_name,
+                'signatory_title' => $programme->signatory_title,
+                'signatory_signature_url' => $programme->signatory_signature_url,
+                'participants' => $programme->participants
+                    ->map(function ($participant) use ($attendanceByUser) {
+                        $attendance = $attendanceByUser->get($participant->id);
+
+                        return [
+                            'id' => $participant->id,
+                            'name' => $participant->name,
+                            'email' => $participant->email,
+                            'display_id' => $participant->display_id,
+                            'checked_in_at' => $attendance?->scanned_at?->toISOString(),
+                        ];
+                    })
+                    ->values()
+                    ->all(),
+            ],
+        ]);
+    }
+
     public function participantIndex(Request $request)
     {
         $attendanceEntries = ParticipantAttendance::query()
