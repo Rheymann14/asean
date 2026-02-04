@@ -104,6 +104,10 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
             ->name('event-management.participants');
         Route::resource('programmes', ProgrammeController::class)->only(['store', 'update', 'destroy']);
 
+        Route::get('vehicle-management', function () {
+            return Inertia::render('vehicle-management');
+        })->name('vehicle-management');
+
         Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
         Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');
         Route::delete('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'destroyTable'])
