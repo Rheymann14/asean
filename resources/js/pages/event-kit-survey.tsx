@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { ChevronDown, CircleCheck, CircleX, Sparkles, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type ProgrammeRow = {
     id: number;
@@ -104,7 +105,10 @@ export default function EventKitSurvey() {
             event_ratings: includeEventFeedback ? eventRatings : {},
             recommendations: recommendations.trim(),
         }));
-        form.post('/event-kit/survey');
+        form.post('/event-kit/survey', {
+            onSuccess: () => toast.success('Survey submitted.'),
+            onError: () => toast.error('Please complete the survey before continuing.'),
+        });
     };
 
     return (

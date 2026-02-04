@@ -124,7 +124,7 @@ export default function EventKitMaterials() {
     const givenDateLabel = formatGivenDate(programme.ends_at ?? programme.starts_at);
     const venue = programme.location || '—';
 
-    const handlePrint = (type: 'appearance' | 'participation') => {
+    const handlePrint = () => {
         if (!hasAttendance) return;
         const html = buildCertificatePrintBody({
             data: {
@@ -137,7 +137,6 @@ export default function EventKitMaterials() {
                 signatorySignature,
             },
             participants: [{ name: participant.name }],
-            types: [type],
         });
         if (!html.trim()) return;
         printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificate' });
@@ -275,37 +274,25 @@ export default function EventKitMaterials() {
                                     </div>
                                 </div>
 
-                                <div className="mt-4 space-y-3">
-                                    {['appearance', 'participation'].map((type) => (
-                                        <div
-                                            key={type}
-                                            className={cn(
-                                                'flex items-center justify-between rounded-xl border p-3 text-xs',
-                                                hasAttendance
-                                                    ? 'border-emerald-200 bg-emerald-50/60 text-emerald-700'
-                                                    : 'border-slate-200 bg-white/70 text-slate-500 dark:border-slate-700 dark:bg-slate-950/40',
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <Medal className="h-4 w-4" />
-                                                <span className="font-semibold">
-                                                    Certificate of {type === 'appearance' ? 'Appearance' : 'Participation'}
-                                                </span>
-                                            </div>
-                                            {hasAttendance ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-8"
-                                                    onClick={() => handlePrint(type as 'appearance' | 'participation')}
-                                                >
-                                                    Print
-                                                </Button>
-                                            ) : (
-                                                <span className="text-[11px]">Pending attendance</span>
-                                            )}
-                                        </div>
-                                    ))}
+                                <div
+                                    className={cn(
+                                        'mt-4 flex items-center justify-between rounded-xl border p-3 text-xs',
+                                        hasAttendance
+                                            ? 'border-emerald-200 bg-emerald-50/60 text-emerald-700'
+                                            : 'border-slate-200 bg-white/70 text-slate-500 dark:border-slate-700 dark:bg-slate-950/40',
+                                    )}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Medal className="h-4 w-4" />
+                                        <span className="font-semibold">Print certificates (appearance & participation)</span>
+                                    </div>
+                                    {hasAttendance ? (
+                                        <Button size="sm" variant="outline" className="h-8" onClick={handlePrint}>
+                                            Print
+                                        </Button>
+                                    ) : (
+                                        <span className="text-[11px]">Pending attendance</span>
+                                    )}
                                 </div>
                             </Card>
 
