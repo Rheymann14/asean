@@ -652,7 +652,7 @@ export default function VenueManagement(props: PageProps) {
                             <div className="space-y-4">
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Event</div>
+                                        <div className="text-sm font-medium">Event  <span className="text-[11px] font-semibold text-red-600"> *</span></div>
 
                                         {programmes?.length ? (
                                             <EventCombobox
@@ -674,7 +674,7 @@ export default function VenueManagement(props: PageProps) {
                                     </div>
 
                                     <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Venue name</div>
+                                        <div className="text-sm font-medium">Venue name <span className="text-[11px] font-semibold text-red-600"> *</span></div>
                                         <Input
                                             value={form.data.name}
                                             onChange={(e) => form.setData('name', e.target.value)}

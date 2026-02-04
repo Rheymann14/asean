@@ -2138,7 +2138,7 @@ export default function ParticipantPage(props: PageProps) {
                     <form onSubmit={submitParticipant} className="space-y-4">
                         <div className="grid gap-3 sm:grid-cols-2">
                             <div className="space-y-1.5 sm:col-span-2">
-                                <div className="text-sm font-medium">Full name</div>
+                                <div className="text-sm font-medium">Full name  <span className="text-[11px] font-semibold text-red-600"> *</span></div>
                                 <Input
                                     value={participantForm.data.full_name}
                                     onChange={(e) => participantForm.setData('full_name', e.target.value)}
@@ -2150,7 +2150,7 @@ export default function ParticipantPage(props: PageProps) {
                             </div>
 
                             <div className="space-y-1.5 sm:col-span-2">
-                                <div className="text-sm font-medium">Email</div>
+                                <div className="text-sm font-medium">Email  <span className="text-[11px] font-semibold text-red-600"> *</span></div>
                                 <Input
                                     value={participantForm.data.email}
                                     onChange={(e) => participantForm.setData('email', e.target.value)}

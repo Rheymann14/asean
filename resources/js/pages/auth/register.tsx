@@ -207,7 +207,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                 <div className="grid gap-5">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="country_id">Country</Label>
+                                        <Label htmlFor="country_id">Country  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <input type="hidden" name="country_id" value={country} />
 
                                         <Popover open={countryOpen} onOpenChange={setCountryOpen}>
@@ -295,7 +295,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="name">Name</Label>
+                                        <Label htmlFor="name">Full Name (First Name, Middle Initial, Surname) <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <Input
                                             id="name"
                                             type="text"
@@ -304,14 +304,14 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             tabIndex={2}
                                             autoComplete="name"
                                             name="name"
-                                            placeholder="Full name"
+                                            placeholder="e.g JUAN DELA CRUZ"
                                             className={inputClass}
                                         />
                                         <InputError message={err.name} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="email">Email address</Label>
+                                        <Label htmlFor="email">Email address  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <Input
                                             id="email"
                                             type="email"
@@ -326,7 +326,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="contact_number">Contact number</Label>
+                                        <Label htmlFor="contact_number">Contact number  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <Input
                                             id="contact_number"
                                             type="tel"
@@ -349,7 +349,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="user_type_id">Registrant Type</Label>
+                                        <Label htmlFor="user_type_id">Registrant Type  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <input type="hidden" name="user_type_id" value={registrantType} />
 
                                         <Popover open={typeOpen} onOpenChange={setTypeOpen}>
@@ -553,7 +553,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                     <div className="grid gap-5 sm:grid-cols-2">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="password">Password</Label>
+                                            <Label htmlFor="password">Password  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                             <div className="relative">
                                                 <Input
                                                     id="password"
@@ -582,7 +582,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         </div>
 
                                         <div className="grid gap-2">
-                                            <Label htmlFor="password_confirmation">Confirm password</Label>
+                                            <Label htmlFor="password_confirmation">Confirm password  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                             <div className="relative">
                                                 <Input
                                                     id="password_confirmation"
@@ -614,6 +614,9 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             <InputError message={err.password_confirmation} />
                                         </div>
                                     </div>
+                                  
+                                  
+                        
 
                                     <div className="grid gap-3 text-left">
                                         <input type="hidden" name="consent_contact_sharing" value={consentContact ? '1' : '0'} />
@@ -622,8 +625,9 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
                                                     Contact Information Sharing
+                                                      <span className="text-[11px] font-semibold text-red-600"> *</span>
                                                 </p>
-                                                <span className="text-[11px] font-semibold text-red-600">*</span>
+                                              
                                             </div>
 
                                             <p className="mt-1 text-sm leading-snug text-slate-600">
@@ -648,8 +652,9 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
                                                     Photo and Videos Consent
+                                                      <span className="text-[11px] font-semibold text-red-600"> *</span>
                                                 </p>
-                                                <span className="text-[11px] font-semibold text-red-600">*</span>
+                                              
                                             </div>
 
                                             <p className="mt-1 text-sm leading-snug text-slate-600">
@@ -678,13 +683,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         )}
                                     </div>
 
-                                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-3 text-sm text-slate-600">
-                                        <p className="font-medium text-slate-700">Why registration can take a moment</p>
-                                        <p className="mt-1 text-sm leading-snug">
-                                            We generate your QR-enabled badge and send a confirmation email after you submit. This can take a few
-                                            extra seconds depending on email delivery.
-                                        </p>
-                                    </div>
+                            
 
                                     <Button
                                         type="submit"

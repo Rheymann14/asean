@@ -407,8 +407,8 @@ export default function Venue({ venues = [], section }: PageProps) {
                     </div>
 
                     {/* Section */}
-                    <div className="mx-auto mt-12 max-w-5xl text-center">
-                        <h2 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
+                    <div className="mx-auto mt-12 max-w-5xl text-center mt-12">
+                        <h2 className="text-balance text-2xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
                             <span className="relative inline-block">
                                 <span className="relative z-10 text-[#0033A0]">{sectionTitle}</span>
                                 <span className="pointer-events-none absolute inset-x-0 bottom-1 -z-0 h-2 rounded-full bg-[#0033A0]/15 blur-[1px]" />

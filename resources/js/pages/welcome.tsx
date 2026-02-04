@@ -1123,6 +1123,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                         >
                             <span className="text-[#0033A0]">ASEAN</span> <span className="text-slate-900">Philippines</span>{' '}
                             <span className="text-amber-600">2026</span>
+                            <div className="span text-lg">Higher Education Sector</div>
                         </motion.h2>
 
                         <motion.p

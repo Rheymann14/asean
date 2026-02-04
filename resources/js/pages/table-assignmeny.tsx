@@ -457,7 +457,7 @@ export default function TableAssignmenyPage(props: PageProps) {
             <CardContent className="space-y-3">
                 <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
                     <div className="space-y-1">
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Event</label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Event  <span className="text-[11px] font-semibold text-red-600"> *</span></label>
                         <SearchableDropdown
                             value={selectedEventId}
                             onValueChange={(v) => setSelectedEventId(v === 'none' ? '' : v)}
@@ -522,7 +522,7 @@ export default function TableAssignmenyPage(props: PageProps) {
             <CardContent>
                 <form onSubmit={submitTable} className="space-y-4">
                     <div className="space-y-1">
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Table name</label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Table name  <span className="text-[11px] font-semibold text-red-600"> *</span></label>
                         <Input
                             type="text"
                             value={tableForm.data.table_number}
@@ -534,7 +534,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                         ) : null}
                     </div>
                     <div className="space-y-1">
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Capacity</label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Capacity  <span className="text-[11px] font-semibold text-red-600"> *</span></label>
                         <Input
                             type="number"
                             min={1}
@@ -565,7 +565,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                 <form onSubmit={submitAssignments} className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-[220px,1fr]">
                         <div className="space-y-1">
-                            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Table</label>
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Table <span className="text-[11px] font-semibold text-red-600"> *</span></label>
                             <SearchableDropdown
                                 value={selectedTableId}
                                 onValueChange={(v) => setSelectedTableId(v === 'none' ? '' : v)}
@@ -856,7 +856,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                         <div className="grid gap-3 md:grid-cols-[260px,1fr] md:items-center">
                                             <div className="space-y-1">
                                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                                    Event
+                                                    Event  <span className="text-[11px] font-semibold text-red-600"> *</span>
                                                 </label>
                                                 <SearchableDropdown
                                                     value={selectedEventId}
