@@ -117,6 +117,47 @@ class EventKitController extends Controller
             return redirect()->route('event-kit.survey');
         }
 
+        $attendanceEntries = ParticipantAttendance::query()
+            ->select(['programme_id'])
+            ->where('user_id', $participant->id)
+            ->whereNotNull('scanned_at')
+            ->get();
+
+        $checkedInProgrammeIds = $attendanceEntries->pluck('programme_id')->unique()->values();
+
+        $checkedInProgrammes = Programme::query()
+            ->with('materials')
+            ->whereIn('id', $checkedInProgrammeIds)
+            ->latest('starts_at')
+            ->get()
+            ->map(fn (Programme $programme) => [
+                'id' => $programme->id,
+                'title' => $programme->title,
+                'description' => $programme->description,
+                'starts_at' => $programme->starts_at?->toISOString(),
+                'ends_at' => $programme->ends_at?->toISOString(),
+                'location' => $programme->location,
+                'materials' => $programme->materials
+                    ->map(fn ($material) => [
+                        'id' => $material->id,
+                        'file_name' => $material->file_name,
+                        'file_path' => $material->file_path,
+                        'file_type' => $material->file_type,
+                    ])
+                    ->values()
+                    ->all(),
+                'signatory_name' => $programme->signatory_name,
+                'signatory_title' => $programme->signatory_title,
+                'signatory_signature_url' => $programme->signatory_signature_url,
+            ])
+            ->values()
+            ->all();
+
+        if ($checkedInProgrammeIds->isNotEmpty() && !$checkedInProgrammeIds->contains((int) $programmeId)) {
+            $programmeId = $checkedInProgrammeIds->first();
+            $request->session()->put('event_kit.programme_id', $programmeId);
+        }
+
         $programme = Programme::query()
             ->with('materials')
             ->find($programmeId);
@@ -154,12 +195,42 @@ class EventKitController extends Controller
                 'signatory_title' => $programme->signatory_title,
                 'signatory_signature_url' => $programme->signatory_signature_url,
             ],
+            'checked_in_programmes' => $checkedInProgrammes,
             'attendance' => $attendance
                 ? [
                     'scanned_at' => $attendance->scanned_at?->toISOString(),
                 ]
                 : null,
         ]);
+    }
+
+    public function selectProgramme(Request $request)
+    {
+        $participant = $this->resolveParticipant($request);
+
+        if (!$participant) {
+            return redirect()->route('event-kit.entry');
+        }
+
+        $validated = $request->validate([
+            'programme_id' => ['required', 'integer', 'exists:programmes,id'],
+        ]);
+
+        $hasAttendance = ParticipantAttendance::query()
+            ->where('user_id', $participant->id)
+            ->where('programme_id', $validated['programme_id'])
+            ->whereNotNull('scanned_at')
+            ->exists();
+
+        if (!$hasAttendance) {
+            return back()->withErrors([
+                'programme_id' => 'Please select an event you checked into.',
+            ]);
+        }
+
+        $request->session()->put('event_kit.programme_id', (int) $validated['programme_id']);
+
+        return redirect()->route('event-kit.materials');
     }
 
     public function reset(Request $request)
