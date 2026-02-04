@@ -13,7 +13,19 @@ import {
 import { dashboard, participant, issuancesManagement, contactDetails, venueManagement, scanner } from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ScrollText, User, Users, Building2, MapPin, ScanLine, House, CalendarDays, Table, Image } from 'lucide-react';
+import {
+    ScrollText,
+    User,
+    Users,
+    Building2,
+    MapPin,
+    ScanLine,
+    House,
+    CalendarDays,
+    Table,
+    Image,
+    Truck,
+} from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -44,6 +56,11 @@ export function AppSidebar() {
                   title: 'Table Assignment',
                   href: '/table-assignment/assignment',
                   icon: Table,
+              },
+              {
+                  title: 'Vehicle Management',
+                  href: '/vehicle-management',
+                  icon: Truck,
               },
               {
                   title: 'Venue',
