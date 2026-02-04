@@ -320,8 +320,8 @@ export default function EventManagement(props: PageProps) {
     // participants dialog
     const [participantsOpen, setParticipantsOpen] = React.useState(false);
     const [participantsTarget, setParticipantsTarget] = React.useState<ProgrammeRow | null>(null);
-    const [signatoryName, setSignatoryName] = React.useState('Shirley C. Agrupis, Ph.D.');
-    const [signatoryTitle, setSignatoryTitle] = React.useState('CHED Chairperson');
+    const [signatoryName, setSignatoryName] = React.useState('Juan Dela Cruz');
+    const [signatoryTitle, setSignatoryTitle] = React.useState('Head of Agency');
     const [signatorySignature, setSignatorySignature] = React.useState<string | null>(null);
     const [signatorySignatureLabel, setSignatorySignatureLabel] = React.useState<string>('');
     const signatorySyncEnabledRef = React.useRef(false);
@@ -1061,135 +1061,158 @@ export default function EventManagement(props: PageProps) {
             </Dialog>
 
             <Dialog open={participantsOpen} onOpenChange={setParticipantsOpen}>
-                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[920px] max-h-[90vh] overflow-hidden">
-                    <DialogHeader>
-                        <DialogTitle>Participants</DialogTitle>
-                        <DialogDescription>
-                            {participantsTarget?.title ?? 'Event'} · {participantsList.length.toLocaleString()} joined ·{' '}
-                            {checkedInCount.toLocaleString()} checked in
-                        </DialogDescription>
-                    </DialogHeader>
+                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[920px] max-h-[90vh] overflow-hidden p-0">
+                    {/* Sticky header */}
+                    <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+                        <DialogHeader className="space-y-1">
+                            <DialogTitle className="text-base">Participants</DialogTitle>
+                            <DialogDescription className="text-xs">
+                                {participantsTarget?.title ?? 'Event'} · {participantsList.length.toLocaleString()} joined ·{' '}
+                                {checkedInCount.toLocaleString()} checked in
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
 
-                    <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
-                        <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-950">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="space-y-1.5">
-                                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signatory name</div>
-                                    <Input
-                                        value={signatoryName}
-                                        onChange={(e) => setSignatoryName(e.target.value)}
-                                        placeholder="Signatory name"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signatory title</div>
-                                    <Input
-                                        value={signatoryTitle}
-                                        onChange={(e) => setSignatoryTitle(e.target.value)}
-                                        placeholder="Signatory title"
-                                    />
-                                </div>
-                                <div className="space-y-1.5 sm:col-span-2">
-                                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Signature upload</div>
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        <Input type="file" accept="image/*" onChange={handleSignatureUpload} />
-                                        {signatorySignature ? (
-                                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                                                <span className="truncate">{signatorySignatureLabel || 'Signature attached'}</span>
-                                            </div>
-                                        ) : null}
-                                        {signatorySignature ? (
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="ghost"
-                                                className="text-red-600 hover:text-red-700"
-                                                onClick={handleSignatureRemove}
-                                            >
-                                                Remove
-                                            </Button>
-                                        ) : null}
+                    {/* Scroll area */}
+                    <div className="max-h-[calc(90vh-56px)] overflow-y-auto px-4 py-3">
+                        <div className="space-y-2">
+                            {/* Compact form */}
+                            <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs dark:border-slate-800 dark:bg-slate-950">
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    <div className="space-y-1">
+                                        <div className="font-medium text-slate-700 dark:text-slate-200">Signatory name</div>
+                                        <Input
+                                            className="h-8 text-xs"
+                                            value={signatoryName}
+                                            onChange={(e) => setSignatoryName(e.target.value)}
+                                            placeholder="Signatory name"
+                                        />
                                     </div>
-                                    {signatorySignature ? (
-                                        <div className="flex items-center gap-3">
-                                            <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                <img src={signatorySignature} alt="Signature preview" className="h-10 w-auto object-contain" />
-                                            </div>
-                                            <div className="text-xs text-slate-500 dark:text-slate-400">Preview</div>
+
+                                    <div className="space-y-1">
+                                        <div className="font-medium text-slate-700 dark:text-slate-200">Signatory title</div>
+                                        <Input
+                                            className="h-8 text-xs"
+                                            value={signatoryTitle}
+                                            onChange={(e) => setSignatoryTitle(e.target.value)}
+                                            placeholder="Signatory title"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1 sm:col-span-2">
+                                        <div className="font-medium text-slate-700 dark:text-slate-200">Signature</div>
+
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Input className="h-8 text-xs" type="file" accept="image/*" onChange={handleSignatureUpload} />
+
+                                            {signatorySignature ? (
+                                                <>
+                                                    <div className="inline-flex max-w-[260px] items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+                                                        <span className="truncate">{signatorySignatureLabel || 'Signature attached'}</span>
+                                                    </div>
+
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-8 px-2 text-xs text-red-600 hover:text-red-700"
+                                                        onClick={handleSignatureRemove}
+                                                    >
+                                                        Remove
+                                                    </Button>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                            <img
+                                                                src={signatorySignature}
+                                                                alt="Signature preview"
+                                                                className="h-8 w-auto object-contain"
+                                                            />
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Preview</div>
+                                                    </div>
+                                                </>
+                                            ) : null}
                                         </div>
-                                    ) : null}
-                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                        Upload a signature image to embed in the certificate PDF view.
+
+                                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                            Upload a signature image to embed in the certificate PDF view.
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-900/40">
-                            <div className="text-slate-600 dark:text-slate-300">
-                                Print certificates for checked-in participants only.
-                            </div>
-                            <Button
-                                type="button"
-                                size="sm"
-                                className={PRIMARY_BTN}
-                                onClick={printAllCertificates}
-                                disabled={checkedInCount === 0}
-                            >
-                                Print All Certificates
-                            </Button>
-                        </div>
-                        {participantsList.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800">
-                                No participants have joined this event yet.
-                            </div>
-                        ) : (
-                            participantsList.map((participant) => (
-                                <div
-                                    key={participant.id}
-                                    className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800"
+
+                            {/* Sticky compact action bar */}
+                            <div className="sticky top-[56px] z-10 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-900/40">
+                                <div className="text-slate-600 dark:text-slate-300">Print checked-in only.</div>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className={PRIMARY_BTN + ' h-8 px-3 text-xs'}
+                                    onClick={printAllCertificates}
+                                    disabled={checkedInCount === 0}
                                 >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <div className="font-semibold text-slate-900 dark:text-slate-100">{participant.name}</div>
-                                            <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                {participant.display_id || participant.email || '—'}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-2">
-                                            {participant.checked_in_at ? (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                                    Checked in
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                                                    Not checked in
-                                                </span>
-                                            )}
-                                            <div className="flex flex-wrap justify-end gap-2">
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => printParticipantCertificates(participantsTarget!, participant)}
-                                                    disabled={!participant.checked_in_at}
-                                                >
-                                                    Print Certificates
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {participant.checked_in_at ? (
-                                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                                            Scanned {formatDateTimeSafe(participant.checked_in_at)}
-                                        </div>
-                                    ) : null}
+                                    Print All
+                                </Button>
+                            </div>
+
+                            {/* List */}
+                            {participantsList.length === 0 ? (
+                                <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800">
+                                    No participants have joined this event yet.
                                 </div>
-                            ))
-                        )}
+                            ) : (
+                                <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950">
+                                    {participantsList.map((participant) => {
+                                        const checked = !!participant.checked_in_at;
+
+                                        return (
+                                            <div key={participant.id} className="flex items-center gap-3 px-3 py-2">
+                                                {/* Left */}
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        {participant.name}
+                                                    </div>
+                                                    <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                                                        {participant.display_id || participant.email || '—'}
+                                                        {checked ? ` · Scanned ${formatDateTimeSafe(participant.checked_in_at)}` : ''}
+                                                    </div>
+                                                </div>
+
+                                                {/* Right */}
+                                                <div className="flex shrink-0 items-center gap-2">
+                                                    {checked ? (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                                            Checked
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                                                            Not yet
+                                                        </span>
+                                                    )}
+
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-8 px-2 text-xs"
+                                                        onClick={() => printParticipantCertificates(participantsTarget!, participant)}
+                                                        disabled={!checked}
+                                                    >
+                                                        Print
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
+
 
             {/* Delete Confirm */}
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

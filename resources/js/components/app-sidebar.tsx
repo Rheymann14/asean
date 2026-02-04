@@ -56,7 +56,7 @@ export function AppSidebar() {
                   icon: Image,
               },
               {
-                  title: 'Event & Certificate',
+                  title: 'Events & Certificates',
                   href: '/event-management',
                   icon: CalendarDays,
               },
