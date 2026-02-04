@@ -29,9 +29,29 @@ export const CERTIFICATE_PRINT_STYLES = `
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-    .certificate-logo { display: block; max-width: 100%; margin: 0 auto 10px; }
-    .certificate-logo--appearance { max-height: 64px; }
-    .certificate-logo--participation { max-height: 54px; }
+  /* Appearance: single logo */
+.certificate-logo { display: block; max-width: 100%; margin: 0 auto 10px; }
+.certificate-logo--appearance { max-height: 64px; }
+
+/* Participation: stacked logos */
+.certificate-logo-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 0 auto 10px;
+}
+
+.certificate-logo-stack img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.certificate-logo--asean-he { max-height: 52px; }   /* top */
+.certificate-logo--participation { max-height: 54px; } /* bottom (your existing ASEAN/CHED logo) */
+
+
     .title { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 14px; }
     .subtitle { text-align: center; font-size: 14px; margin-bottom: 4px; }
     .lead { text-align: center; font-size: 15px; margin-top: 6px; }
@@ -50,18 +70,35 @@ export const CERTIFICATE_PRINT_STYLES = `
     }
 `;
 
-function renderCertificate({ data, participantName, type }: { data: CertificateData; participantName: string; type: 'appearance' | 'participation' }) {
+function renderCertificate({
+    data,
+    participantName,
+    type,
+}: {
+    data: CertificateData;
+    participantName: string;
+    type: 'appearance' | 'participation';
+}) {
     const typeTitle = type === 'appearance' ? 'CERTIFICATE OF APPEARANCE' : 'CERTIFICATE OF PARTICIPATION';
     const lead = type === 'appearance' ? 'This is to certify that' : 'This certificate is hereby given to';
     const body =
         type === 'appearance'
             ? `has appeared during the conduct of <span class="value">${data.eventName}</span> on <span class="value">${data.eventDate}</span> at <span class="value">${data.venue}</span>.`
             : `for actively participating in <span class="value">${data.eventName}</span> on <span class="value">${data.eventDate}</span> at <span class="value">${data.venue}</span>.`;
-    const logo = type === 'appearance' ? '/img/ched_logo_bagong_pilipinas.png' : '/img/ched_logo_bagong_pilipinas_asean.png';
+
+    const logoHtml =
+        type === 'appearance'
+            ? `<img class="certificate-logo certificate-logo--appearance" src="/img/ched_logo_bagong_pilipinas.png" alt="" />`
+            : `
+                <div class="certificate-logo-stack">
+                    <img class="certificate-logo--asean-he" src="/img/asean_logo_he.png" alt="" />
+                    <img class="certificate-logo--participation" src="/img/ched_logo_bagong_pilipinas_asean.png" alt="" />
+                </div>
+            `;
 
     return `
         <section class="certificate certificate--${type}">
-            <img class="certificate-logo certificate-logo--${type}" src="${logo}" alt="" />
+            ${logoHtml}
             <div class="title">${typeTitle}</div>
             <div class="lead">${lead}</div>
             <div class="recipient">${participantName}</div>
@@ -76,6 +113,14 @@ function renderCertificate({ data, participantName, type }: { data: CertificateD
     `;
 }
 
+function toUpperName(name: string) {
+    return (name ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLocaleUpperCase('en-PH');
+}
+
+
 export function buildCertificatePrintBody({
     data,
     participants,
@@ -87,7 +132,15 @@ export function buildCertificatePrintBody({
 }) {
     return participants
         .map((participant) => {
-            const certificates = types.map((type) => renderCertificate({ data, participantName: participant.name, type })).join('');
+            const certificates = types
+                .map((type) =>
+                    renderCertificate({
+                        data,
+                        participantName: toUpperName(participant.name),
+                        type,
+                    }),
+                )
+                .join('');
             return `
                 <div class="page">
                     ${certificates}

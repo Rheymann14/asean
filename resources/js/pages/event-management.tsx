@@ -317,6 +317,23 @@ export default function EventManagement(props: PageProps) {
     const [deleteOpen, setDeleteOpen] = React.useState(false);
     const [deleteTarget, setDeleteTarget] = React.useState<ProgrammeRow | null>(null);
 
+    type MaterialRow = NonNullable<ProgrammeRow['materials']>[number];
+
+    const [existingMaterials, setExistingMaterials] = React.useState<MaterialRow[]>([]);
+    const [removedMaterials, setRemovedMaterials] = React.useState<MaterialRow[]>([]);
+    const [removedMaterialIds, setRemovedMaterialIds] = React.useState<number[]>([]);
+
+    // new uploads (client)
+    const [materialsFiles, setMaterialsFiles] = React.useState<File[]>([]);
+
+    function resolveMaterialUrl(path: string) {
+        if (!path) return '#';
+        if (path.startsWith('http') || path.startsWith('/')) return path;
+        // typical Laravel Storage::url() stores "folder/file.ext" -> /storage/folder/file.ext
+        return `/storage/${path}`;
+    }
+
+
     // participants dialog
     const [participantsOpen, setParticipantsOpen] = React.useState(false);
     const [participantsTarget, setParticipantsTarget] = React.useState<ProgrammeRow | null>(null);
@@ -499,6 +516,13 @@ export default function EventManagement(props: PageProps) {
         setPdfLabel('');
         setMaterialsLabel('');
 
+        setExistingMaterials([]);
+        setRemovedMaterials([]);
+        setRemovedMaterialIds([]);
+        setMaterialsFiles([]);
+        form.setData('materials', []);
+        setMaterialsLabel('');
+
         setDialogOpen(true);
     }
 
@@ -507,6 +531,13 @@ export default function EventManagement(props: PageProps) {
 
         setCurrentImageUrl(resolveImageUrl(item.image_url));
         setCurrentPdfUrl(resolvePdfUrl(item.pdf_url));
+
+        setExistingMaterials(item.materials ?? []);
+        setRemovedMaterials([]);
+        setRemovedMaterialIds([]);
+        setMaterialsFiles([]);
+        form.setData('materials', []);
+        setMaterialsLabel('');
 
         form.setData({
             title: item.title ?? '',
@@ -554,20 +585,33 @@ export default function EventManagement(props: PageProps) {
     }
 
     function handleMaterialsUpload(e: React.ChangeEvent<HTMLInputElement>) {
-        const files = Array.from(e.target.files ?? []);
-        form.setData('materials', files);
-        if (!files.length) {
-            setMaterialsLabel('');
-            return;
-        }
-        setMaterialsLabel(files.map((file) => file.name).join(', '));
+        const picked = Array.from(e.target.files ?? []);
+        if (!picked.length) return;
+
+        const keyOf = (f: File) => `${f.name}-${f.size}-${f.lastModified}`;
+
+        setMaterialsFiles((prev) => {
+            const existingKeys = new Set(prev.map(keyOf));
+            const next = [...prev];
+            for (const f of picked) {
+                const k = keyOf(f);
+                if (!existingKeys.has(k)) next.push(f);
+            }
+
+            form.setData('materials', next);
+            setMaterialsLabel(next.length ? `${next.length} file(s) selected` : '');
+            return next;
+        });
+
+        // allow selecting the same file again later
+        e.currentTarget.value = '';
     }
+
 
     function submit(e: React.FormEvent) {
         e.preventDefault();
 
         const hasUploads = Boolean(form.data.image || form.data.pdf || form.data.materials.length);
-
         form.transform((data) => {
             const payload: any = {
                 title: data.title.trim(),
@@ -581,6 +625,7 @@ export default function EventManagement(props: PageProps) {
             if (data.image) payload.image = data.image;
             if (data.pdf) payload.pdf = data.pdf;
             if (data.materials.length) payload.materials = data.materials;
+            if (removedMaterialIds.length) payload.materials_remove = removedMaterialIds;
             if (editing) payload._method = 'patch';
 
             return payload;
@@ -637,54 +682,74 @@ export default function EventManagement(props: PageProps) {
         setParticipantsOpen(true);
     }
 
-    function printParticipantCertificates(
-        programme: ProgrammeRow,
-        participant: ProgrammeParticipant,
-    ) {
-        const html = buildCertificatePrintBody({
-            data: {
-                eventName: programme.title,
-                eventDate: formatDateRange(programme.starts_at, programme.ends_at),
-                givenDate: formatGivenDate(programme.ends_at ?? programme.starts_at),
-                venue: formatVenueLabel(programme),
-                signatoryName: signatoryName,
-                signatoryTitle: signatoryTitle,
-                signatorySignature: signatorySignature,
+    function formatPrintName(name?: string | null) {
+    return (name ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLocaleUpperCase('en-PH');
+}
+
+function printParticipantCertificates(programme: ProgrammeRow, participant: ProgrammeParticipant) {
+    const html = buildCertificatePrintBody({
+        data: {
+            eventName: programme.title,
+            eventDate: formatDateRange(programme.starts_at, programme.ends_at),
+            givenDate: formatGivenDate(programme.ends_at ?? programme.starts_at),
+            venue: formatVenueLabel(programme),
+            signatoryName: signatoryName,
+            signatoryTitle: signatoryTitle,
+            signatorySignature: signatorySignature,
+        },
+        participants: [
+            {
+                ...participant,
+                name: formatPrintName(participant.name),
             },
-            participants: [participant],
-        });
-        if (!html.trim()) {
-            toast.error('Unable to generate certificates.');
-            return;
-        }
-        printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificates' });
+        ],
+    });
+
+    if (!html.trim()) {
+        toast.error('Unable to generate certificates.');
+        return;
     }
 
-    function printAllCertificates() {
-        if (!participantsTarget) return;
-        const checkedInParticipants = (participantsTarget.participants ?? []).filter((participant) => participant.checked_in_at);
-        if (checkedInParticipants.length === 0) {
-            toast.error('No checked-in participants to print.');
-            return;
-        }
-        const html = buildCertificatePrintBody({
-            data: {
-                eventName: participantsTarget.title,
-                eventDate: formatDateRange(participantsTarget.starts_at, participantsTarget.ends_at),
-                givenDate: formatGivenDate(participantsTarget.ends_at ?? participantsTarget.starts_at),
-                venue: formatVenueLabel(participantsTarget),
-                signatoryName: signatoryName,
-                signatoryTitle: signatoryTitle,
-                signatorySignature: signatorySignature,
-            },
-            participants: checkedInParticipants,
-        });
-        if (!html.trim()) {
-            toast.error('Unable to generate certificates.');
-            return;
-        }
-        printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificates' });
+    printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificates' });
+}
+
+function printAllCertificates() {
+    if (!participantsTarget) return;
+
+    const checkedInParticipants = (participantsTarget.participants ?? []).filter((p) => p.checked_in_at);
+
+    if (checkedInParticipants.length === 0) {
+        toast.error('No checked-in participants to print.');
+        return;
     }
+
+    const html = buildCertificatePrintBody({
+        data: {
+            eventName: participantsTarget.title,
+            eventDate: formatDateRange(participantsTarget.starts_at, participantsTarget.ends_at),
+            givenDate: formatGivenDate(participantsTarget.ends_at ?? participantsTarget.starts_at),
+            venue: formatVenueLabel(participantsTarget),
+            signatoryName: signatoryName,
+            signatoryTitle: signatoryTitle,
+            signatorySignature: signatorySignature,
+        },
+        participants: checkedInParticipants.map((p) => ({
+            ...p,
+            name: formatPrintName(p.name),
+        })),
+    });
+
+    if (!html.trim()) {
+        toast.error('Unable to generate certificates.');
+        return;
+    }
+
+    printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificates' });
+}
+
 
     const participantsList = participantsTarget?.participants ?? [];
     const checkedInCount = participantsList.filter((participant) => participant.checked_in_at).length;
@@ -1002,46 +1067,170 @@ export default function EventManagement(props: PageProps) {
                                     </div>
 
                                     {/* MATERIALS (upload only) */}
-                                    <div className="space-y-1.5 sm:col-span-2">
+                                    <div className="space-y-2 sm:col-span-2">
                                         <div className="text-sm font-medium">Event kit materials</div>
 
-                                        <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
-                                            <div className="space-y-2">
-                                                <Input
-                                                    type="file"
-                                                    multiple
-                                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                                                    onChange={handleMaterialsUpload}
-                                                />
-                                                {(form.errors as any).materials ? (
-                                                    <div className="text-xs text-red-600">{(form.errors as any).materials}</div>
-                                                ) : null}
+                                        <Input
+                                            type="file"
+                                            multiple
+                                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                                            onChange={handleMaterialsUpload}
+                                        />
 
-                                                {editing?.materials?.length ? (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                        Current materials: {editing.materials.length}
-                                                    </div>
-                                                ) : null}
+                                        {(form.errors as any).materials ? (
+                                            <div className="text-xs text-red-600">{(form.errors as any).materials}</div>
+                                        ) : null}
+
+                                        <div className="rounded-xl border border-slate-200 bg-white p-2.5 dark:border-slate-800 dark:bg-slate-950">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                                    <FileText className="h-3.5 w-3.5" />
+                                                    <span>Files</span>
+                                                </div>
+
+                                                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                    {(editing ? existingMaterials.length : 0).toLocaleString()} current
+                                                    {materialsFiles.length ? ` · ${materialsFiles.length} new` : ''}
+                                                </div>
                                             </div>
 
-                                            <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">Selected</div>
-                                                <div className="mt-2 flex items-center gap-2">
-                                                    <div className="grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                                                        <FileText className="h-4 w-4" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                            {materialsLabel || 'No files selected'}
+                                            {/* Existing (server) materials when editing */}
+                                            {editing ? (
+                                                <div className="mt-2 space-y-1.5">
+                                                    {existingMaterials.length ? (
+                                                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                                            Existing uploads
                                                         </div>
-                                                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                            Upload files for the Event Kit downloads.
+                                                    ) : (
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">No existing materials.</div>
+                                                    )}
+
+                                                    {existingMaterials.map((m) => {
+                                                        const href = resolveMaterialUrl(m.file_path);
+                                                        return (
+                                                            <div
+                                                                key={m.id}
+                                                                className="flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 text-xs dark:border-slate-800"
+                                                            >
+                                                                <div className="grid size-7 place-items-center rounded-md bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                                                    <FileText className="h-3.5 w-3.5" />
+                                                                </div>
+
+                                                                <a
+                                                                    href={href}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="min-w-0 flex-1 truncate font-medium text-slate-900 hover:underline dark:text-slate-100"
+                                                                    title={m.file_name}
+                                                                >
+                                                                    {m.file_name}
+                                                                </a>
+
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                                                                    onClick={() => {
+                                                                        // move to "removed" (undo-able)
+                                                                        setExistingMaterials((prev) => prev.filter((x) => x.id !== m.id));
+                                                                        setRemovedMaterials((prev) => [m, ...prev]);
+                                                                        setRemovedMaterialIds((prev) => (prev.includes(m.id) ? prev : [...prev, m.id]));
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                                                    Remove
+                                                                </Button>
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    {/* Removed list (undo) */}
+                                                    {removedMaterials.length ? (
+                                                        <div className="mt-3 space-y-1.5">
+                                                            <div className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                                                                Removed (will delete on Save)
+                                                            </div>
+
+                                                            {removedMaterials.map((m) => (
+                                                                <div
+                                                                    key={`removed-${m.id}`}
+                                                                    className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs dark:border-amber-900/40 dark:bg-amber-950/20"
+                                                                >
+                                                                    <div className="min-w-0 flex-1 truncate text-slate-800 dark:text-slate-100">
+                                                                        {m.file_name}
+                                                                    </div>
+
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-7 px-2 text-xs"
+                                                                        onClick={() => {
+                                                                            // undo remove
+                                                                            setRemovedMaterials((prev) => prev.filter((x) => x.id !== m.id));
+                                                                            setExistingMaterials((prev) => [m, ...prev]);
+                                                                            setRemovedMaterialIds((prev) => prev.filter((id) => id !== m.id));
+                                                                        }}
+                                                                    >
+                                                                        Undo
+                                                                    </Button>
+                                                                </div>
+                                                            ))}
                                                         </div>
-                                                    </div>
+                                                    ) : null}
                                                 </div>
+                                            ) : null}
+
+                                            {/* New uploads (client) */}
+                                            <div className={cn('mt-3 space-y-1.5', editing ? '' : 'mt-2')}>
+                                                {materialsFiles.length ? (
+                                                    <>
+                                                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">New uploads</div>
+                                                        {materialsFiles.map((f, idx) => (
+                                                            <div
+                                                                key={`${f.name}-${f.size}-${f.lastModified}-${idx}`}
+                                                                className="flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 text-xs dark:border-slate-800"
+                                                            >
+                                                                <div className="grid size-7 place-items-center rounded-md bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                                                    <FileText className="h-3.5 w-3.5" />
+                                                                </div>
+
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="truncate font-medium text-slate-900 dark:text-slate-100">{f.name}</div>
+                                                                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                        {(f.size / 1024).toFixed(0)} KB
+                                                                    </div>
+                                                                </div>
+
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                                                                    onClick={() => {
+                                                                        setMaterialsFiles((prev) => {
+                                                                            const next = prev.filter((_, i) => i !== idx);
+                                                                            form.setData('materials', next);
+                                                                            setMaterialsLabel(next.length ? `${next.length} file(s) selected` : '');
+                                                                            return next;
+                                                                        });
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                                                    Remove
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </>
+                                                ) : (
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">No new files selected.</div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
+
+
                                 </div>
                             </div>
                         </div>

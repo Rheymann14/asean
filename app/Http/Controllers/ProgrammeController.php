@@ -226,6 +226,8 @@ class ProgrammeController extends Controller
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
             'materials' => ['nullable', 'array'],
             'materials.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx', 'max:20480'],
+               'materials_remove' => ['nullable', 'array'],
+    'materials_remove.*' => ['integer'],
             'signatory_name' => ['nullable', 'string', 'max:255'],
             'signatory_title' => ['nullable', 'string', 'max:255'],
             'signatory_signature' => ['nullable', 'image', 'max:10240'],
@@ -387,6 +389,25 @@ class ProgrammeController extends Controller
 
         $programme->update($validated);
 
+        // ✅ remove selected existing materials (delete file + db row)
+$removeIds = $request->input('materials_remove', []);
+if (is_array($removeIds) && count($removeIds)) {
+    $removeIds = collect($removeIds)->filter()->unique()->values();
+
+    $materialsToRemove = $programme->materials()
+        ->whereIn('id', $removeIds)
+        ->get();
+
+    foreach ($materialsToRemove as $material) {
+        $existing = public_path('event-materials/' . ltrim($material->file_path, '/'));
+        if (File::exists($existing)) {
+            File::delete($existing);
+        }
+        $material->delete();
+    }
+}
+
+
         $this->storeMaterials($request, $programme);
 
         return back();
@@ -438,6 +459,16 @@ class ProgrammeController extends Controller
                 File::delete($existing);
             }
         }
+
+        // ✅ delete event materials files + rows
+foreach ($programme->materials()->get() as $material) {
+    $existing = public_path('event-materials/' . ltrim($material->file_path, '/'));
+    if (File::exists($existing)) {
+        File::delete($existing);
+    }
+}
+$programme->materials()->delete();
+
 
         $programme->delete();
 
