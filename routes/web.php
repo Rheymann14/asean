@@ -39,6 +39,7 @@ Route::post('/event-kit/verify', [EventKitController::class, 'verify'])->name('e
 Route::get('/event-kit/survey', [EventKitController::class, 'survey'])->name('event-kit.survey');
 Route::post('/event-kit/survey', [EventKitController::class, 'submitSurvey'])->name('event-kit.survey.submit');
 Route::get('/event-kit/materials', [EventKitController::class, 'materials'])->name('event-kit.materials');
+Route::post('/event-kit/select-programme', [EventKitController::class, 'selectProgramme'])->name('event-kit.select-programme');
 Route::post('/event-kit/reset', [EventKitController::class, 'reset'])->name('event-kit.reset');
 
 

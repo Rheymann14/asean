@@ -4,10 +4,13 @@ import PublicLayout from '@/layouts/public-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, CalendarDays, Download, FileText, MapPin, Medal, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CalendarDays, ChevronDown, Download, FileText, MapPin, Medal, RotateCcw, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import printJS from '@/lib/print-js';
 import { buildCertificatePrintBody, CERTIFICATE_PRINT_STYLES } from '@/lib/certificates';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { toast } from 'sonner';
 
 type Programme = {
     id: number;
@@ -44,6 +47,7 @@ type PageProps = {
     participant: Participant;
     programme: Programme;
     attendance: Attendance;
+    checked_in_programmes: Programme[];
 };
 
 function resolvePdfUrl(pdfUrl?: string | null) {
@@ -110,8 +114,10 @@ function formatGivenDate(startsAt?: string | null) {
 }
 
 export default function EventKitMaterials() {
-    const { participant, programme, attendance } = usePage<PageProps>().props;
+    const { participant, programme, attendance, checked_in_programmes } = usePage<PageProps>().props;
     const resetForm = useForm({});
+    const selectForm = useForm({ programme_id: programme.id });
+    const [open, setOpen] = React.useState(false);
     const hasAttendance = Boolean(attendance?.scanned_at);
     const pdfUrl = resolvePdfUrl(programme.pdf_url);
     const signatorySignature = resolveSignatureUrl(programme.signatory_signature_url);
@@ -119,6 +125,7 @@ export default function EventKitMaterials() {
         ...material,
         url: resolveMaterialUrl(material.file_path),
     }));
+    const selectedProgramme = checked_in_programmes.find((item) => item.id === programme.id) ?? null;
 
     const eventDate = formatDateRange(programme.starts_at, programme.ends_at);
     const givenDateLabel = formatGivenDate(programme.ends_at ?? programme.starts_at);
@@ -163,6 +170,69 @@ export default function EventKitMaterials() {
                             <div className="text-slate-500 dark:text-slate-400">{participant.email}</div>
                         </Card>
                     </div>
+
+                    {checked_in_programmes.length ? (
+                        <Card className="mt-6 border-slate-200/70 bg-white/70 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                        Choose a checked-in event
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                                        Filter the Event Kit materials and certificates by your checked-in events.
+                                    </p>
+                                </div>
+                                <Popover open={open} onOpenChange={setOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-10 min-w-[240px] justify-between rounded-xl border-slate-200 bg-white/80 text-left dark:border-slate-700 dark:bg-slate-900/60"
+                                        >
+                                            <span className="truncate">
+                                                {selectedProgramme ? selectedProgramme.title : 'Select event'}
+                                            </span>
+                                            <ChevronDown className="h-4 w-4 text-slate-400" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Search events..." />
+                                            <CommandList>
+                                                <CommandEmpty>No events found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {checked_in_programmes.map((item) => (
+                                                        <CommandItem
+                                                            key={item.id}
+                                                            value={item.title}
+                                                            onSelect={() => {
+                                                                selectForm.setData('programme_id', item.id);
+                                                                selectForm.post('/event-kit/select-programme', {
+                                                                    preserveScroll: true,
+                                                                    onSuccess: () => toast.success('Event updated.'),
+                                                                    onError: () => toast.error('Unable to switch event.'),
+                                                                });
+                                                                setOpen(false);
+                                                            }}
+                                                        >
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                                    {item.title}
+                                                                </span>
+                                                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                                    {formatEventWindow(item.starts_at, item.ends_at)}
+                                                                </span>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        </Card>
+                    ) : null}
 
                     <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
                         <Card className="border-slate-200/70 bg-white/70 p-6 dark:border-slate-800 dark:bg-slate-950/40">
