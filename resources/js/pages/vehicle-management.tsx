@@ -7,13 +7,14 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-import { Bus, CalendarClock, MapPin, Truck, UserCheck, Users } from 'lucide-react';
+import { Bus, CalendarClock, MapPin, Truck, UserCheck, Users, Bell } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Management', href: '/vehicle-management' }];
 
@@ -28,20 +29,38 @@ type Participant = {
     email: string | null;
 };
 
+type Driver = {
+    id: number;
+    full_name: string;
+    email: string | null;
+};
+
+type Vehicle = {
+    id: number;
+    label: string;
+    plate_number: string | null;
+    capacity: number | null;
+};
+
 type Assignment = {
     id: number;
     participant: Participant | null;
-    vehicle_label: string;
+    driver: Driver | null;
+    vehicle: Vehicle | null;
+    vehicle_label: string | null;
     pickup_status: AssignmentStatus;
     pickup_at: string | null;
     pickup_location: string | null;
     dropoff_at: string | null;
     dropoff_location: string | null;
+    notify_admin: boolean;
     updated_at: string | null;
 };
 
 type PageProps = {
     participants: Participant[];
+    drivers: Driver[];
+    vehicles: Vehicle[];
     assignments: Assignment[];
 };
 
@@ -70,7 +89,15 @@ function formatDateTime(value?: string | null) {
     }).format(d);
 }
 
-export default function VehicleManagement({ participants, assignments }: PageProps) {
+function formatVehicleLabel(vehicle: Vehicle | null, fallback?: string | null) {
+    if (vehicle) {
+        const suffix = vehicle.plate_number ? ` • ${vehicle.plate_number}` : '';
+        return `${vehicle.label}${suffix}`;
+    }
+    return fallback || '—';
+}
+
+export default function VehicleManagement({ participants, drivers, vehicles, assignments }: PageProps) {
     const [search, setSearch] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<AssignmentStatus | 'all'>('all');
 
@@ -93,27 +120,47 @@ export default function VehicleManagement({ participants, assignments }: PagePro
             if (!matchesStatus) return false;
             if (!term) return true;
             const participantName = item.participant?.full_name?.toLowerCase() ?? '';
-            const vehicleLabel = item.vehicle_label.toLowerCase();
-            return participantName.includes(term) || vehicleLabel.includes(term);
+            const driverName = item.driver?.full_name?.toLowerCase() ?? '';
+            const vehicleLabel = formatVehicleLabel(item.vehicle, item.vehicle_label).toLowerCase();
+            return participantName.includes(term) || driverName.includes(term) || vehicleLabel.includes(term);
         });
     }, [assignments, search, statusFilter]);
 
-    const form = useForm({
+    const assignmentForm = useForm({
         user_id: participants[0]?.id ?? '',
+        driver_user_id: drivers[0]?.id ?? '',
+        vehicle_id: vehicles[0]?.id ?? '',
         vehicle_label: '',
         pickup_status: 'pending' as AssignmentStatus,
         pickup_location: '',
         pickup_at: '',
         dropoff_location: '',
         dropoff_at: '',
+        notify_admin: false,
     });
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const vehicleForm = useForm({
+        label: '',
+        plate_number: '',
+        capacity: '',
+    });
+
+    const handleAssignmentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        form.post('/vehicle-assignments', {
+        assignmentForm.post('/vehicle-assignments', {
             preserveScroll: true,
             onSuccess: () => {
-                form.reset('vehicle_label', 'pickup_location', 'pickup_at', 'dropoff_location', 'dropoff_at');
+                assignmentForm.reset('vehicle_label', 'pickup_location', 'pickup_at', 'dropoff_location', 'dropoff_at');
+            },
+        });
+    };
+
+    const handleVehicleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        vehicleForm.post('/transport-vehicles', {
+            preserveScroll: true,
+            onSuccess: () => {
+                vehicleForm.reset('label', 'plate_number', 'capacity');
             },
         });
     };
@@ -130,7 +177,7 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                 Vehicle Management &amp; Pickup Tracking
                             </h1>
                             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Assign vehicles to registered participants and track pickup/dropoff details in one place.
+                                Add vehicles, assign participants and drivers, and notify admins about pickup details.
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -206,13 +253,13 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                         <div className="flex flex-col gap-1">
                             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Active Assignments</h2>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Check pickup progress, locations, and time stamps for every participant.
+                                Check pickup progress, assigned drivers, and time stamps for every participant.
                             </p>
                         </div>
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center">
                                 <Input
-                                    placeholder="Search participant or vehicle"
+                                    placeholder="Search participant, driver, or vehicle"
                                     className="h-10 w-full md:max-w-xs"
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
@@ -243,11 +290,12 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                     <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                         <TableHead className="w-[120px]">Assignment</TableHead>
                                         <TableHead>Participant</TableHead>
+                                        <TableHead>Driver</TableHead>
                                         <TableHead>Vehicle</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Pickup Details</TableHead>
                                         <TableHead>Dropoff Details</TableHead>
-                                        <TableHead className="text-right">Last Update</TableHead>
+                                        <TableHead className="text-right">Notify Admin</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -265,7 +313,15 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                                         <span className="text-xs text-slate-500">{item.participant?.email ?? '—'}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>{item.vehicle_label}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-slate-900 dark:text-slate-100">
+                                                            {item.driver?.full_name ?? '—'}
+                                                        </span>
+                                                        <span className="text-xs text-slate-500">{item.driver?.email ?? '—'}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{formatVehicleLabel(item.vehicle, item.vehicle_label)}</TableCell>
                                                 <TableCell>
                                                     <Badge className={cn('border-transparent font-medium', statusBadgeStyles[item.pickup_status])}>
                                                         {statusLabels[item.pickup_status]}
@@ -293,14 +349,22 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                                         </span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-right text-xs text-slate-500">
-                                                    {formatDateTime(item.updated_at)}
+                                                <TableCell className="text-right">
+                                                    {item.notify_admin ? (
+                                                        <Badge className="border-transparent bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200">
+                                                            Notified
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge className="border-transparent bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                                            Not yet
+                                                        </Badge>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="py-12 text-center text-sm text-slate-500">
+                                            <TableCell colSpan={8} className="py-12 text-center text-sm text-slate-500">
                                                 No assignments found for the current filters.
                                             </TableCell>
                                         </TableRow>
@@ -313,19 +377,28 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                             {filteredAssignments.length ? (
                                 filteredAssignments.map((item) => (
                                     <Card key={item.id} className="border border-slate-200 shadow-none dark:border-slate-800">
-                                        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-                                            <div>
-                                                <CardTitle className="text-base">VM-{item.id}</CardTitle>
-                                                <CardDescription>{item.participant?.full_name ?? 'Unassigned'}</CardDescription>
+                                        <CardHeader className="flex flex-col gap-2 pb-2">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <CardTitle className="text-base">VM-{item.id}</CardTitle>
+                                                    <CardDescription>{item.participant?.full_name ?? 'Unassigned'}</CardDescription>
+                                                </div>
+                                                <Badge className={cn('border-transparent font-medium', statusBadgeStyles[item.pickup_status])}>
+                                                    {statusLabels[item.pickup_status]}
+                                                </Badge>
                                             </div>
-                                            <Badge className={cn('border-transparent font-medium', statusBadgeStyles[item.pickup_status])}>
-                                                {statusLabels[item.pickup_status]}
-                                            </Badge>
+                                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                <Truck className="h-4 w-4" />
+                                                <span>{formatVehicleLabel(item.vehicle, item.vehicle_label)}</span>
+                                            </div>
                                         </CardHeader>
                                         <CardContent className="space-y-3 text-sm">
-                                            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                                                <Truck className="h-4 w-4" />
-                                                <span>{item.vehicle_label}</span>
+                                            <div>
+                                                <p className="text-xs font-semibold text-slate-500">Driver</p>
+                                                <p className="text-sm text-slate-700 dark:text-slate-200">
+                                                    {item.driver?.full_name ?? '—'}
+                                                </p>
+                                                <p className="text-xs text-slate-500">{item.driver?.email ?? '—'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs font-semibold text-slate-500">Pickup</p>
@@ -347,7 +420,10 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                                     {item.dropoff_location || '—'}
                                                 </p>
                                             </div>
-                                            <p className="text-xs text-slate-400">Last update: {formatDateTime(item.updated_at)}</p>
+                                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                <Bell className="h-4 w-4" />
+                                                <span>{item.notify_admin ? 'Admin notified' : 'Admin not notified'}</span>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 ))
@@ -362,18 +438,61 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                     <aside className="flex flex-col gap-4">
                         <Card className="border border-slate-200 shadow-sm dark:border-slate-800">
                             <CardHeader>
-                                <CardTitle className="text-base">Assign Vehicle</CardTitle>
-                                <CardDescription>
-                                    Match a registered participant with a vehicle and schedule pickup/dropoff details.
-                                </CardDescription>
+                                <CardTitle className="text-base">Add Vehicle</CardTitle>
+                                <CardDescription>Add a van, bus, or car before assigning participants.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+                                <form className="flex flex-col gap-4" onSubmit={handleVehicleSubmit}>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vehicle-label">Vehicle label</Label>
+                                        <Input
+                                            id="vehicle-label"
+                                            placeholder="e.g. Van 2"
+                                            value={vehicleForm.data.label}
+                                            onChange={(event) => vehicleForm.setData('label', event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="plate-number">Plate number</Label>
+                                        <Input
+                                            id="plate-number"
+                                            placeholder="Optional"
+                                            value={vehicleForm.data.plate_number}
+                                            onChange={(event) => vehicleForm.setData('plate_number', event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="capacity">Capacity</Label>
+                                        <Input
+                                            id="capacity"
+                                            type="number"
+                                            min={1}
+                                            placeholder="Optional"
+                                            value={vehicleForm.data.capacity}
+                                            onChange={(event) => vehicleForm.setData('capacity', event.target.value)}
+                                        />
+                                    </div>
+                                    <Button type="submit" disabled={vehicleForm.processing} className={cn('rounded-full', PRIMARY_BTN)}>
+                                        Save vehicle
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border border-slate-200 shadow-sm dark:border-slate-800">
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <CardTitle className="text-base">Assign Vehicle</CardTitle>
+                                <Badge className="border-transparent bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                    {vehicles.length} vehicles
+                                </Badge>
+                            </CardHeader>
+                            <CardContent>
+                                <form className="flex flex-col gap-4" onSubmit={handleAssignmentSubmit}>
                                     <div className="space-y-2">
                                         <Label htmlFor="participant">Participant</Label>
                                         <Select
-                                            value={form.data.user_id ? String(form.data.user_id) : ''}
-                                            onValueChange={(value) => form.setData('user_id', Number(value))}
+                                            value={assignmentForm.data.user_id ? String(assignmentForm.data.user_id) : ''}
+                                            onValueChange={(value) => assignmentForm.setData('user_id', Number(value))}
                                         >
                                             <SelectTrigger id="participant" className="h-10">
                                                 <SelectValue placeholder="Select participant" />
@@ -395,12 +514,62 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                     </div>
 
                                     <div className="space-y-2">
+                                        <Label htmlFor="driver">Driver / Assigned user</Label>
+                                        <Select
+                                            value={assignmentForm.data.driver_user_id ? String(assignmentForm.data.driver_user_id) : ''}
+                                            onValueChange={(value) => assignmentForm.setData('driver_user_id', Number(value))}
+                                        >
+                                            <SelectTrigger id="driver" className="h-10">
+                                                <SelectValue placeholder="Select user" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {drivers.map((driver) => (
+                                                    <SelectItem key={driver.id} value={String(driver.id)}>
+                                                        <div className="flex flex-col">
+                                                            <span>{driver.full_name}</span>
+                                                            <span className="text-xs text-slate-500">{driver.email ?? '—'}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
                                         <Label htmlFor="vehicle">Vehicle</Label>
+                                        <Select
+                                            value={assignmentForm.data.vehicle_id ? String(assignmentForm.data.vehicle_id) : ''}
+                                            onValueChange={(value) => assignmentForm.setData('vehicle_id', Number(value))}
+                                        >
+                                            <SelectTrigger id="vehicle" className="h-10">
+                                                <SelectValue placeholder="Select vehicle" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {vehicles.map((vehicle) => (
+                                                    <SelectItem key={vehicle.id} value={String(vehicle.id)}>
+                                                        <div className="flex flex-col">
+                                                            <span>{vehicle.label}</span>
+                                                            <span className="text-xs text-slate-500">
+                                                                {vehicle.plate_number ? `${vehicle.plate_number} • ` : ''}
+                                                                {vehicle.capacity ? `${vehicle.capacity} seats` : 'Capacity not set'}
+                                                            </span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {vehicles.length === 0 ? (
+                                            <p className="text-xs text-amber-600">Add a vehicle before assigning participants.</p>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vehicle-label">Vehicle label override</Label>
                                         <Input
-                                            id="vehicle"
-                                            placeholder="e.g. Van 2 (Driver: Leah)"
-                                            value={form.data.vehicle_label}
-                                            onChange={(event) => form.setData('vehicle_label', event.target.value)}
+                                            id="vehicle-label"
+                                            placeholder="Optional display label"
+                                            value={assignmentForm.data.vehicle_label}
+                                            onChange={(event) => assignmentForm.setData('vehicle_label', event.target.value)}
                                         />
                                     </div>
 
@@ -411,8 +580,8 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                         <Input
                                             id="pickup-location"
                                             placeholder="e.g. Hotel Main Entrance"
-                                            value={form.data.pickup_location}
-                                            onChange={(event) => form.setData('pickup_location', event.target.value)}
+                                            value={assignmentForm.data.pickup_location}
+                                            onChange={(event) => assignmentForm.setData('pickup_location', event.target.value)}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -420,8 +589,8 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                         <Input
                                             id="pickup-datetime"
                                             type="datetime-local"
-                                            value={form.data.pickup_at}
-                                            onChange={(event) => form.setData('pickup_at', event.target.value)}
+                                            value={assignmentForm.data.pickup_at}
+                                            onChange={(event) => assignmentForm.setData('pickup_at', event.target.value)}
                                         />
                                     </div>
 
@@ -430,8 +599,8 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                         <Input
                                             id="dropoff-location"
                                             placeholder="e.g. ASEAN Convention Center"
-                                            value={form.data.dropoff_location}
-                                            onChange={(event) => form.setData('dropoff_location', event.target.value)}
+                                            value={assignmentForm.data.dropoff_location}
+                                            onChange={(event) => assignmentForm.setData('dropoff_location', event.target.value)}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -439,16 +608,16 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                         <Input
                                             id="dropoff-datetime"
                                             type="datetime-local"
-                                            value={form.data.dropoff_at}
-                                            onChange={(event) => form.setData('dropoff_at', event.target.value)}
+                                            value={assignmentForm.data.dropoff_at}
+                                            onChange={(event) => assignmentForm.setData('dropoff_at', event.target.value)}
                                         />
                                     </div>
 
                                     <div className="space-y-2">
                                         <Label htmlFor="pickup-status">Pickup Status</Label>
                                         <Select
-                                            value={form.data.pickup_status}
-                                            onValueChange={(value) => form.setData('pickup_status', value as AssignmentStatus)}
+                                            value={assignmentForm.data.pickup_status}
+                                            onValueChange={(value) => assignmentForm.setData('pickup_status', value as AssignmentStatus)}
                                         >
                                             <SelectTrigger id="pickup-status" className="h-10">
                                                 <SelectValue placeholder="Set status" />
@@ -461,9 +630,20 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                                         </Select>
                                     </div>
 
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id="notify-admin"
+                                            checked={assignmentForm.data.notify_admin}
+                                            onCheckedChange={(value) => assignmentForm.setData('notify_admin', Boolean(value))}
+                                        />
+                                        <Label htmlFor="notify-admin" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                            Notify admin for pickup details
+                                        </Label>
+                                    </div>
+
                                     <Button
                                         type="submit"
-                                        disabled={form.processing || participants.length === 0}
+                                        disabled={assignmentForm.processing || participants.length === 0 || vehicles.length === 0}
                                         className={cn('w-full rounded-full', PRIMARY_BTN)}
                                     >
                                         Save assignment
@@ -479,9 +659,10 @@ export default function VehicleManagement({ participants, assignments }: PagePro
                             </CardHeader>
                             <CardContent className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                                 <p>Total registered participants: {participants.length}</p>
-                                <p>Assignments recorded: {assignments.length}</p>
+                                <p>Total drivers/users: {drivers.length}</p>
+                                <p>Vehicles available: {vehicles.length}</p>
                                 <p className="text-xs text-slate-500">
-                                    Ensure every registered participant has a vehicle assignment and confirmed pickup.
+                                    Ensure every registered participant has a vehicle and driver assignment with pickup details.
                                 </p>
                             </CardContent>
                         </Card>
