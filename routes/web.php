@@ -16,6 +16,7 @@ use App\Http\Controllers\VenueSectionController;
 use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TableAssignmentController;
+use App\Http\Controllers\EventKitController;
 
 
 
@@ -32,6 +33,14 @@ Route::get('/contact-us', [ContactDetailController::class, 'publicIndex'])->name
 Route::get('/venue', [VenueController::class, 'publicIndex'])->name('venue');
 
 Route::get('/event', [ProgrammeController::class, 'publicIndex'])->name('event');
+
+Route::get('/event-kit', [EventKitController::class, 'entry'])->name('event-kit.entry');
+Route::post('/event-kit/verify', [EventKitController::class, 'verify'])->name('event-kit.verify');
+Route::get('/event-kit/survey', [EventKitController::class, 'survey'])->name('event-kit.survey');
+Route::post('/event-kit/survey', [EventKitController::class, 'submitSurvey'])->name('event-kit.survey.submit');
+Route::get('/event-kit/materials', [EventKitController::class, 'materials'])->name('event-kit.materials');
+Route::get('/event-kit/certificate', [EventKitController::class, 'certificate'])->name('event-kit.certificate');
+Route::post('/event-kit/reset', [EventKitController::class, 'reset'])->name('event-kit.reset');
 
 
 Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issuances');
