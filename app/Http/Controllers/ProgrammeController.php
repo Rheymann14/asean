@@ -22,6 +22,7 @@ class ProgrammeController extends Controller
             ->with([
                 'user',
                 'participants',
+                'materials',
                 'venues' => fn ($query) => $query->where('is_active', true)->orderBy('id'),
             ])
             ->latest('starts_at')
@@ -47,6 +48,15 @@ class ProgrammeController extends Controller
                         : null,
                     'image_url' => $programme->image_url,
                     'pdf_url' => $programme->pdf_url,
+                    'materials' => $programme->materials
+                        ->map(fn ($material) => [
+                            'id' => $material->id,
+                            'file_name' => $material->file_name,
+                            'file_path' => $material->file_path,
+                            'file_type' => $material->file_type,
+                        ])
+                        ->values()
+                        ->all(),
                     'signatory_name' => $programme->signatory_name,
                     'signatory_title' => $programme->signatory_title,
                     'signatory_signature_url' => $programme->signatory_signature_url,
@@ -112,7 +122,10 @@ class ProgrammeController extends Controller
             ->get();
 
         $programmes = Programme::query()
-            ->with(['venues' => fn ($query) => $query->where('is_active', true)->orderBy('id')])
+            ->with([
+                'materials',
+                'venues' => fn ($query) => $query->where('is_active', true)->orderBy('id'),
+            ])
             ->latest('starts_at')
             ->get()
             ->map(function (Programme $programme) {
@@ -134,6 +147,15 @@ class ProgrammeController extends Controller
                         : null,
                     'image_url' => $programme->image_url,
                     'pdf_url' => $programme->pdf_url,
+                    'materials' => $programme->materials
+                        ->map(fn ($material) => [
+                            'id' => $material->id,
+                            'file_name' => $material->file_name,
+                            'file_path' => $material->file_path,
+                            'file_type' => $material->file_type,
+                        ])
+                        ->values()
+                        ->all(),
                     'is_active' => $programme->is_active,
                     'updated_at' => $programme->updated_at?->toISOString(),
                 ];
@@ -202,6 +224,8 @@ class ProgrammeController extends Controller
             'location' => ['nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'max:10240'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
+            'materials' => ['nullable', 'array'],
+            'materials.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx', 'max:20480'],
             'signatory_name' => ['nullable', 'string', 'max:255'],
             'signatory_title' => ['nullable', 'string', 'max:255'],
             'signatory_signature' => ['nullable', 'image', 'max:10240'],
@@ -247,7 +271,7 @@ class ProgrammeController extends Controller
             $file->move($destination, $signatureName);
         }
 
-        Programme::create([
+        $programme = Programme::create([
             'user_id' => $request->user()->id,
             'tag' => $validated['tag'] ?? '',
             'title' => $validated['title'],
@@ -263,6 +287,8 @@ class ProgrammeController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
+        $this->storeMaterials($request, $programme);
+
         return back();
     }
 
@@ -277,6 +303,8 @@ class ProgrammeController extends Controller
             'location' => ['sometimes', 'nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'max:10240'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
+            'materials' => ['nullable', 'array'],
+            'materials.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx', 'max:20480'],
             'signatory_name' => ['nullable', 'string', 'max:255'],
             'signatory_title' => ['nullable', 'string', 'max:255'],
             'signatory_signature' => ['nullable', 'image', 'max:10240'],
@@ -359,7 +387,33 @@ class ProgrammeController extends Controller
 
         $programme->update($validated);
 
+        $this->storeMaterials($request, $programme);
+
         return back();
+    }
+
+    private function storeMaterials(Request $request, Programme $programme): void
+    {
+        if (!$request->hasFile('materials')) {
+            return;
+        }
+
+        $destination = public_path('event-materials');
+
+        if (!File::exists($destination)) {
+            File::makeDirectory($destination, 0755, true);
+        }
+
+        foreach ($request->file('materials', []) as $file) {
+            $fileName = $this->resolveUploadName($file->getClientOriginalName(), $destination);
+            $file->move($destination, $fileName);
+
+            $programme->materials()->create([
+                'file_name' => $file->getClientOriginalName(),
+                'file_path' => $fileName,
+                'file_type' => $file->getClientOriginalExtension(),
+            ]);
+        }
     }
 
     public function destroy(Programme $programme)

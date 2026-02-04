@@ -4,6 +4,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
 import { cn } from '@/lib/utils';
 import printJS from '@/lib/print-js';
+import { buildCertificatePrintBody, CERTIFICATE_PRINT_STYLES } from '@/lib/certificates';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,6 +77,12 @@ type ProgrammeRow = {
 
     image_url: string | null; // server-provided
     pdf_url: string | null; // server-provided (for "View more")
+    materials?: {
+        id: number;
+        file_name: string;
+        file_path: string;
+        file_type: string | null;
+    }[];
     signatory_name?: string | null;
     signatory_title?: string | null;
     signatory_signature_url?: string | null;
@@ -329,6 +336,7 @@ export default function EventManagement(props: PageProps) {
 
     // pdf label
     const [pdfLabel, setPdfLabel] = React.useState<string>('');
+    const [materialsLabel, setMaterialsLabel] = React.useState<string>('');
 
     React.useEffect(() => {
         return () => {
@@ -459,6 +467,7 @@ export default function EventManagement(props: PageProps) {
         ends_at: string; // datetime-local
         image: File | null;
         pdf: File | null;
+        materials: File[];
         is_active: boolean;
     }>({
         title: '',
@@ -467,6 +476,7 @@ export default function EventManagement(props: PageProps) {
         ends_at: '',
         image: null,
         pdf: null,
+        materials: [],
         is_active: true,
     });
 
@@ -487,6 +497,7 @@ export default function EventManagement(props: PageProps) {
 
         resetImagePreview(null);
         setPdfLabel('');
+        setMaterialsLabel('');
 
         setDialogOpen(true);
     }
@@ -504,6 +515,7 @@ export default function EventManagement(props: PageProps) {
             ends_at: toLocalInputValue(item.ends_at),
             image: null,
             pdf: null,
+            materials: [],
             is_active: !!item.is_active,
         });
 
@@ -512,6 +524,7 @@ export default function EventManagement(props: PageProps) {
         // show existing as "preview" until new upload
         resetImagePreview(resolveImageUrl(item.image_url));
         setPdfLabel(item.pdf_url ? basename(resolvePdfUrl(item.pdf_url) ?? item.pdf_url) : '');
+        setMaterialsLabel('');
 
         setDialogOpen(true);
     }
@@ -540,10 +553,20 @@ export default function EventManagement(props: PageProps) {
         setPdfLabel(file.name);
     }
 
+    function handleMaterialsUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const files = Array.from(e.target.files ?? []);
+        form.setData('materials', files);
+        if (!files.length) {
+            setMaterialsLabel('');
+            return;
+        }
+        setMaterialsLabel(files.map((file) => file.name).join(', '));
+    }
+
     function submit(e: React.FormEvent) {
         e.preventDefault();
 
-        const hasUploads = Boolean(form.data.image || form.data.pdf);
+        const hasUploads = Boolean(form.data.image || form.data.pdf || form.data.materials.length);
 
         form.transform((data) => {
             const payload: any = {
@@ -557,6 +580,7 @@ export default function EventManagement(props: PageProps) {
             // only send if selected (so editing won't overwrite existing files)
             if (data.image) payload.image = data.image;
             if (data.pdf) payload.pdf = data.pdf;
+            if (data.materials.length) payload.materials = data.materials;
             if (editing) payload._method = 'patch';
 
             return payload;
@@ -617,98 +641,23 @@ export default function EventManagement(props: PageProps) {
         programme: ProgrammeRow,
         participant: ProgrammeParticipant,
     ) {
-        const html = buildCertificatePrintBody(programme, [participant]);
+        const html = buildCertificatePrintBody({
+            data: {
+                eventName: programme.title,
+                eventDate: formatDateRange(programme.starts_at, programme.ends_at),
+                givenDate: formatGivenDate(programme.ends_at ?? programme.starts_at),
+                venue: formatVenueLabel(programme),
+                signatoryName: signatoryName,
+                signatoryTitle: signatoryTitle,
+                signatorySignature: signatorySignature,
+            },
+            participants: [participant],
+        });
         if (!html.trim()) {
             toast.error('Unable to generate certificates.');
             return;
         }
-        printJS({ printable: html, type: 'raw-html', style: printStyles, documentTitle: 'Certificates' });
-    }
-
-    const printStyles = `
-        @page { size: A4 portrait; margin: 12mm; }
-        body { font-family: "Times New Roman", serif; color: #111; margin: 0; }
-        .page { width: 210mm; min-height: 297mm; margin: 0 auto 12mm; display: flex; flex-direction: column; gap: 10mm; }
-        .certificate { flex: 1; border: 1px solid #e5e7eb; padding: 10mm; display: flex; flex-direction: column; justify-content: center; }
-        .certificate--appearance {
-            background: url('/img/appearance_bg.png') center/cover no-repeat;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        .certificate--participation {
-            background:
-                linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)),
-                url('/img/bg.png') center/cover no-repeat;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        .certificate-logo { display: block; max-width: 100%; margin: 0 auto 10px; }
-        .certificate-logo--appearance { max-height: 64px; }
-        .certificate-logo--participation { max-height: 54px; }
-        .title { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 14px; }
-        .subtitle { text-align: center; font-size: 14px; margin-bottom: 4px; }
-        .lead { text-align: center; font-size: 15px; margin-top: 6px; }
-        .recipient { text-align: center; font-size: 20px; font-weight: 700; margin-top: 6px; }
-        .text { text-align: center; font-size: 15px; line-height: 1.6; margin: 10px auto 0; max-width: 620px; }
-        .value { font-weight: 700; }
-        .given { text-align: center; font-size: 14px; margin-top: 16px; }
-        .signatory { margin-top: 24px; text-align: center; }
-        .signatory-signature { display: block; margin: 0 auto -6px; max-height: 60px; object-fit: contain; }
-        .sign-name { font-size: 15px; font-weight: 700; }
-        .sign-title { font-size: 13px; }
-        .page:last-child { margin-bottom: 0; }
-        @media print {
-            .page { margin: 0 auto; page-break-after: always; }
-            .page:last-child { page-break-after: auto; }
-        }
-    `;
-
-    function buildCertificatePrintBody(programme: ProgrammeRow, participants: ProgrammeParticipant[]) {
-        const eventName = programme.title;
-        const eventDate = formatDateRange(programme.starts_at, programme.ends_at);
-        const givenDate = formatGivenDate(programme.ends_at ?? programme.starts_at);
-        const venue = formatVenueLabel(programme);
-
-        const renderCertificate = (participantName: string, type: 'appearance' | 'participation') => {
-            const typeTitle = type === 'appearance' ? 'CERTIFICATE OF APPEARANCE' : 'CERTIFICATE OF PARTICIPATION';
-            const lead =
-                type === 'appearance' ? 'This is to certify that' : 'This certificate is hereby given to';
-            const body =
-                type === 'appearance'
-                    ? `has appeared during the conduct of <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`
-                    : `for actively participating in <span class="value">${eventName}</span> on <span class="value">${eventDate}</span> at <span class="value">${venue}</span>.`;
-            const logo =
-                type === 'appearance' ? '/img/ched_logo_bagong_pilipinas.png' : '/img/ched_logo_bagong_pilipinas_asean.png';
-
-            return `
-                <section class="certificate certificate--${type}">
-                    <img class="certificate-logo certificate-logo--${type}" src="${logo}" alt="" />
-                    <div class="title">${typeTitle}</div>
-                    <div class="lead">${lead}</div>
-                    <div class="recipient">${participantName}</div>
-                    <div class="text">${body}</div>
-                    <div class="given">Given this ${givenDate} at ${venue}.</div>
-                    <div class="signatory">
-                        ${signatorySignature ? `<img class="signatory-signature" src="${signatorySignature}" alt="Signature" />` : ''}
-                        <div class="sign-name">${signatoryName}</div>
-                        <div class="sign-title">${signatoryTitle}</div>
-                    </div>
-                </section>
-            `;
-        };
-
-        const pages = participants
-            .map((participant) => {
-                return `
-                    <div class="page">
-                        ${renderCertificate(participant.name, 'appearance')}
-                        ${renderCertificate(participant.name, 'participation')}
-                    </div>
-                `;
-            })
-            .join('');
-
-        return pages;
+        printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificates' });
     }
 
     function printAllCertificates() {
@@ -718,12 +667,23 @@ export default function EventManagement(props: PageProps) {
             toast.error('No checked-in participants to print.');
             return;
         }
-        const html = buildCertificatePrintBody(participantsTarget, checkedInParticipants);
+        const html = buildCertificatePrintBody({
+            data: {
+                eventName: participantsTarget.title,
+                eventDate: formatDateRange(participantsTarget.starts_at, participantsTarget.ends_at),
+                givenDate: formatGivenDate(participantsTarget.ends_at ?? participantsTarget.starts_at),
+                venue: formatVenueLabel(participantsTarget),
+                signatoryName: signatoryName,
+                signatoryTitle: signatoryTitle,
+                signatorySignature: signatorySignature,
+            },
+            participants: checkedInParticipants,
+        });
         if (!html.trim()) {
             toast.error('Unable to generate certificates.');
             return;
         }
-        printJS({ printable: html, type: 'raw-html', style: printStyles, documentTitle: 'Certificates' });
+        printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificates' });
     }
 
     const participantsList = participantsTarget?.participants ?? [];
@@ -1035,6 +995,48 @@ export default function EventManagement(props: PageProps) {
                                                             {pdfLabel || 'No PDF selected'}
                                                         </div>
                                                         <div className="text-xs text-slate-500 dark:text-slate-400">Opens when users click “View more”.</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* MATERIALS (upload only) */}
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Event kit materials</div>
+
+                                        <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
+                                            <div className="space-y-2">
+                                                <Input
+                                                    type="file"
+                                                    multiple
+                                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                                                    onChange={handleMaterialsUpload}
+                                                />
+                                                {(form.errors as any).materials ? (
+                                                    <div className="text-xs text-red-600">{(form.errors as any).materials}</div>
+                                                ) : null}
+
+                                                {editing?.materials?.length ? (
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                        Current materials: {editing.materials.length}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+
+                                            <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">Selected</div>
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <div className="grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                                        <FileText className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                            {materialsLabel || 'No files selected'}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                            Upload files for the Event Kit downloads.
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

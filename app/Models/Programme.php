@@ -44,6 +44,11 @@ class Programme extends Model
         return $this->hasMany(Venue::class);
     }
 
+    public function materials(): HasMany
+    {
+        return $this->hasMany(ProgrammeMaterial::class);
+    }
+
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'participant_programmes')->withTimestamps();
