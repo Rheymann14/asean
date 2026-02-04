@@ -46,9 +46,11 @@ import {
     BadgeCheck,
     CalendarDays,
     ImageUp,
+    FileSpreadsheet,
     FileText,
     CheckCircle2,
     XCircle,
+    Presentation,
 } from 'lucide-react';
 
 type ProgrammeParticipant = {
@@ -205,6 +207,16 @@ function resolveImageUrl(imageUrl?: string | null) {
     return `/event-images/${imageUrl}`;
 }
 
+function resolveMaterialUrl(filePath?: string | null) {
+    if (!filePath) return null;
+    if (filePath.startsWith('http') || filePath.startsWith('/')) return filePath;
+    const encodedPath = filePath
+        .split('/')
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
+    return `/event-materials/${encodedPath}`;
+}
+
 function resolveSignatureUrl(signatureUrl?: string | null) {
     if (!signatureUrl) return null;
     if (signatureUrl.startsWith('http') || signatureUrl.startsWith('/')) return signatureUrl;
@@ -254,6 +266,41 @@ function EventStatusBadge({ status }: { status: 'upcoming' | 'ongoing' | 'closed
     } as const;
 
     return <span className={cn('inline-flex rounded-full px-2.5 py-1 text-[12px] font-medium', styles[status])}>{labels[status]}</span>;
+}
+
+function getMaterialMeta(fileName: string, fileType?: string | null) {
+    const extension = fileType || fileName.split('.').pop() || '';
+    const normalized = extension.toLowerCase();
+
+    if (['doc', 'docx'].includes(normalized)) {
+        return {
+            icon: FileText,
+            badgeClass: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-200',
+        };
+    }
+    if (['pdf'].includes(normalized)) {
+        return {
+            icon: FileText,
+            badgeClass: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-200',
+        };
+    }
+    if (['ppt', 'pptx'].includes(normalized)) {
+        return {
+            icon: Presentation,
+            badgeClass: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-200',
+        };
+    }
+    if (['xls', 'xlsx', 'csv'].includes(normalized)) {
+        return {
+            icon: FileSpreadsheet,
+            badgeClass: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-200',
+        };
+    }
+
+    return {
+        icon: FileText,
+        badgeClass: 'bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300',
+    };
 }
 
 function showToastError(errors: Record<string, string | string[]>) {
@@ -688,6 +735,17 @@ export default function EventManagement(props: PageProps) {
 
     const participantsList = participantsTarget?.participants ?? [];
     const checkedInCount = participantsList.filter((participant) => participant.checked_in_at).length;
+    const existingMaterials =
+        editing?.materials?.map((material) => ({
+            ...material,
+            url: resolveMaterialUrl(material.file_path),
+        })) ?? [];
+    const selectedMaterials = form.data.materials.map((file, index) => ({
+        id: `new-${index}`,
+        file_name: file.name,
+        file_type: file.name.split('.').pop() ?? null,
+        url: null,
+    }));
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -1016,28 +1074,113 @@ export default function EventManagement(props: PageProps) {
                                                 {(form.errors as any).materials ? (
                                                     <div className="text-xs text-red-600">{(form.errors as any).materials}</div>
                                                 ) : null}
-
-                                                {editing?.materials?.length ? (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                        Current materials: {editing.materials.length}
-                                                    </div>
-                                                ) : null}
                                             </div>
 
                                             <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">Selected</div>
-                                                <div className="mt-2 flex items-center gap-2">
-                                                    <div className="grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                                                        <FileText className="h-4 w-4" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                            {materialsLabel || 'No files selected'}
+                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                                    Materials list
+                                                </div>
+                                                <div className="mt-2 space-y-3">
+                                                    {existingMaterials.length ? (
+                                                        <div className="space-y-2">
+                                                            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                                                Current materials
+                                                            </div>
+                                                            {existingMaterials.map((material) => {
+                                                                const { icon: Icon, badgeClass } = getMaterialMeta(
+                                                                    material.file_name,
+                                                                    material.file_type,
+                                                                );
+
+                                                                return (
+                                                                    <div
+                                                                        key={material.id}
+                                                                        className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 sm:flex-row sm:items-center sm:justify-between"
+                                                                    >
+                                                                        <div className="flex min-w-0 items-center gap-3">
+                                                                            <div
+                                                                                className={cn(
+                                                                                    'grid size-9 shrink-0 place-items-center rounded-lg',
+                                                                                    badgeClass,
+                                                                                )}
+                                                                            >
+                                                                                <Icon className="h-4 w-4" />
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <div className="text-sm font-semibold break-words">
+                                                                                    {material.file_name}
+                                                                                </div>
+                                                                                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                                    {material.file_type?.toUpperCase() ?? 'FILE'}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {material.url ? (
+                                                                            <Button
+                                                                                asChild
+                                                                                size="sm"
+                                                                                className="h-8 bg-[#0033A0] text-white hover:bg-[#0033A0]/90"
+                                                                            >
+                                                                                <a href={material.url} target="_blank" rel="noreferrer">
+                                                                                    Download
+                                                                                </a>
+                                                                            </Button>
+                                                                        ) : null}
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
+                                                    ) : null}
+
+                                                    {selectedMaterials.length ? (
+                                                        <div className="space-y-2">
+                                                            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                                                New uploads
+                                                            </div>
+                                                            {selectedMaterials.map((material) => {
+                                                                const { icon: Icon, badgeClass } = getMaterialMeta(
+                                                                    material.file_name,
+                                                                    material.file_type,
+                                                                );
+
+                                                                return (
+                                                                    <div
+                                                                        key={material.id}
+                                                                        className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 sm:flex-row sm:items-center sm:justify-between"
+                                                                    >
+                                                                        <div className="flex min-w-0 items-center gap-3">
+                                                                            <div
+                                                                                className={cn(
+                                                                                    'grid size-9 shrink-0 place-items-center rounded-lg',
+                                                                                    badgeClass,
+                                                                                )}
+                                                                            >
+                                                                                <Icon className="h-4 w-4" />
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <div className="text-sm font-semibold break-words">
+                                                                                    {material.file_name}
+                                                                                </div>
+                                                                                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                                    {material.file_type?.toUpperCase() ?? 'FILE'}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ) : null}
+
+                                                    {!existingMaterials.length && !selectedMaterials.length ? (
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                            {materialsLabel || 'No files selected'}.
+                                                        </div>
+                                                    ) : (
                                                         <div className="text-xs text-slate-500 dark:text-slate-400">
                                                             Upload files for the Event Kit downloads.
                                                         </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
