@@ -4,8 +4,10 @@ import PublicLayout from '@/layouts/public-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, CalendarDays, Download, MapPin, Medal, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CalendarDays, Download, FileText, MapPin, Medal, RotateCcw, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import printJS from '@/lib/print-js';
+import { buildCertificatePrintBody, CERTIFICATE_PRINT_STYLES } from '@/lib/certificates';
 
 type Programme = {
     id: number;
@@ -16,6 +18,15 @@ type Programme = {
     location: string | null;
     image_url: string | null;
     pdf_url: string | null;
+    materials: {
+        id: number;
+        file_name: string;
+        file_path: string;
+        file_type: string | null;
+    }[];
+    signatory_name: string | null;
+    signatory_title: string | null;
+    signatory_signature_url: string | null;
 };
 
 type Participant = {
@@ -39,6 +50,18 @@ function resolvePdfUrl(pdfUrl?: string | null) {
     if (!pdfUrl) return null;
     if (pdfUrl.startsWith('http') || pdfUrl.startsWith('/')) return pdfUrl;
     return `/downloadables/${pdfUrl}`;
+}
+
+function resolveMaterialUrl(filePath?: string | null) {
+    if (!filePath) return null;
+    if (filePath.startsWith('http') || filePath.startsWith('/')) return filePath;
+    return `/event-materials/${filePath}`;
+}
+
+function resolveSignatureUrl(signatureUrl?: string | null) {
+    if (!signatureUrl) return null;
+    if (signatureUrl.startsWith('http') || signatureUrl.startsWith('/')) return signatureUrl;
+    return `/signatures/${signatureUrl}`;
 }
 
 function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
@@ -65,11 +88,60 @@ function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
     return `${dateFmt.format(start)} ${startTime} → ${dateFmt.format(end)} ${timeFmt.format(end)}`;
 }
 
+function formatDateRange(startsAt?: string | null, endsAt?: string | null) {
+    if (!startsAt) return '—';
+    const start = new Date(startsAt);
+    if (Number.isNaN(start.getTime())) return '—';
+    const end = endsAt ? new Date(endsAt) : null;
+    const sameDay = end && !Number.isNaN(end.getTime()) && start.toDateString() === end.toDateString();
+    const date = new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(start);
+    if (!end || Number.isNaN(end.getTime()) || sameDay) {
+        return date;
+    }
+    const endDate = new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(end);
+    return `${date} – ${endDate}`;
+}
+
+function formatGivenDate(startsAt?: string | null) {
+    if (!startsAt) return '—';
+    const start = new Date(startsAt);
+    if (Number.isNaN(start.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(start);
+}
+
 export default function EventKitMaterials() {
     const { participant, programme, attendance } = usePage<PageProps>().props;
     const resetForm = useForm({});
     const hasAttendance = Boolean(attendance?.scanned_at);
     const pdfUrl = resolvePdfUrl(programme.pdf_url);
+    const signatorySignature = resolveSignatureUrl(programme.signatory_signature_url);
+    const materials = programme.materials.map((material) => ({
+        ...material,
+        url: resolveMaterialUrl(material.file_path),
+    }));
+
+    const eventDate = formatDateRange(programme.starts_at, programme.ends_at);
+    const givenDateLabel = formatGivenDate(programme.ends_at ?? programme.starts_at);
+    const venue = programme.location || '—';
+
+    const handlePrint = (type: 'appearance' | 'participation') => {
+        if (!hasAttendance) return;
+        const html = buildCertificatePrintBody({
+            data: {
+                eventName: programme.title,
+                eventDate,
+                givenDate: givenDateLabel,
+                venue,
+                signatoryName: programme.signatory_name ?? 'Shirley C. Agrupis, Ph.D.',
+                signatoryTitle: programme.signatory_title ?? 'CHED Chairperson',
+                signatorySignature,
+            },
+            participants: [{ name: participant.name }],
+            types: [type],
+        });
+        if (!html.trim()) return;
+        printJS({ printable: html, type: 'raw-html', style: CERTIFICATE_PRINT_STYLES, documentTitle: 'Certificate' });
+    };
 
     return (
         <>
@@ -137,21 +209,53 @@ export default function EventKitMaterials() {
                                 <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">
                                     Download the official event materials and guide for this programme.
                                 </p>
-                                {pdfUrl ? (
-                                    <Button
-                                        asChild
-                                        className="mt-4 h-10 bg-[#0033A0] text-white hover:bg-[#0033A0]/90"
-                                    >
-                                        <a href={pdfUrl} target="_blank" rel="noreferrer">
-                                            Download materials
-                                            <ArrowRight className="ml-2 h-4 w-4" />
-                                        </a>
-                                    </Button>
-                                ) : (
-                                    <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-                                        Materials are not available yet. Please check back later.
-                                    </p>
-                                )}
+                                <div className="mt-4 space-y-2">
+                                    {pdfUrl ? (
+                                        <Button
+                                            asChild
+                                            className="h-10 bg-[#0033A0] text-white hover:bg-[#0033A0]/90"
+                                        >
+                                            <a href={pdfUrl} target="_blank" rel="noreferrer">
+                                                Download event guide
+                                                <ArrowRight className="ml-2 h-4 w-4" />
+                                            </a>
+                                        </Button>
+                                    ) : null}
+
+                                    {materials.length ? (
+                                        <div className="space-y-2">
+                                            {materials.map((material) => (
+                                                <div
+                                                    key={material.id}
+                                                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="grid size-8 place-items-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                                                            <FileText className="h-4 w-4" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="truncate text-sm font-semibold">{material.file_name}</div>
+                                                            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                {material.file_type?.toUpperCase() ?? 'FILE'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {material.url ? (
+                                                        <Button asChild size="sm" variant="outline" className="h-8">
+                                                            <a href={material.url} target="_blank" rel="noreferrer">
+                                                                Download
+                                                            </a>
+                                                        </Button>
+                                                    ) : null}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : !pdfUrl ? (
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            Materials are not available yet. Please check back later.
+                                        </p>
+                                    ) : null}
+                                </div>
                             </div>
                         </Card>
 
@@ -189,10 +293,13 @@ export default function EventKitMaterials() {
                                                 </span>
                                             </div>
                                             {hasAttendance ? (
-                                                <Button asChild size="sm" variant="outline" className="h-8">
-                                                    <a href={`/event-kit/certificate?type=${type}`} target="_blank" rel="noreferrer">
-                                                        Open
-                                                    </a>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-8"
+                                                    onClick={() => handlePrint(type as 'appearance' | 'participation')}
+                                                >
+                                                    Print
                                                 </Button>
                                             ) : (
                                                 <span className="text-[11px]">Pending attendance</span>

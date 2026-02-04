@@ -69,10 +69,21 @@ class EventKitController extends Controller
 
         $validated = $request->validate([
             'programme_id' => ['required', 'integer', 'exists:programmes,id'],
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'recommend' => ['required', 'in:yes,no'],
-            'feedback' => ['required', 'string', 'max:1000'],
+            'user_experience_rating' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'event_ratings' => ['nullable', 'array'],
+            'event_ratings.*' => ['integer', 'min:1', 'max:5'],
+            'recommendations' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $eventRatings = collect($validated['event_ratings'] ?? [])->filter(fn ($value) => (int) $value > 0);
+        $hasUserExperience = !empty($validated['user_experience_rating']);
+        $hasEventRatings = $eventRatings->isNotEmpty();
+
+        if (!$hasUserExperience && !$hasEventRatings) {
+            return back()->withErrors([
+                'survey' => 'Please add at least one rating before submitting.',
+            ]);
+        }
 
         $request->session()->put('event_kit.programme_id', (int) $validated['programme_id']);
         $request->session()->put('event_kit.survey_completed', true);
@@ -98,7 +109,9 @@ class EventKitController extends Controller
             return redirect()->route('event-kit.survey');
         }
 
-        $programme = Programme::query()->find($programmeId);
+        $programme = Programme::query()
+            ->with('materials')
+            ->find($programmeId);
 
         if (!$programme) {
             return redirect()->route('event-kit.survey');
@@ -120,46 +133,24 @@ class EventKitController extends Controller
                 'location' => $programme->location,
                 'image_url' => $programme->image_url,
                 'pdf_url' => $programme->pdf_url,
+                'materials' => $programme->materials
+                    ->map(fn ($material) => [
+                        'id' => $material->id,
+                        'file_name' => $material->file_name,
+                        'file_path' => $material->file_path,
+                        'file_type' => $material->file_type,
+                    ])
+                    ->values()
+                    ->all(),
+                'signatory_name' => $programme->signatory_name,
+                'signatory_title' => $programme->signatory_title,
+                'signatory_signature_url' => $programme->signatory_signature_url,
             ],
             'attendance' => $attendance
                 ? [
                     'scanned_at' => $attendance->scanned_at?->toISOString(),
                 ]
                 : null,
-        ]);
-    }
-
-    public function certificate(Request $request)
-    {
-        $participant = $this->resolveParticipant($request);
-
-        if (!$participant) {
-            return redirect()->route('event-kit.entry');
-        }
-
-        $programmeId = $request->session()->get('event_kit.programme_id');
-        $type = $request->query('type');
-
-        if (!$programmeId || !in_array($type, ['appearance', 'participation'], true)) {
-            return redirect()->route('event-kit.materials');
-        }
-
-        $programme = Programme::query()->find($programmeId);
-
-        if (!$programme) {
-            return redirect()->route('event-kit.materials');
-        }
-
-        return Inertia::render('event-kit-certificate', [
-            'participant' => $participant,
-            'programme' => [
-                'id' => $programme->id,
-                'title' => $programme->title,
-                'starts_at' => $programme->starts_at?->toISOString(),
-                'ends_at' => $programme->ends_at?->toISOString(),
-                'location' => $programme->location,
-            ],
-            'type' => $type,
         ]);
     }
 

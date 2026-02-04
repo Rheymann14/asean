@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { ChevronDown, CircleCheck, CircleX, Sparkles } from 'lucide-react';
+import { ChevronDown, CircleCheck, CircleX, Sparkles, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ProgrammeRow = {
@@ -68,10 +68,24 @@ export default function EventKitSurvey() {
     const [open, setOpen] = React.useState(false);
     const form = useForm({
         programme_id: selected_programme_id ?? '',
-        rating: '',
-        recommend: '',
-        feedback: '',
+        user_experience_rating: 0,
+        event_ratings: {} as Record<string, number>,
+        recommendations: '',
     });
+
+    const [feedbackRating, setFeedbackRating] = React.useState(0);
+    const [includeUserExperience, setIncludeUserExperience] = React.useState(true);
+    const [includeEventFeedback, setIncludeEventFeedback] = React.useState(false);
+    const [eventRatings, setEventRatings] = React.useState<Record<string, number>>({});
+    const [recommendations, setRecommendations] = React.useState('');
+
+    const eventCategories = React.useMemo(() => ['Venue', 'Food', 'Speaker', 'Program flow', 'Sound system'], []);
+    const hasEventRatings = React.useMemo(
+        () => includeEventFeedback && Object.values(eventRatings).some((value) => value > 0),
+        [eventRatings, includeEventFeedback],
+    );
+    const hasUserExperienceRating = includeUserExperience && feedbackRating > 0;
+    const canSubmitFeedback = hasEventRatings || hasUserExperienceRating;
 
     const attendanceByProgramme = React.useMemo(
         () => new Map(attendance_entries.map((entry) => [entry.programme_id, entry.scanned_at])),
@@ -84,10 +98,14 @@ export default function EventKitSurvey() {
 
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
+        form.transform(() => ({
+            programme_id: form.data.programme_id,
+            user_experience_rating: includeUserExperience ? feedbackRating : null,
+            event_ratings: includeEventFeedback ? eventRatings : {},
+            recommendations: recommendations.trim(),
+        }));
         form.post('/event-kit/survey');
     };
-
-    const ratingOptions = [1, 2, 3, 4, 5];
 
     return (
         <>
@@ -196,66 +214,131 @@ export default function EventKitSurvey() {
                                     ) : null}
                                 </div>
 
-                                <div>
-                                    <label className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                        Overall event rating
-                                    </label>
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        {ratingOptions.map((rating) => (
-                                            <button
-                                                key={rating}
-                                                type="button"
-                                                onClick={() => form.setData('rating', String(rating))}
-                                                className={cn(
-                                                    'h-10 w-10 rounded-xl border text-sm font-semibold transition',
-                                                    form.data.rating === String(rating)
-                                                        ? 'border-[#0033A0] bg-[#0033A0] text-white'
-                                                        : 'border-slate-200 bg-white text-slate-700 hover:border-[#0033A0]/40 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200',
-                                                )}
-                                            >
-                                                {rating}
-                                            </button>
-                                        ))}
+                                <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-slate-700">Include feedback for</p>
+                                    <div className="space-y-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm">
+                                        <label className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-slate-300 text-[#1e3c73]"
+                                                checked={includeUserExperience}
+                                                onChange={(event) => setIncludeUserExperience(event.target.checked)}
+                                            />
+                                            User experience
+                                        </label>
+                                        <label className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-slate-300 text-[#1e3c73]"
+                                                checked={includeEventFeedback}
+                                                onChange={(event) => setIncludeEventFeedback(event.target.checked)}
+                                            />
+                                            Event
+                                        </label>
                                     </div>
-                                    {errors?.rating ? <p className="mt-2 text-xs text-rose-500">{errors.rating}</p> : null}
                                 </div>
 
-                                <div>
-                                    <label className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                        Would you recommend this event?
-                                    </label>
-                                    <div className="mt-3 flex gap-2">
-                                        {['yes', 'no'].map((option) => (
-                                            <button
-                                                key={option}
-                                                type="button"
-                                                onClick={() => form.setData('recommend', option)}
-                                                className={cn(
-                                                    'h-10 flex-1 rounded-xl border text-sm font-semibold capitalize transition',
-                                                    form.data.recommend === option
-                                                        ? 'border-[#0033A0] bg-[#0033A0] text-white'
-                                                        : 'border-slate-200 bg-white text-slate-700 hover:border-[#0033A0]/40 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200',
-                                                )}
-                                            >
-                                                {option}
-                                            </button>
-                                        ))}
+                                {includeEventFeedback && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-700">Event highlights</p>
+                                        <div className="mt-2 space-y-2">
+                                            {eventCategories.map((category) => {
+                                                const rating = eventRatings[category] ?? 0;
+                                                return (
+                                                    <div
+                                                        key={category}
+                                                        className="rounded-2xl border border-slate-200/80 bg-white px-3 py-2"
+                                                    >
+                                                        <p className="text-xs font-semibold tracking-[0.22em] text-slate-500 uppercase">
+                                                            {category}
+                                                        </p>
+                                                        <div className="mt-2 flex items-center gap-1.5">
+                                                            {[1, 2, 3, 4, 5].map((star) => {
+                                                                const isActive = star <= rating;
+                                                                return (
+                                                                    <button
+                                                                        key={star}
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setEventRatings((current) => ({
+                                                                                ...current,
+                                                                                [category]: star,
+                                                                            }))
+                                                                        }
+                                                                        className={cn(
+                                                                            'inline-flex h-8 w-8 items-center justify-center rounded-full border transition',
+                                                                            isActive
+                                                                                ? 'border-amber-300/60 bg-amber-100/60 text-amber-500'
+                                                                                : 'border-slate-200 text-slate-400 hover:border-[#1e3c73]/40 hover:text-[#1e3c73]',
+                                                                        )}
+                                                                        aria-label={`Rate ${category} ${star} star${star === 1 ? '' : 's'}`}
+                                                                    >
+                                                                        <Star
+                                                                            className={cn(
+                                                                                'h-4 w-4',
+                                                                                isActive ? 'fill-amber-400 text-amber-400' : '',
+                                                                            )}
+                                                                        />
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                            <span className="text-[10px] font-medium text-slate-500">
+                                                                {rating ? `${rating}/5` : 'Tap a star'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                    {errors?.recommend ? <p className="mt-2 text-xs text-rose-500">{errors.recommend}</p> : null}
-                                </div>
+                                )}
 
-                                <div>
-                                    <label className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                        What should we improve?
-                                    </label>
+                                {includeUserExperience && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-700">Ease of navigation</p>
+                                        <div className="mt-2 flex items-center gap-2">
+                                            {[1, 2, 3, 4, 5].map((star) => {
+                                                const isActive = star <= feedbackRating;
+                                                return (
+                                                    <button
+                                                        key={star}
+                                                        type="button"
+                                                        onClick={() => setFeedbackRating(star)}
+                                                        className={cn(
+                                                            'inline-flex h-8 w-8 items-center justify-center rounded-full border transition',
+                                                            isActive
+                                                                ? 'border-amber-300/60 bg-amber-100/60 text-amber-500'
+                                                                : 'border-slate-200 text-slate-400 hover:border-[#1e3c73]/40 hover:text-[#1e3c73]',
+                                                        )}
+                                                        aria-label={`Rate ${star} star${star === 1 ? '' : 's'}`}
+                                                    >
+                                                        <Star
+                                                            className={cn(
+                                                                'h-4 w-4',
+                                                                isActive ? 'fill-amber-400 text-amber-400' : '',
+                                                            )}
+                                                        />
+                                                    </button>
+                                                );
+                                            })}
+                                            <span className="text-[10px] font-medium text-slate-500">
+                                                {feedbackRating ? `${feedbackRating}/5` : 'Tap a star'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <label className="block text-xs font-semibold text-slate-700">
+                                    Recommendations
                                     <Textarea
-                                        value={form.data.feedback}
-                                        onChange={(event) => form.setData('feedback', event.target.value)}
-                                        className="mt-3 min-h-[120px]"
-                                        placeholder="Share your feedback..."
+                                        rows={3}
+                                        placeholder="Tell us what would make the experience even better..."
+                                        value={recommendations}
+                                        onChange={(event) => setRecommendations(event.target.value)}
+                                        className="mt-2 min-h-[96px]"
                                     />
-                                    {errors?.feedback ? <p className="mt-2 text-xs text-rose-500">{errors.feedback}</p> : null}
-                                </div>
+                                </label>
+                                {errors?.survey ? <p className="text-xs text-rose-500">{errors.survey}</p> : null}
                             </div>
                         </Card>
 
@@ -280,7 +363,7 @@ export default function EventKitSurvey() {
                             <Button
                                 type="submit"
                                 className="h-11 w-full bg-[#0033A0] text-white hover:bg-[#0033A0]/90"
-                                disabled={form.processing}
+                                disabled={!canSubmitFeedback || form.processing}
                             >
                                 Submit questionnaire
                             </Button>
