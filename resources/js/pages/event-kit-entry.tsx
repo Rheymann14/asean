@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, IdCard, QrCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type PageProps = {
     errors?: Record<string, string>;
@@ -20,7 +21,10 @@ export default function EventKitEntry() {
 
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
-        form.post('/event-kit/verify');
+        form.post('/event-kit/verify', {
+            onSuccess: () => toast.success('Participant verified.'),
+            onError: () => toast.error('Unable to verify participant ID.'),
+        });
     };
 
     return (

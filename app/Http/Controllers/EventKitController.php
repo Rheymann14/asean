@@ -12,6 +12,10 @@ class EventKitController extends Controller
 {
     public function entry()
     {
+        if (session()->get('event_kit.survey_completed') && session()->get('event_kit.programme_id')) {
+            return redirect()->route('event-kit.materials');
+        }
+
         return Inertia::render('event-kit-entry');
     }
 
@@ -47,6 +51,10 @@ class EventKitController extends Controller
 
         if (!$participant) {
             return redirect()->route('event-kit.entry');
+        }
+
+        if ($request->session()->get('event_kit.survey_completed')) {
+            return redirect()->route('event-kit.materials');
         }
 
         [$programmes, $attendanceEntries] = $this->loadProgrammesAndAttendance($participant->id);
