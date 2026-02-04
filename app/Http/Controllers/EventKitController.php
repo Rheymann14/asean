@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ParticipantAttendance;
 use App\Models\Programme;
+use App\Models\Feedback;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -53,6 +54,18 @@ class EventKitController extends Controller
             return redirect()->route('event-kit.entry');
         }
 
+        $existingFeedback = Feedback::query()
+            ->where('participant_id', $participant->id)
+            ->latest()
+            ->first();
+
+        if ($existingFeedback && $existingFeedback->programme_id) {
+            $request->session()->put('event_kit.survey_completed', true);
+            $request->session()->put('event_kit.programme_id', $existingFeedback->programme_id);
+
+            return redirect()->route('event-kit.materials');
+        }
+
         if ($request->session()->get('event_kit.survey_completed')) {
             return redirect()->route('event-kit.materials');
         }
@@ -95,6 +108,14 @@ class EventKitController extends Controller
 
         $request->session()->put('event_kit.programme_id', (int) $validated['programme_id']);
         $request->session()->put('event_kit.survey_completed', true);
+
+        Feedback::create([
+            'participant_id' => $participant->id,
+            'programme_id' => (int) $validated['programme_id'],
+            'user_experience_rating' => $validated['user_experience_rating'] ?? null,
+            'event_ratings' => $eventRatings->map(fn ($value) => (int) $value)->values()->all() ?: null,
+            'recommendations' => $validated['recommendations'] ?? null,
+        ]);
 
         return redirect()->route('event-kit.materials');
     }
