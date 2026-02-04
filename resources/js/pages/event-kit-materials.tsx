@@ -4,7 +4,19 @@ import PublicLayout from '@/layouts/public-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, CalendarDays, ChevronDown, Download, FileText, MapPin, Medal, RotateCcw, ShieldCheck } from 'lucide-react';
+import {
+    ArrowRight,
+    CalendarDays,
+    ChevronDown,
+    Download,
+    FileSpreadsheet,
+    FileText,
+    MapPin,
+    Medal,
+    Presentation,
+    RotateCcw,
+    ShieldCheck,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import printJS from '@/lib/print-js';
 import { buildCertificatePrintBody, CERTIFICATE_PRINT_STYLES } from '@/lib/certificates';
@@ -111,6 +123,41 @@ function formatGivenDate(startsAt?: string | null) {
     const start = new Date(startsAt);
     if (Number.isNaN(start.getTime())) return '—';
     return new Intl.DateTimeFormat('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).format(start);
+}
+
+function getMaterialMeta(fileName: string, fileType?: string | null) {
+    const extension = fileType || fileName.split('.').pop() || '';
+    const normalized = extension.toLowerCase();
+
+    if (['doc', 'docx'].includes(normalized)) {
+        return {
+            icon: FileText,
+            badgeClass: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-200',
+        };
+    }
+    if (['pdf'].includes(normalized)) {
+        return {
+            icon: FileText,
+            badgeClass: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-200',
+        };
+    }
+    if (['ppt', 'pptx'].includes(normalized)) {
+        return {
+            icon: Presentation,
+            badgeClass: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-200',
+        };
+    }
+    if (['xls', 'xlsx', 'csv'].includes(normalized)) {
+        return {
+            icon: FileSpreadsheet,
+            badgeClass: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-200',
+        };
+    }
+
+    return {
+        icon: FileText,
+        badgeClass: 'bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300',
+    };
 }
 
 export default function EventKitMaterials() {
@@ -293,31 +340,49 @@ export default function EventKitMaterials() {
 
                                     {materials.length ? (
                                         <div className="space-y-2">
-                                            {materials.map((material) => (
-                                                <div
-                                                    key={material.id}
-                                                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200"
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="grid size-8 place-items-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                                                            <FileText className="h-4 w-4" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <div className="truncate text-sm font-semibold">{material.file_name}</div>
-                                                            <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                                                {material.file_type?.toUpperCase() ?? 'FILE'}
+                                            {materials.map((material) => {
+                                                const { icon: Icon, badgeClass } = getMaterialMeta(
+                                                    material.file_name,
+                                                    material.file_type,
+                                                );
+
+                                                return (
+                                                    <div
+                                                        key={material.id}
+                                                        className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 sm:flex-row sm:items-center sm:justify-between"
+                                                    >
+                                                        <div className="flex min-w-0 items-center gap-3">
+                                                            <div
+                                                                className={cn(
+                                                                    'grid size-9 shrink-0 place-items-center rounded-lg',
+                                                                    badgeClass,
+                                                                )}
+                                                            >
+                                                                <Icon className="h-4 w-4" />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="text-sm font-semibold break-words">
+                                                                    {material.file_name}
+                                                                </div>
+                                                                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                    {material.file_type?.toUpperCase() ?? 'FILE'}
+                                                                </div>
                                                             </div>
                                                         </div>
+                                                        {material.url ? (
+                                                            <Button
+                                                                asChild
+                                                                size="sm"
+                                                                className="h-8 bg-[#0033A0] text-white hover:bg-[#0033A0]/90"
+                                                            >
+                                                                <a href={material.url} target="_blank" rel="noreferrer">
+                                                                    Download
+                                                                </a>
+                                                            </Button>
+                                                        ) : null}
                                                     </div>
-                                                    {material.url ? (
-                                                        <Button asChild size="sm" variant="outline" className="h-8">
-                                                            <a href={material.url} target="_blank" rel="noreferrer">
-                                                                Download
-                                                            </a>
-                                                        </Button>
-                                                    ) : null}
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     ) : !pdfUrl ? (
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
