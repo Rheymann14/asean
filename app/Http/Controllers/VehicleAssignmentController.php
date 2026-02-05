@@ -14,6 +14,17 @@ use Inertia\Inertia;
 
 class VehicleAssignmentController extends Controller
 {
+    public function index(Request $request)
+    {
+        $user = $request->user();
+
+        if ($this->isParticipantRole((string) $user?->userType?->name, (string) $user?->userType?->slug)) {
+            return $this->participantAssignmentIndex($request);
+        }
+
+        return $this->assignmentIndex($request);
+    }
+
     public function managementIndex(Request $request)
     {
         $events = Programme::query()->orderBy('starts_at')->orderBy('title')->get();
@@ -183,6 +194,48 @@ class VehicleAssignmentController extends Controller
         ]);
     }
 
+    public function participantAssignmentIndex(Request $request)
+    {
+        $participant = $request->user();
+
+        $events = $participant->joinedProgrammes()
+            ->orderBy('starts_at')
+            ->orderBy('title')
+            ->get();
+
+        $assignments = VehicleAssignment::query()
+            ->with(['vehicle.incharge', 'driver'])
+            ->where('user_id', $participant->id)
+            ->get()
+            ->keyBy('programme_id');
+
+        $eventRows = $events->map(function (Programme $event) use ($assignments) {
+            $assignment = $assignments->get($event->id);
+            $vehicle = $assignment?->vehicle;
+            $incharge = $vehicle?->incharge ?? $assignment?->driver;
+
+            return [
+                'id' => $event->id,
+                'title' => $event->title,
+                'starts_at' => $event->starts_at?->toISOString(),
+                'ends_at' => $event->ends_at?->toISOString(),
+                'location' => $event->location,
+                'vehicle_assignment' => $assignment
+                    ? [
+                        'vehicle_name' => $vehicle?->label ?: $assignment->vehicle_label,
+                        'plate_number' => $vehicle?->plate_number,
+                        'ched_lo_name' => $incharge?->name,
+                        'ched_lo_number' => $incharge?->contact_number,
+                    ]
+                    : null,
+            ];
+        });
+
+        return Inertia::render('participant-vehicle-assignment', [
+            'events' => $eventRows,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -277,5 +330,13 @@ class VehicleAssignmentController extends Controller
             || $compact->startsWith('CHEDLO')
             || $normalized->startsWith('CHED LIAISON')
             || $compact->startsWith('CHEDLIAISON');
+    }
+
+    private function isParticipantRole(string $name, string $slug): bool
+    {
+        $nameNormalized = Str::of($name)->lower()->replace(['_', '-'], ' ')->replaceMatches('/\s+/', ' ')->trim()->toString();
+        $slugNormalized = Str::of($slug)->lower()->replace(['_', '-'], ' ')->replaceMatches('/\s+/', ' ')->trim()->toString();
+
+        return $nameNormalized === 'participant' || $slugNormalized === 'participant';
     }
 }

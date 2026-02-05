@@ -59,7 +59,9 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
             ->middleware(['verified', 'role:ched_admin'])
             ->name('table-assignment.assignment');
 
-        Route::middleware(['role:participant'])->group(function () {
+        Route::get('vehicle-assignment', [VehicleAssignmentController::class, 'index'])->name('vehicle-assignment');
+
+    Route::middleware(['role:participant'])->group(function () {
             Route::get('participant-dashboard', function () {
                 return Inertia::render('participant-dashboard');
             })->name('participant-dashboard');
@@ -77,7 +79,6 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
 
     Route::middleware(['verified', 'role:ched_admin'])->group(function () {
         Route::get('vehicle-management', [VehicleAssignmentController::class, 'managementIndex'])->name('vehicle-management');
-        Route::get('vehicle-assignment', [VehicleAssignmentController::class, 'assignmentIndex'])->name('vehicle-assignment');
         Route::post('vehicle-assignments', [VehicleAssignmentController::class, 'store'])
             ->name('vehicle-assignments.store');
         Route::delete('vehicle-assignments/{vehicleAssignment}', [VehicleAssignmentController::class, 'destroy'])

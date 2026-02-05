@@ -113,6 +113,11 @@ export function AppSidebar() {
                   icon: CalendarDays,
               },
               {
+                  title: 'Vehicle Assignment',
+                  href: '/vehicle-assignment',
+                  icon: Bus,
+              },
+              {
                   title: 'Table Assignment',
                   href: '/table-assignment',
                   icon: Table,
