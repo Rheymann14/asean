@@ -13,6 +13,7 @@ class VehicleAssignment extends Model
 
     protected $fillable = [
         'user_id',
+        'programme_id',
         'vehicle_id',
         'driver_user_id',
         'vehicle_label',
@@ -28,6 +29,11 @@ class VehicleAssignment extends Model
         'pickup_at' => 'datetime',
         'dropoff_at' => 'datetime',
     ];
+
+    public function programme(): BelongsTo
+    {
+        return $this->belongsTo(Programme::class);
+    }
 
     public function user(): BelongsTo
     {
