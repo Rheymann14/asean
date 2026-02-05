@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Programme;
 use App\Models\TransportVehicle;
 use App\Models\User;
+use App\Models\UserType;
 use App\Models\VehicleAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -38,8 +39,26 @@ class VehicleAssignmentController extends Controller
                 'created_at' => $vehicle->created_at?->toISOString(),
             ]);
 
+        $chedLoTypeIds = UserType::query()
+            ->get()
+            ->filter(fn (UserType $type) => $this->matchesChedLo((string) $type->name) || $this->matchesChedLo((string) $type->slug))
+            ->pluck('id')
+            ->values();
+
         $chedLoUsers = User::query()
             ->with('userType')
+            ->when(
+                $chedLoTypeIds->isNotEmpty(),
+                fn ($query) => $query->whereIn('user_type_id', $chedLoTypeIds),
+                fn ($query) => $query->whereHas('userType', function ($subQuery) {
+                    $subQuery->where(function ($q) {
+                        $q->whereRaw("UPPER(REPLACE(REPLACE(COALESCE(name, ''), '-', ''), '_', '')) LIKE 'CHEDLO%'")
+                            ->orWhereRaw("UPPER(COALESCE(name, '')) LIKE 'CHED LIAISON%'")
+                            ->orWhereRaw("UPPER(REPLACE(REPLACE(COALESCE(slug, ''), '-', ''), '_', '')) LIKE 'CHEDLO%'")
+                            ->orWhereRaw("UPPER(COALESCE(slug, '')) LIKE 'CHED LIAISON%'");
+                    });
+                })
+            )
             ->orderBy('name')
             ->get()
             ->filter(fn (User $user) => $this->isChedLoType($user))
@@ -246,8 +265,13 @@ class VehicleAssignmentController extends Controller
             ->replaceMatches('/\s+/', ' ')
             ->trim();
 
+        $compact = Str::of((string) $normalized)->replace(' ', '');
+
         return $normalized === 'CHED LO'
             || $normalized === 'CHEDLO'
-            || $normalized->startsWith('CHED LO ');
+            || $normalized->startsWith('CHED LO ')
+            || $compact->startsWith('CHEDLO')
+            || $normalized->startsWith('CHED LIAISON')
+            || $compact->startsWith('CHEDLIAISON');
     }
 }
