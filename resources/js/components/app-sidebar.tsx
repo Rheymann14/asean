@@ -51,6 +51,11 @@ export function AppSidebar() {
             href: '/vehicle-management',
             icon: Truck,
         },
+        {
+            title: 'Vehicle Assignment',
+            href: '/vehicle-assignment',
+            icon: Truck,
+        },
     ];
 
     const mainNavItems: NavItem[] = isChed
