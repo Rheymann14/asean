@@ -192,7 +192,7 @@ function Pill({ children, tone = 'default' }: { children: React.ReactNode; tone?
             className={cn(
                 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
                 tone === 'success' &&
-                    'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+                'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
                 tone === 'danger' && 'bg-red-600/10 text-red-700 dark:bg-red-500/15 dark:text-red-300',
                 tone === 'default' && 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
             )}
@@ -1129,8 +1129,8 @@ export default function Scanner(props: PageProps) {
                 e?.name === 'NotAllowedError'
                     ? 'Camera permission denied. Please allow camera access.'
                     : e?.name === 'NotFoundError'
-                      ? 'No camera found on this device.'
-                      : 'Unable to start camera. Try again.';
+                        ? 'No camera found on this device.'
+                        : 'Unable to start camera. Try again.';
             setCameraError(msg);
             setStatus('error');
             setIsScanning(false);
@@ -1435,12 +1435,12 @@ export default function Scanner(props: PageProps) {
                                 {status === 'verifying'
                                     ? 'Verifying...'
                                     : status === 'scanning'
-                                      ? 'Scanning'
-                                      : status === 'success'
-                                        ? 'Verified'
-                                        : status === 'error'
-                                          ? 'Rejected'
-                                          : 'Ready'}
+                                        ? 'Scanning'
+                                        : status === 'success'
+                                            ? 'Verified'
+                                            : status === 'error'
+                                                ? 'Rejected'
+                                                : 'Ready'}
                             </Pill>
                         </div>
                     </div>
@@ -1453,7 +1453,7 @@ export default function Scanner(props: PageProps) {
                                     variant="outline"
                                     role="combobox"
                                     aria-expanded={eventOpen}
-                                    className="h-11 w-full justify-between rounded-2xl"
+                                    className="h-11 w-100 justify-between rounded-2xl"
                                 >
                                     <span className="flex min-w-0 items-center gap-2">
                                         {selectedEvent ? (
@@ -1462,7 +1462,7 @@ export default function Scanner(props: PageProps) {
                                                 {selectedEventPhase ? (
                                                     <span
                                                         className={cn(
-                                                            'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                                                             phaseBadgeClass(selectedEventPhase),
                                                         )}
                                                     >
@@ -1477,11 +1477,18 @@ export default function Scanner(props: PageProps) {
                                     <ChevronsUpDown className="h-4 w-4 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+
+                            <PopoverContent
+                                align="start"
+                                sideOffset={8}
+                                collisionPadding={12}
+                                className="p-0 w-[min(var(--radix-popper-anchor-width),calc(100vw-2rem))]"
+                            >
                                 <Command>
                                     <CommandInput placeholder="Search event…" />
                                     <CommandEmpty>No event found.</CommandEmpty>
-                                    <CommandList>
+
+                                    <CommandList className="max-h-[320px] overflow-y-auto">
                                         <CommandGroup>
                                             {filteredEvents.map((event) => (
                                                 <CommandItem
@@ -1491,25 +1498,28 @@ export default function Scanner(props: PageProps) {
                                                         setSelectedEventId(String(event.id));
                                                         setEventOpen(false);
                                                         setResult(null);
-                                                        setStatus('idle');
+                                                        setStatus("idle");
                                                     }}
-                                                    className="gap-2"
+                                                    className="flex items-center gap-2"
                                                 >
-                                                    <span className="truncate">{event.title}</span>
+                                                    {/* ✅ this is important: allows truncate to actually shrink */}
+                                                    <span className="min-w-0 flex-1 truncate">{event.title}</span>
+
                                                     {event.phase ? (
                                                         <span
                                                             className={cn(
-                                                                'ml-auto inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                                                "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                                                                 phaseBadgeClass(event.phase),
                                                             )}
                                                         >
                                                             {phaseLabel(event.phase)}
                                                         </span>
                                                     ) : null}
+
                                                     <Check
                                                         className={cn(
-                                                            'ml-2 h-4 w-4',
-                                                            selectedEventId === String(event.id) ? 'opacity-100' : 'opacity-0',
+                                                            "ml-2 h-4 w-4 shrink-0",
+                                                            selectedEventId === String(event.id) ? "opacity-100" : "opacity-0",
                                                         )}
                                                     />
                                                 </CommandItem>
@@ -1559,8 +1569,8 @@ export default function Scanner(props: PageProps) {
                                     qrAim === 'aligned'
                                         ? 'border-emerald-300/90 shadow-[0_0_0_1px_rgba(16,185,129,0.25),0_0_30px_rgba(16,185,129,0.35)]'
                                         : qrAim === 'detected'
-                                          ? 'border-sky-200/70 shadow-[0_0_26px_rgba(56,189,248,0.25)]'
-                                          : 'border-white/30',
+                                            ? 'border-sky-200/70 shadow-[0_0_26px_rgba(56,189,248,0.25)]'
+                                            : 'border-white/30',
                                 )}
                             />
 
@@ -1575,8 +1585,8 @@ export default function Scanner(props: PageProps) {
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
-                                          ? 'border-sky-200'
-                                          : 'border-white/80',
+                                            ? 'border-sky-200'
+                                            : 'border-white/80',
                                 )}
                             />
                             <div
@@ -1585,8 +1595,8 @@ export default function Scanner(props: PageProps) {
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
-                                          ? 'border-sky-200'
-                                          : 'border-white/80',
+                                            ? 'border-sky-200'
+                                            : 'border-white/80',
                                 )}
                             />
                             <div
@@ -1595,8 +1605,8 @@ export default function Scanner(props: PageProps) {
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
-                                          ? 'border-sky-200'
-                                          : 'border-white/80',
+                                            ? 'border-sky-200'
+                                            : 'border-white/80',
                                 )}
                             />
                             <div
@@ -1605,8 +1615,8 @@ export default function Scanner(props: PageProps) {
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
-                                          ? 'border-sky-200'
-                                          : 'border-white/80',
+                                            ? 'border-sky-200'
+                                            : 'border-white/80',
                                 )}
                             />
 
@@ -1619,15 +1629,15 @@ export default function Scanner(props: PageProps) {
                                             qrAim === 'aligned'
                                                 ? 'bg-emerald-600/55'
                                                 : qrAim === 'detected'
-                                                  ? 'bg-sky-600/50'
-                                                  : 'bg-black/35',
+                                                    ? 'bg-sky-600/50'
+                                                    : 'bg-black/35',
                                         )}
                                     >
                                         {qrAim === 'aligned'
                                             ? 'QR detected • Hold steady'
                                             : qrAim === 'detected'
-                                              ? 'QR detected • Center it'
-                                              : 'Searching for QR…'}
+                                                ? 'QR detected • Center it'
+                                                : 'Searching for QR…'}
                                     </div>
                                 </div>
                             ) : null}
