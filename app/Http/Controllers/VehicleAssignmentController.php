@@ -234,11 +234,20 @@ class VehicleAssignmentController extends Controller
 
     private function isChedLoType(User $user): bool
     {
-        $value = Str::of((string) ($user->userType?->slug ?: $user->userType?->name))
+        return $this->matchesChedLo((string) $user->userType?->name)
+            || $this->matchesChedLo((string) $user->userType?->slug);
+    }
+
+    private function matchesChedLo(string $value): bool
+    {
+        $normalized = Str::of($value)
             ->upper()
             ->replace(['_', '-'], ' ')
+            ->replaceMatches('/\s+/', ' ')
             ->trim();
 
-        return $value === 'CHED LO' || $value->startsWith('CHED LO ');
+        return $normalized === 'CHED LO'
+            || $normalized === 'CHEDLO'
+            || $normalized->startsWith('CHED LO ');
     }
 }
