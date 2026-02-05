@@ -149,7 +149,7 @@ class ParticipantController extends Controller
         ])->refresh();
 
         rescue(fn () => Mail::to($user->email)->send(new ParticipantWelcomeMail($user)), report: true);
-        app(SemaphoreSms::class)->sendWelcome($user);
+        rescue(fn () => app(SemaphoreSms::class)->sendWelcome($user), report: true);
 
         return back();
     }
