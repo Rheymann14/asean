@@ -88,6 +88,7 @@ class TableAssignmentController extends Controller
 
                             return [
                                 'id' => $assignment->id,
+                                'seat_number' => $assignment->seat_number,
                                 'assigned_at' => $assignment->assigned_at?->toISOString(),
                                 'participant' => $participant
                                     ? [
@@ -207,6 +208,7 @@ class TableAssignmentController extends Controller
                     ? [
                         'table_number' => $table->table_number,
                         'capacity' => $table->capacity,
+                        'seat_number' => $assignment?->seat_number,
                         'assigned_at' => $assignment?->assigned_at?->toISOString(),
                     ]
                     : null,
@@ -332,15 +334,21 @@ class TableAssignmentController extends Controller
         }
 
         $now = now();
+        $startingSeatNumber = ParticipantTableAssignment::query()
+            ->where('participant_table_id', $table->id)
+            ->max('seat_number') ?? 0;
 
-        $payload = $newIds->map(fn ($id) => [
-            'programme_id' => $validated['programme_id'],
-            'participant_table_id' => $table->id,
-            'user_id' => $id,
-            'assigned_at' => $now,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
+        $payload = $newIds->values()->map(function ($id, $index) use ($validated, $table, $now, $startingSeatNumber) {
+            return [
+                'programme_id' => $validated['programme_id'],
+                'participant_table_id' => $table->id,
+                'seat_number' => $startingSeatNumber + $index + 1,
+                'user_id' => $id,
+                'assigned_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        });
 
         ParticipantTableAssignment::insert($payload->all());
 
@@ -356,9 +364,27 @@ class TableAssignmentController extends Controller
             ]);
         }
 
+        $tableId = $participantTableAssignment->participant_table_id;
+
         $participantTableAssignment->delete();
 
+        $this->resequenceSeatNumbers($tableId);
+
         return back();
+    }
+
+    private function resequenceSeatNumbers(int $tableId): void
+    {
+        $assignments = ParticipantTableAssignment::query()
+            ->where('participant_table_id', $tableId)
+            ->orderBy('seat_number')
+            ->orderBy('assigned_at')
+            ->orderBy('id')
+            ->get(['id']);
+
+        foreach ($assignments as $index => $assignment) {
+            $assignment->update(['seat_number' => $index + 1]);
+        }
     }
 
     private function isProgrammeOpen(Programme $event, $now): bool

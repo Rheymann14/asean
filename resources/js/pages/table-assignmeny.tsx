@@ -45,6 +45,7 @@ type Participant = {
 
 type TableAssignment = {
     id: number;
+    seat_number: number;
     assigned_at?: string | null;
     participant?: Participant | null;
 };
@@ -517,7 +518,7 @@ export default function TableAssignmenyPage(props: PageProps) {
         <Card>
             <CardHeader>
                 <CardTitle className="text-base">Create Table</CardTitle>
-                <CardDescription>Set up a new table with a number and capacity.</CardDescription>
+                <CardDescription>Set up a new table with a number, capacity, and seat arrangement support.</CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={submitTable} className="space-y-4">
@@ -705,7 +706,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                     <div>
                                         <CardTitle className="text-base">{table.table_number}</CardTitle>
                                         <CardDescription>
-                                            {table.assigned_count} of {table.capacity} seats occupied
+                                            {table.assigned_count} of {table.capacity} seats occupied (seat arrangement auto-numbered)
                                         </CardDescription>
                                     </div>
                                     <Badge
@@ -746,6 +747,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                             <TableHeader>
                                                 <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                                     <TableHead>Participant</TableHead>
+                                                    <TableHead className="w-[110px]">Seat no.</TableHead>
                                                     <TableHead className="w-[140px]">Role</TableHead>
                                                     <TableHead className="w-[180px]">Assigned at</TableHead>
                                                     <TableHead className="w-[80px] text-right">Action</TableHead>
@@ -755,7 +757,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                 {table.assignments.length === 0 ? (
                                                     <TableRow>
                                                         <TableCell
-                                                            colSpan={4}
+                                                            colSpan={5}
                                                             className="py-6 text-center text-sm text-slate-500"
                                                         >
                                                             No participants assigned yet.
@@ -782,6 +784,9 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                                         </div>
                                                                     </div>
                                                                 </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-slate-700 dark:text-slate-300">
+                                                                #{assignment.seat_number}
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Badge variant="secondary">
