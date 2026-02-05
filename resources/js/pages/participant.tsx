@@ -817,7 +817,7 @@ export default function ParticipantPage(props: PageProps) {
     const [qrDataUrls, setQrDataUrls] = React.useState<Record<number, string>>({});
     const qrCacheRef = React.useRef<Record<number, string>>({});
 
-        async function ensureQrForParticipants(list: ParticipantRow[]) {
+    async function ensureQrForParticipants(list: ParticipantRow[]) {
         // only generate for non-CHED participants with qr_payload
         const pending = list.filter(
             (p) => !isChedParticipant(p) && !!p.qr_payload && !qrCacheRef.current[p.id],
@@ -2171,193 +2171,229 @@ export default function ParticipantPage(props: PageProps) {
 
             {/* -------------------- Participant Dialog -------------------- */}
             <Dialog open={participantDialogOpen} onOpenChange={setParticipantDialogOpen}>
-                <DialogContent className="sm:max-w-[560px]">
+                <DialogContent
+                    className={cn(
+                        // ✅ bigger + responsive
+                        'flex max-h-[90vh] w-[calc(100vw-1.5rem)] flex-col overflow-hidden',
+                        // ✅ large width (adjust if you want wider)
+                        'sm:max-w-4xl lg:max-w-5xl',
+                    )}
+                >
                     <DialogHeader>
                         <DialogTitle>{editingParticipant ? 'Edit Participant' : 'Add Participant'}</DialogTitle>
                         <DialogDescription>Fill out the participant details below.</DialogDescription>
                     </DialogHeader>
 
-                    <form onSubmit={submitParticipant} className="space-y-4">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="space-y-1.5 sm:col-span-2">
-                                <div className="text-sm font-medium">Full name  <span className="text-[11px] font-semibold text-red-600"> *</span></div>
-                                <Input
-                                    value={participantForm.data.full_name}
-                                    onChange={(e) => participantForm.setData('full_name', e.target.value)}
-                                    placeholder="e.g. Juan Dela Cruz"
-                                />
-                                {participantForm.errors.full_name ? (
-                                    <div className="text-xs text-red-600">{participantForm.errors.full_name}</div>
-                                ) : null}
-                            </div>
-
-                            <div className="space-y-1.5 sm:col-span-2">
-                                <div className="text-sm font-medium">Email  <span className="text-[11px] font-semibold text-red-600"> *</span></div>
-                                <Input
-                                    value={participantForm.data.email}
-                                    onChange={(e) => participantForm.setData('email', e.target.value)}
-                                    placeholder="e.g. juan@example.com"
-                                />
-                                {!editingParticipant ? (
-                                    <div className="text-xs text-slate-500">
-                                        We will send the welcome email with the participant QR badge after you create the record.
-                                    </div>
-                                ) : null}
-                                {participantForm.errors.email ? <div className="text-xs text-red-600">{participantForm.errors.email}</div> : null}
-                            </div>
-
-                            <div className="space-y-1.5 sm:col-span-2">
-                                <div className="text-sm font-medium">Contact number</div>
-                                <Input
-                                    type="tel"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    value={participantForm.data.contact_number}
-                                    onChange={(e) => participantForm.setData('contact_number', e.target.value)}
-                                    onInput={(event) => {
-                                        event.currentTarget.value = event.currentTarget.value.replace(/[^0-9]/g, '');
-                                    }}
-                                    placeholder="e.g. 639123456789"
-                                />
-                                {participantForm.errors.contact_number ? (
-                                    <div className="text-xs text-red-600">{participantForm.errors.contact_number}</div>
-                                ) : null}
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <div className="text-sm font-medium">Country</div>
-                                <Select value={participantForm.data.country_id} onValueChange={(v) => participantForm.setData('country_id', v)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select country" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {countries
-                                            .filter((c) => c.is_active)
-                                            .map((c) => (
-                                                <SelectItem key={c.id} value={String(c.id)}>
-                                                    <div className="flex items-center gap-2">
-                                                        <FlagThumb country={c} size={18} />
-                                                        <span>{c.name}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                    </SelectContent>
-                                </Select>
-                                {participantForm.errors.country_id ? <div className="text-xs text-red-600">{participantForm.errors.country_id}</div> : null}
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <div className="text-sm font-medium">User type</div>
-                                <Select value={participantForm.data.user_type_id} onValueChange={(v) => participantForm.setData('user_type_id', v)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {userTypes
-                                            .filter((u) => u.is_active)
-                                            .map((u) => (
-                                                <SelectItem key={u.id} value={String(u.id)}>
-                                                    {u.name}
-                                                </SelectItem>
-                                            ))}
-                                    </SelectContent>
-                                </Select>
-                                {participantForm.errors.user_type_id ? <div className="text-xs text-red-600">{participantForm.errors.user_type_id}</div> : null}
-                            </div>
-
-                            {showFoodRestrictionsField ? (
-                                <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                    <div className="space-y-0.5">
-                                        <div className="text-sm font-medium">Food restrictions</div>
-                                        <div className="text-xs text-slate-600 dark:text-slate-400">
-                                            Select all applicable food restrictions.
+                    {/* ✅ Make body scrollable, keep footer visible */}
+                    <form onSubmit={submitParticipant} className="flex flex-1 flex-col overflow-hidden">
+                        <div className="flex-1 overflow-y-auto pr-1">
+                            <div className="space-y-4">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">
+                                            Full name <span className="text-[11px] font-semibold text-red-600"> *</span>
                                         </div>
+                                        <Input
+                                            value={participantForm.data.full_name}
+                                            onChange={(e) => participantForm.setData('full_name', e.target.value)}
+                                            placeholder="e.g. Juan Dela Cruz"
+                                        />
+                                        {participantForm.errors.full_name ? (
+                                            <div className="text-xs text-red-600">{participantForm.errors.full_name}</div>
+                                        ) : null}
                                     </div>
-                                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                        {FOOD_RESTRICTION_OPTIONS.map((option) => {
-                                            const checked = participantForm.data.food_restrictions.includes(option.value);
 
-                                            return (
-                                                <label
-                                                    key={option.value}
-                                                    className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm dark:border-slate-700"
-                                                >
-                                                    <Checkbox
-                                                        checked={checked}
-                                                        onCheckedChange={(value) => {
-                                                            const current = participantForm.data.food_restrictions;
-
-                                                            if (value) {
-                                                                participantForm.setData(
-                                                                    'food_restrictions',
-                                                                    current.includes(option.value)
-                                                                        ? current
-                                                                        : [...current, option.value],
-                                                                );
-                                                                return;
-                                                            }
-
-                                                            participantForm.setData(
-                                                                'food_restrictions',
-                                                                current.filter((item) => item !== option.value),
-                                                            );
-                                                        }}
-                                                    />
-                                                    <span>{option.label}</span>
-                                                </label>
-                                            );
-                                        })}
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">
+                                            Email <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </div>
+                                        <Input
+                                            value={participantForm.data.email}
+                                            onChange={(e) => participantForm.setData('email', e.target.value)}
+                                            placeholder="e.g. juan@example.com"
+                                        />
+                                        {!editingParticipant ? (
+                                            <div className="text-xs text-slate-500">
+                                                We will send the welcome email with the participant QR badge after you create the record.
+                                            </div>
+                                        ) : null}
+                                        {participantForm.errors.email ? (
+                                            <div className="text-xs text-red-600">{participantForm.errors.email}</div>
+                                        ) : null}
                                     </div>
+
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Contact number</div>
+                                        <Input
+                                            type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={participantForm.data.contact_number}
+                                            onChange={(e) => participantForm.setData('contact_number', e.target.value)}
+                                            onInput={(event) => {
+                                                event.currentTarget.value = event.currentTarget.value.replace(/[^0-9]/g, '');
+                                            }}
+                                            placeholder="e.g. 639123456789"
+                                        />
+                                        {participantForm.errors.contact_number ? (
+                                            <div className="text-xs text-red-600">{participantForm.errors.contact_number}</div>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Country</div>
+                                        <Select
+                                            value={participantForm.data.country_id}
+                                            onValueChange={(v) => participantForm.setData('country_id', v)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select country" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {countries
+                                                    .filter((c) => c.is_active)
+                                                    .map((c) => (
+                                                        <SelectItem key={c.id} value={String(c.id)}>
+                                                            <div className="flex items-center gap-2">
+                                                                <FlagThumb country={c} size={18} />
+                                                                <span>{c.name}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {participantForm.errors.country_id ? (
+                                            <div className="text-xs text-red-600">{participantForm.errors.country_id}</div>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">User type</div>
+                                        <Select
+                                            value={participantForm.data.user_type_id}
+                                            onValueChange={(v) => participantForm.setData('user_type_id', v)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select type" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {userTypes
+                                                    .filter((u) => u.is_active)
+                                                    .map((u) => (
+                                                        <SelectItem key={u.id} value={String(u.id)}>
+                                                            {u.name}
+                                                        </SelectItem>
+                                                    ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {participantForm.errors.user_type_id ? (
+                                            <div className="text-xs text-red-600">{participantForm.errors.user_type_id}</div>
+                                        ) : null}
+                                    </div>
+
+                                    {showFoodRestrictionsField ? (
+                                        <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                            <div className="space-y-0.5">
+                                                <div className="text-sm font-medium">Food restrictions</div>
+                                                <div className="text-xs text-slate-600 dark:text-slate-400">
+                                                    Select all applicable food restrictions.
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                {FOOD_RESTRICTION_OPTIONS.map((option) => {
+                                                    const checked = participantForm.data.food_restrictions.includes(option.value);
+
+                                                    return (
+                                                        <label
+                                                            key={option.value}
+                                                            className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm dark:border-slate-700"
+                                                        >
+                                                            <Checkbox
+                                                                checked={checked}
+                                                                onCheckedChange={(value) => {
+                                                                    const current = participantForm.data.food_restrictions;
+
+                                                                    if (value) {
+                                                                        participantForm.setData(
+                                                                            'food_restrictions',
+                                                                            current.includes(option.value)
+                                                                                ? current
+                                                                                : [...current, option.value],
+                                                                        );
+                                                                        return;
+                                                                    }
+
+                                                                    participantForm.setData(
+                                                                        'food_restrictions',
+                                                                        current.filter((item) => item !== option.value),
+                                                                    );
+                                                                }}
+                                                            />
+                                                            <span>{option.label}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ) : null}
+
+                                    <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                        <div className="space-y-0.5">
+                                            <div className="text-sm font-medium">Active</div>
+                                            <div className="text-xs text-slate-600 dark:text-slate-400">
+                                                Inactive users will not appear in active selection lists.
+                                            </div>
+                                        </div>
+                                        <Switch
+                                            checked={participantForm.data.is_active}
+                                            onCheckedChange={(v) => participantForm.setData('is_active', !!v)}
+                                        />
+                                    </div>
+
+                                    {editingParticipant ? (
+                                        <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                            <div className="text-sm font-medium">Consents</div>
+                                            <div className="mt-2 grid gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span>Contact Information Sharing</span>
+                                                    <Badge
+                                                        className={cn(
+                                                            'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
+                                                            editingParticipant.consent_contact_sharing
+                                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                        )}
+                                                    >
+                                                        {editingParticipant.consent_contact_sharing ? 'Consented' : 'Not consented'}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span>Photo and Videos Consent</span>
+                                                    <Badge
+                                                        className={cn(
+                                                            'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
+                                                            editingParticipant.consent_photo_video
+                                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                                                        )}
+                                                    >
+                                                        {editingParticipant.consent_photo_video ? 'Consented' : 'Not consented'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                 </div>
-                            ) : null}
-
-                            <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                <div className="space-y-0.5">
-                                    <div className="text-sm font-medium">Active</div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400">
-                                        Inactive users will not appear in active selection lists.
-                                    </div>
-                                </div>
-                                <Switch checked={participantForm.data.is_active} onCheckedChange={(v) => participantForm.setData('is_active', !!v)} />
                             </div>
-
-                            {editingParticipant ? (
-                                <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
-                                    <div className="text-sm font-medium">Consents</div>
-                                    <div className="mt-2 grid gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <span>Contact Information Sharing</span>
-                                            <Badge
-                                                className={cn(
-                                                    'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
-                                                    editingParticipant.consent_contact_sharing
-                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
-                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                                                )}
-                                            >
-                                                {editingParticipant.consent_contact_sharing ? 'Consented' : 'Not consented'}
-                                            </Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-3">
-                                            <span>Photo and Videos Consent</span>
-                                            <Badge
-                                                className={cn(
-                                                    'rounded-full border border-transparent px-2.5 py-1 text-[11px]',
-                                                    editingParticipant.consent_photo_video
-                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
-                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                                                )}
-                                            >
-                                                {editingParticipant.consent_photo_video ? 'Consented' : 'Not consented'}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : null}
                         </div>
 
-                        <DialogFooter className="gap-2 sm:gap-0">
-                            <Button type="button" variant="outline" onClick={() => setParticipantDialogOpen(false)} disabled={participantForm.processing}>
+                        <DialogFooter className="mt-4 gap-2 border-t border-slate-200/70 pt-4 sm:gap-0 dark:border-slate-800">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setParticipantDialogOpen(false)}
+                                disabled={participantForm.processing}
+                            >
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={participantForm.processing} className={PRIMARY_BTN}>
@@ -2367,6 +2403,7 @@ export default function ParticipantPage(props: PageProps) {
                     </form>
                 </DialogContent>
             </Dialog>
+
 
             {/* -------------------- Country Dialog (flag upload) -------------------- */}
             <Dialog open={countryDialogOpen} onOpenChange={setCountryDialogOpen}>
