@@ -6,6 +6,7 @@ use App\Models\TransportVehicle;
 use App\Models\User;
 use App\Models\VehicleAssignment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class VehicleAssignmentController extends Controller
@@ -15,12 +16,7 @@ class VehicleAssignmentController extends Controller
         $participants = User::with('userType')
             ->orderBy('name')
             ->get()
-            ->filter(function (User $user) {
-                $name = strtoupper($user->userType?->name ?? '');
-                $slug = strtoupper($user->userType?->slug ?? '');
-
-                return $name !== 'CHED' && $slug !== 'CHED';
-            })
+            ->filter(fn (User $user) => ! $this->isChedAdminType($user))
             ->map(fn (User $user) => [
                 'id' => $user->id,
                 'full_name' => $user->name,
@@ -116,5 +112,16 @@ class VehicleAssignmentController extends Controller
         ]);
 
         return back();
+    }
+
+
+    private function isChedAdminType(User $user): bool
+    {
+        $value = Str::of((string) ($user->userType?->slug ?: $user->userType?->name))
+            ->upper()
+            ->replace(['_', '-'], ' ')
+            ->trim();
+
+        return $value === 'CHED' || $value->startsWith('CHED ');
     }
 }
