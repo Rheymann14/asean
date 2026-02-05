@@ -2,41 +2,47 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Programme;
 use App\Models\TransportVehicle;
 use App\Models\User;
 use App\Models\VehicleAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class VehicleAssignmentController extends Controller
 {
-    public function index()
+    public function managementIndex(Request $request)
     {
-        $participants = User::with('userType')
-            ->orderBy('name')
-            ->get()
-            ->filter(fn (User $user) => ! $this->isChedAdminType($user))
-            ->map(fn (User $user) => [
-                'id' => $user->id,
-                'full_name' => $user->name,
-                'email' => $user->email,
-            ])
-            ->values();
+        $events = Programme::query()->orderBy('starts_at')->orderBy('title')->get();
+        $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
 
         $vehicles = TransportVehicle::query()
-            ->latest('created_at')
+            ->with(['incharge'])
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->orderBy('label')
             ->get()
             ->map(fn (TransportVehicle $vehicle) => [
                 'id' => $vehicle->id,
                 'label' => $vehicle->label,
-                'plate_number' => $vehicle->plate_number,
-                'capacity' => $vehicle->capacity,
+                'driver_name' => $vehicle->driver_name,
+                'driver_contact_number' => $vehicle->driver_contact_number,
+                'incharge' => $vehicle->incharge
+                    ? [
+                        'id' => $vehicle->incharge->id,
+                        'full_name' => $vehicle->incharge->name,
+                        'email' => $vehicle->incharge->email,
+                    ]
+                    : null,
+                'created_at' => $vehicle->created_at?->toISOString(),
             ]);
 
-        $drivers = User::with('userType')
+        $chedLoUsers = User::query()
+            ->with('userType')
             ->orderBy('name')
             ->get()
+            ->filter(fn (User $user) => $this->isChedLoType($user))
             ->map(fn (User $user) => [
                 'id' => $user->id,
                 'full_name' => $user->name,
@@ -44,84 +50,195 @@ class VehicleAssignmentController extends Controller
             ])
             ->values();
 
-        $assignments = VehicleAssignment::with(['user', 'driver', 'vehicle'])
-            ->latest('updated_at')
+        return Inertia::render('vehicle-management', [
+            'events' => $events->map(fn (Programme $event) => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'starts_at' => $event->starts_at?->toISOString(),
+                'ends_at' => $event->ends_at?->toISOString(),
+                'is_active' => (bool) $event->is_active,
+            ]),
+            'selected_event_id' => $selectedEventId ?: null,
+            'vehicles' => $vehicles,
+            'ched_lo_users' => $chedLoUsers,
+        ]);
+    }
+
+    public function assignmentIndex(Request $request)
+    {
+        $events = Programme::query()->orderBy('starts_at')->orderBy('title')->get();
+        $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
+
+        $vehicles = TransportVehicle::query()
+            ->with('incharge')
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->orderBy('label')
             ->get()
-            ->map(fn (VehicleAssignment $assignment) => [
-                'id' => $assignment->id,
-                'participant' => $assignment->user
+            ->map(fn (TransportVehicle $vehicle) => [
+                'id' => $vehicle->id,
+                'label' => $vehicle->label,
+                'driver_name' => $vehicle->driver_name,
+                'driver_contact_number' => $vehicle->driver_contact_number,
+                'incharge' => $vehicle->incharge
                     ? [
-                        'id' => $assignment->user->id,
-                        'full_name' => $assignment->user->name,
-                        'email' => $assignment->user->email,
+                        'id' => $vehicle->incharge->id,
+                        'full_name' => $vehicle->incharge->name,
                     ]
                     : null,
-                'driver' => $assignment->driver
-                    ? [
-                        'id' => $assignment->driver->id,
-                        'full_name' => $assignment->driver->name,
-                        'email' => $assignment->driver->email,
-                    ]
-                    : null,
-                'vehicle' => $assignment->vehicle
-                    ? [
-                        'id' => $assignment->vehicle->id,
-                        'label' => $assignment->vehicle->label,
-                        'plate_number' => $assignment->vehicle->plate_number,
-                        'capacity' => $assignment->vehicle->capacity,
-                    ]
-                    : null,
-                'vehicle_label' => $assignment->vehicle_label,
-                'pickup_status' => $assignment->pickup_status,
-                'pickup_location' => $assignment->pickup_location,
-                'pickup_at' => $assignment->pickup_at?->toISOString(),
-                'dropoff_location' => $assignment->dropoff_location,
-                'dropoff_at' => $assignment->dropoff_at?->toISOString(),
-                'notify_admin' => $assignment->notify_admin,
-                'updated_at' => $assignment->updated_at?->toISOString(),
             ]);
 
-        return Inertia::render('vehicle-management', [
-            'participants' => $participants,
-            'drivers' => $drivers,
+        $participants = User::query()
+            ->with(['country', 'userType'])
+            ->when(
+                $selectedEventId,
+                fn ($query) => $query->whereHas('joinedProgrammes', fn ($subQuery) => $subQuery->where('programmes.id', $selectedEventId))
+            )
+            ->where(function ($query) {
+                $query->whereDoesntHave('userType')
+                    ->orWhereHas('userType', function ($subQuery) {
+                        $subQuery->where(function ($nameQuery) {
+                            $nameQuery->whereNull('name')->orWhereRaw("UPPER(name) NOT LIKE 'CHED%'");
+                        })->where(function ($slugQuery) {
+                            $slugQuery->whereNull('slug')->orWhereRaw("UPPER(slug) NOT LIKE 'CHED%'");
+                        });
+                    });
+            })
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $participant) use ($selectedEventId) {
+                $assignment = VehicleAssignment::query()
+                    ->with('vehicle')
+                    ->where('programme_id', $selectedEventId)
+                    ->where('user_id', $participant->id)
+                    ->first();
+
+                return [
+                    'id' => $participant->id,
+                    'full_name' => $participant->name,
+                    'email' => $participant->email,
+                    'country' => $participant->country
+                        ? [
+                            'id' => $participant->country->id,
+                            'code' => $participant->country->code,
+                            'name' => $participant->country->name,
+                            'flag_url' => $participant->country->flag_url,
+                        ]
+                        : null,
+                    'user_type' => $participant->userType
+                        ? [
+                            'id' => $participant->userType->id,
+                            'name' => $participant->userType->name,
+                            'slug' => $participant->userType->slug,
+                        ]
+                        : null,
+                    'assignment' => $assignment
+                        ? [
+                            'id' => $assignment->id,
+                            'vehicle_id' => $assignment->vehicle_id,
+                            'vehicle_label' => $assignment->vehicle?->label ?: $assignment->vehicle_label,
+                            'pickup_status' => $assignment->pickup_status,
+                            'pickup_location' => $assignment->pickup_location,
+                            'pickup_at' => $assignment->pickup_at?->toISOString(),
+                            'dropoff_location' => $assignment->dropoff_location,
+                            'dropoff_at' => $assignment->dropoff_at?->toISOString(),
+                        ]
+                        : null,
+                ];
+            });
+
+        return Inertia::render('vehicle-assignment', [
+            'events' => $events->map(fn (Programme $event) => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'starts_at' => $event->starts_at?->toISOString(),
+                'ends_at' => $event->ends_at?->toISOString(),
+                'is_active' => (bool) $event->is_active,
+            ]),
+            'selected_event_id' => $selectedEventId ?: null,
             'vehicles' => $vehicles,
-            'assignments' => $assignments,
+            'participants' => $participants,
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'vehicle_id' => ['required', 'exists:transport_vehicles,id'],
-            'driver_user_id' => ['required', 'exists:users,id'],
-            'vehicle_label' => ['nullable', 'string', 'max:255'],
-            'pickup_status' => ['required', 'in:pending,picked_up,dropped_off'],
-            'pickup_location' => ['nullable', 'string', 'max:255'],
-            'pickup_at' => ['nullable', 'date'],
-            'dropoff_location' => ['nullable', 'string', 'max:255'],
-            'dropoff_at' => ['nullable', 'date'],
-            'notify_admin' => ['nullable', 'boolean'],
+            'programme_id' => ['required', 'exists:programmes,id'],
+            'vehicle_id' => [
+                'required',
+                Rule::exists('transport_vehicles', 'id')->where('programme_id', $request->input('programme_id')),
+            ],
+            'participant_ids' => ['required', 'array', 'min:1'],
+            'participant_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        VehicleAssignment::create($validated + [
-            'vehicle_label' => $validated['vehicle_label'] ?: optional(
-                TransportVehicle::find($validated['vehicle_id'])
-            )->label,
-            'notify_admin' => $validated['notify_admin'] ?? false,
+        $vehicle = TransportVehicle::query()->findOrFail($validated['vehicle_id']);
+
+        $participantIds = collect($validated['participant_ids'])->unique()->values();
+
+        foreach ($participantIds as $participantId) {
+            VehicleAssignment::updateOrCreate(
+                [
+                    'programme_id' => $validated['programme_id'],
+                    'user_id' => $participantId,
+                ],
+                [
+                    'vehicle_id' => $vehicle->id,
+                    'driver_user_id' => $vehicle->incharge_user_id,
+                    'vehicle_label' => $vehicle->label,
+                ],
+            );
+        }
+
+        return back();
+    }
+
+    public function destroy(VehicleAssignment $vehicleAssignment)
+    {
+        $vehicleAssignment->delete();
+
+        return back();
+    }
+
+    public function storePickup(Request $request, VehicleAssignment $vehicleAssignment)
+    {
+        $validated = $request->validate([
+            'pickup_location' => ['required', 'string', 'max:255'],
+            'pickup_at' => ['required', 'date'],
+        ]);
+
+        $vehicleAssignment->update([
+            'pickup_location' => $validated['pickup_location'],
+            'pickup_at' => $validated['pickup_at'],
+            'pickup_status' => 'picked_up',
         ]);
 
         return back();
     }
 
+    public function storeDropoff(Request $request, VehicleAssignment $vehicleAssignment)
+    {
+        $validated = $request->validate([
+            'dropoff_location' => ['required', 'string', 'max:255'],
+            'dropoff_at' => ['required', 'date'],
+        ]);
 
-    private function isChedAdminType(User $user): bool
+        $vehicleAssignment->update([
+            'dropoff_location' => $validated['dropoff_location'],
+            'dropoff_at' => $validated['dropoff_at'],
+            'pickup_status' => 'dropped_off',
+        ]);
+
+        return back();
+    }
+
+    private function isChedLoType(User $user): bool
     {
         $value = Str::of((string) ($user->userType?->slug ?: $user->userType?->name))
             ->upper()
             ->replace(['_', '-'], ' ')
             ->trim();
 
-        return $value === 'CHED' || $value->startsWith('CHED ');
+        return $value === 'CHED LO' || $value->startsWith('CHED LO ');
     }
 }
