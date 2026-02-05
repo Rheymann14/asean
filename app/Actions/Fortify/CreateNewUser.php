@@ -2,10 +2,8 @@
 
 namespace App\Actions\Fortify;
 
-use App\Mail\ParticipantWelcomeMail;
 use App\Models\User;
-use App\Services\SemaphoreSms;
-use Illuminate\Support\Facades\Mail;
+use App\Services\WelcomeNotificationService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -56,8 +54,7 @@ class CreateNewUser implements CreatesNewUsers
             $user->joinedProgrammes()->sync($programmeIds);
         }
 
-        rescue(fn () => Mail::to($user->email)->send(new ParticipantWelcomeMail($user)), report: true);
-        app(SemaphoreSms::class)->sendWelcome($user);
+        app(WelcomeNotificationService::class)->dispatch($user);
 
         return $user;
     }

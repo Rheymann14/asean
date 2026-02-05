@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\ParticipantWelcomeMail;
 use App\Models\Country;
 use App\Models\ParticipantAttendance;
 use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
-use App\Services\SemaphoreSms;
+use App\Services\WelcomeNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -148,8 +146,7 @@ class ParticipantController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ])->refresh();
 
-        rescue(fn () => Mail::to($user->email)->send(new ParticipantWelcomeMail($user)), report: true);
-        app(SemaphoreSms::class)->sendWelcome($user);
+        app(WelcomeNotificationService::class)->dispatch($user);
 
         return back();
     }
