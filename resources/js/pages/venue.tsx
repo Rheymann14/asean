@@ -301,6 +301,18 @@ export default function Venue({ venues = [], section }: PageProps) {
         setImgError(false);
     }, [activeImageSrc]);
 
+    const firstVenueId = eventVenues[0]?.id ?? '';
+    const [activeVenueId, setActiveVenueId] = React.useState(firstVenueId);
+
+    // keep active tab valid if venues change
+    React.useEffect(() => {
+        if (!firstVenueId) return;
+
+        const stillExists = eventVenues.some((v) => v.id === activeVenueId);
+        if (!stillExists) setActiveVenueId(firstVenueId);
+    }, [firstVenueId, eventVenues, activeVenueId]);
+
+
     return (
         <>
             <Head title="Venue" />
@@ -352,57 +364,83 @@ export default function Venue({ venues = [], section }: PageProps) {
                                 </div>
                             </Card>
                         ) : (
-                            <Tabs defaultValue={eventVenues[0]?.id ?? ''} className="w-full">
+                            <Tabs value={activeVenueId} onValueChange={setActiveVenueId} className="w-full">
                                 <div className="flex items-center justify-center">
-                                    <TabsList
-                                        className={[
-                                            'h-auto w-full max-w-6xl justify-start items-stretch gap-1.5 rounded-2xl border border-slate-200/70 bg-white/70 p-1.5',
-                                            'shadow-[0_10px_30px_-28px_rgba(2,6,23,0.25)] backdrop-blur-md',
-                                            'overflow-x-auto overflow-y-hidden',
-                                            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-we {item.title}bkit-scrollbar]:hidden',
-                                            'dark:border-white/10 dark:bg-slate-900/40',
-                                        ].join(' ')}
-                                    >
+                                    <div className="relative w-full max-w-6xl">
+                                        {/* subtle edge fades (mobile) */}
+                                        <div
+                                            aria-hidden
+                                            className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-white/90 to-transparent dark:from-slate-950/70 md:hidden"
+                                        />
+                                        <div
+                                            aria-hidden
+                                            className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-white/90 to-transparent dark:from-slate-950/70 md:hidden"
+                                        />
 
-                                        {eventVenues.map((ev) => (
-                                            <TabsTrigger
-                                                key={ev.id}
-                                                value={ev.id}
-                                                title={ev.label}
-                                                className={[
-                                                    // ✅ allow long titles (2 lines)
-                                                    'shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide leading-snug',
-                                                    'whitespace-normal text-center',
-                                                    // ✅ wider cap but still responsive
-                                                    'max-w-[min(18rem,calc(100vw-6rem))]',
-                                                    // ✅ states
-                                                    'data-[state=inactive]:text-slate-700 data-[state=inactive]:hover:bg-slate-100/80',
-                                                    'data-[state=active]:bg-[#0033A0] data-[state=active]:text-white',
-                                                    'dark:data-[state=inactive]:text-slate-200 dark:data-[state=inactive]:hover:bg-white/10',
-                                                    // ✅ accessibility
-                                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/35 focus-visible:ring-offset-2',
-                                                    'ring-offset-white dark:ring-offset-slate-950',
-                                                ].join(' ')}
-                                            >
-                                                <span className="block line-clamp-2 break-words [overflow-wrap:anywhere]">
-                                                    {ev.label}
-                                                </span>
-                                            </TabsTrigger>
-                                        ))}
+                                        <TabsList
+                                            className={[
+                                                'h-auto w-full items-center justify-start gap-2 rounded-2xl border border-slate-200/70 bg-white/70 p-2',
+                                                'shadow-[0_10px_30px_-28px_rgba(2,6,23,0.25)] backdrop-blur-md',
+                                                // ✅ mobile horizontal scroll
+                                                'overflow-x-auto overflow-y-hidden scroll-smooth',
+                                                'snap-x snap-mandatory',
+                                                '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                                                'dark:border-white/10 dark:bg-slate-900/40',
+                                            ].join(' ')}
+                                        >
+                                            {eventVenues.map((ev) => (
+                                                <TabsTrigger
+                                                    key={ev.id}
+                                                    value={ev.id}
+                                                    title={ev.label}
+                                                    className={[
+                                                        // ✅ fixed height prevents “circle balloon” tabs
+                                                        'snap-start shrink-0',
+                                                        'h-12 rounded-xl px-3',
+                                                        // ✅ readable width on mobile, auto on desktop
+                                                        'w-[11.5rem] sm:w-auto sm:max-w-[18rem]',
+                                                        // ✅ allow 2-line titles (no crazy wrapping)
+                                                        'whitespace-normal text-center',
+                                                        'text-[11px] font-semibold leading-tight tracking-wide',
+                                                        // ✅ states
+                                                        'data-[state=inactive]:text-slate-700 data-[state=inactive]:hover:bg-slate-100/80',
+                                                        'data-[state=active]:bg-[#0033A0] data-[state=active]:text-white',
+                                                        'dark:data-[state=inactive]:text-slate-200 dark:data-[state=inactive]:hover:bg-white/10',
+                                                        // ✅ focus
+                                                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/35 focus-visible:ring-offset-2',
+                                                        'ring-offset-white dark:ring-offset-slate-950',
+                                                    ].join(' ')}
+                                                >
+                                                    <span
+                                                        className={[
+                                                            'block min-w-0',
+                                                            // ✅ mobile: single line with ellipsis
+                                                            'truncate',
+                                                            // ✅ sm+: allow up to 2 lines (no plugin needed)
+                                                            'sm:whitespace-normal sm:overflow-hidden',
+                                                            'sm:[display:-webkit-box] sm:[-webkit-box-orient:vertical] sm:[-webkit-line-clamp:2]',
+                                                        ].join(' ')}
+                                                    >
+                                                        {ev.label}
+                                                    </span>
 
-                                    </TabsList>
+                                                </TabsTrigger>
+                                            ))}
+                                        </TabsList>
+                                    </div>
                                 </div>
 
                                 <div className="mt-6">
                                     {eventVenues.map((ev) => (
                                         <TabsContent key={ev.id} value={ev.id} className="m-0 outline-none">
-                                            <div key={ev.id} className="animate-in fade-in-0 duration-300">
+                                            <div className="animate-in fade-in-0 duration-300">
                                                 <EventVenuePanel event={ev} />
                                             </div>
                                         </TabsContent>
                                     ))}
                                 </div>
                             </Tabs>
+
                         )}
                     </div>
 
