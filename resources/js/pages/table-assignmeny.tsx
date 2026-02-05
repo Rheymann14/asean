@@ -255,7 +255,8 @@ export default function TableAssignmenyPage(props: PageProps) {
     const userType = auth.user?.user_type ?? auth.user?.userType;
     const roleName = (userType?.name ?? '').toUpperCase();
     const roleSlug = (userType?.slug ?? '').toUpperCase();
-    const isChed = roleName === 'CHED' || roleSlug === 'CHED';
+    const roleValue = `${roleSlug || roleName}`.replace(/[_-]+/g, ' ').trim();
+    const isChedAdmin = roleValue === 'CHED' || roleValue.startsWith('CHED ');
     const chedView = props.view === 'assignment' ? 'assignment' : 'create';
     const tables = props.tables ?? [];
     const participants = props.participants ?? [];
@@ -316,7 +317,7 @@ export default function TableAssignmenyPage(props: PageProps) {
         tableForm.clearErrors();
         assignmentForm.clearErrors();
 
-        const destination = isChed ? chedBasePath : '/table-assignment';
+        const destination = isChedAdmin ? chedBasePath : '/table-assignment';
         router.get(destination, { event_id: selectedEventId || undefined }, { preserveScroll: true, preserveState: true, replace: true });
     }, [selectedEventId]);
 
@@ -889,11 +890,11 @@ export default function TableAssignmenyPage(props: PageProps) {
                             <div className="flex items-center gap-2">
                                 <TableIcon className="h-5 w-5 text-[#00359c]" />
                                 <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                                    {isChed && chedView === 'create' ? 'Table Management' : 'Table Assignment'}
+                                    {isChedAdmin && chedView === 'create' ? 'Table Management' : 'Table Assignment'}
                                 </h1>
                             </div>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                                {isChed && chedView === 'create'
+                                {isChedAdmin && chedView === 'create'
                                     ? 'Create tables, set capacities, and review seating plans.'
                                     : 'Assign participants to tables, manage capacities, and track seating.'}
                             </p>
@@ -903,7 +904,7 @@ export default function TableAssignmenyPage(props: PageProps) {
               
                 </div>
 
-                {isChed ? (
+                {isChedAdmin ? (
                     chedView === 'assignment' ? (
                         <>
                             <div className="grid gap-6">

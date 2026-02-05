@@ -29,20 +29,11 @@ import {
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useInitials } from '@/hooks/use-initials';
 import { cn, isSameUrl, resolveUrl } from '@/lib/utils';
-import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
 
 const rightNavItems: NavItem[] = [
     {
@@ -68,6 +59,19 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
     const getInitials = useInitials();
+    const userType = auth.user?.user_type ?? auth.user?.userType;
+    const roleName = (userType?.name ?? '').toUpperCase();
+    const roleSlug = (userType?.slug ?? '').toUpperCase();
+    const roleValue = `${roleSlug || roleName}`.replace(/[_-]+/g, ' ').trim();
+    const homeHref = roleValue === 'CHED' ? '/dashboard' : roleValue.startsWith('CHED ') ? '/table-assignment/create' : '/participant-dashboard';
+
+    const mainNavItems: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: homeHref,
+            icon: LayoutGrid,
+        },
+    ];
     return (
         <>
             <div className="border-b border-sidebar-border/80">
@@ -140,7 +144,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     </div>
 
                     <Link
-                        href={dashboard()}
+                        href={homeHref}
                         prefetch
                         className="flex items-center space-x-2"
                     >
