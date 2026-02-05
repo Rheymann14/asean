@@ -27,23 +27,11 @@ class TableAssignmentController extends Controller
 
     public function create(Request $request)
     {
-        $user = $request->user();
-
-        if (! $this->isChedAdmin($user)) {
-            return $this->participantIndex($request);
-        }
-
         return $this->chedIndex($request, 'create');
     }
 
     public function assignment(Request $request)
     {
-        $user = $request->user();
-
-        if (! $this->isChedAdmin($user)) {
-            return $this->participantIndex($request);
-        }
-
         return $this->chedIndex($request, 'assignment');
     }
 

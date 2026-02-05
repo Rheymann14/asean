@@ -52,8 +52,11 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
 
     Route::middleware(['auth'])->group(function () {
         Route::get('table-assignment', [TableAssignmentController::class, 'index'])->name('table-assignment');
-        Route::get('table-assignment/create', [TableAssignmentController::class, 'create'])->name('table-assignment.create');
+        Route::get('table-assignment/create', [TableAssignmentController::class, 'create'])
+            ->middleware(['verified', 'role:ched_admin'])
+            ->name('table-assignment.create');
         Route::get('table-assignment/assignment', [TableAssignmentController::class, 'assignment'])
+            ->middleware(['verified', 'role:ched_admin'])
             ->name('table-assignment.assignment');
 
         Route::middleware(['role:participant'])->group(function () {
