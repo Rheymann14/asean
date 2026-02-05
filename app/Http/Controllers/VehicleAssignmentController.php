@@ -340,11 +340,13 @@ class VehicleAssignmentController extends Controller
 
         $user->loadMissing('userType');
 
-        $value = Str::of((string) ($user->userType?->slug ?: $user->userType?->name))
-            ->upper()
-            ->replace(['_', '-'], ' ')
-            ->trim();
+        $roleName = Str::upper((string) ($user->userType?->name ?? ''));
+        $roleSlug = Str::upper((string) ($user->userType?->slug ?? ''));
 
-        return $value === 'CHED' || $value->startsWith('CHED ');
+        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
+        $isChedLo = in_array('CHED LO', [$roleName, $roleSlug], true)
+            || in_array('CHED-LO', [$roleSlug], true);
+
+        return $isChed || $isChedLo;
     }
 }
