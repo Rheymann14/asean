@@ -72,6 +72,24 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
                 ->name('event-list.clear');
         });
 
+    Route::middleware(['verified', 'role:ched_admin'])->group(function () {
+        Route::get('vehicle-management', [VehicleAssignmentController::class, 'index'])->name('vehicle-management');
+        Route::post('vehicle-assignments', [VehicleAssignmentController::class, 'store'])
+            ->name('vehicle-assignments.store');
+        Route::post('transport-vehicles', [TransportVehicleController::class, 'store'])
+            ->name('transport-vehicles.store');
+
+        Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
+        Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');
+        Route::delete('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'destroyTable'])
+            ->name('table-assignment.tables.destroy');
+        Route::post('table-assignment/assignments', [TableAssignmentController::class, 'storeAssignments'])->name('table-assignment.assignments.store');
+        Route::patch('table-assignment/assignments/{participantTableAssignment}', [TableAssignmentController::class, 'updateAssignment'])
+            ->name('table-assignment.assignments.update');
+        Route::delete('table-assignment/assignments/{participantTableAssignment}', [TableAssignmentController::class, 'destroyAssignment'])
+            ->name('table-assignment.assignments.destroy');
+    });
+
     Route::middleware(['verified', 'role:ched'])->group(function () {
         Route::get('dashboard', [DashboardController::class, 'show'])->name('dashboard');
         Route::get('participant', [ParticipantController::class, 'index'])->name('participant');
@@ -109,21 +127,6 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
             ->name('event-management.participants');
         Route::resource('programmes', ProgrammeController::class)->only(['store', 'update', 'destroy']);
 
-        Route::get('vehicle-management', [VehicleAssignmentController::class, 'index'])->name('vehicle-management');
-        Route::post('vehicle-assignments', [VehicleAssignmentController::class, 'store'])
-            ->name('vehicle-assignments.store');
-        Route::post('transport-vehicles', [TransportVehicleController::class, 'store'])
-            ->name('transport-vehicles.store');
-
-        Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
-        Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');
-        Route::delete('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'destroyTable'])
-            ->name('table-assignment.tables.destroy');
-        Route::post('table-assignment/assignments', [TableAssignmentController::class, 'storeAssignments'])->name('table-assignment.assignments.store');
-        Route::patch('table-assignment/assignments/{participantTableAssignment}', [TableAssignmentController::class, 'updateAssignment'])
-            ->name('table-assignment.assignments.update');
-        Route::delete('table-assignment/assignments/{participantTableAssignment}', [TableAssignmentController::class, 'destroyAssignment'])
-            ->name('table-assignment.assignments.destroy');
 
         Route::get('scanner', [ScannerController::class, 'index'])->name('scanner');
         Route::post('scanner/scan', [ScannerController::class, 'scan'])->name('scanner.scan');

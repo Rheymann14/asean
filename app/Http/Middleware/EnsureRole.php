@@ -24,12 +24,22 @@ class EnsureRole
         $roleName = Str::upper((string) ($user->userType->name ?? ''));
         $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
         $isChed = in_array('CHED', [$roleName, $roleSlug], true);
+        $isChedLo = in_array('CHED LO', [$roleName], true) || in_array('CHED-LO', [$roleSlug], true);
+        $isChedAdmin = $isChed || $isChedLo;
 
         if ($role === 'ched' && ! $isChed) {
             abort(403);
         }
 
-        if ($role === 'participant' && $isChed) {
+        if ($role === 'ched_lo' && ! $isChedLo) {
+            abort(403);
+        }
+
+        if ($role === 'ched_admin' && ! $isChedAdmin) {
+            abort(403);
+        }
+
+        if ($role === 'participant' && $isChedAdmin) {
             abort(403);
         }
 
