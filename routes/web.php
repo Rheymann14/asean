@@ -22,45 +22,6 @@ use App\Http\Controllers\VehicleAssignmentController;
 use App\Http\Controllers\TransportVehicleController;
 
 
-Route::get('/_brevo-test', function () {
-    // simple protection
-    abort_unless(request('key') === env('BREVO_TEST_KEY'), 403, 'Forbidden');
-
-    $to = request('to');
-    abort_unless($to, 400, 'Provide ?to=email@example.com');
-
-    $apiKey = env('BREVO_API_KEY');
-    abort_unless($apiKey, 500, 'BREVO_API_KEY is missing');
-
-    $config = Brevo\Client\Configuration::getDefaultConfiguration()
-        ->setApiKey('api-key', $apiKey);
-
-    $api = new Brevo\Client\Api\TransactionalEmailsApi(
-        new GuzzleHttp\Client(),
-        $config
-    );
-
-    $email = new Brevo\Client\Model\SendSmtpEmail([
-        'sender' => [
-            'name'  => 'ASEAN PH 2026',
-            'email' => 'ph2026@asean.chedro12.com', // must be verified in Brevo
-        ],
-        'to' => [[ 'email' => $to ]],
-        'subject'     => 'Test via Brevo API',
-        'htmlContent' => '<strong>Hello</strong>',
-        'textContent' => 'Hello',
-    ]);
-
-    try {
-        $result = $api->sendTransacEmail($email);
-        return response()->json($result);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'error' => true,
-            'message' => $e->getMessage(),
-        ], 500);
-    }
-});
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
