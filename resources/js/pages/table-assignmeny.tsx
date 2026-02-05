@@ -778,7 +778,8 @@ export default function TableAssignmenyPage(props: PageProps) {
                                             <TableHeader>
                                                 <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                                     <TableHead>Participant</TableHead>
-                                                    <TableHead className="w-[110px]">Seat no.</TableHead>
+                                                    <TableHead className="w-[120px]">Seat no.</TableHead>
+                                                    <TableHead className="w-[90px] text-center">Update</TableHead>
                                                     <TableHead className="w-[140px]">Role</TableHead>
                                                     <TableHead className="w-[180px]">Assigned at</TableHead>
                                                     <TableHead className="w-[80px] text-right">Action</TableHead>
@@ -788,7 +789,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                 {table.assignments.length === 0 ? (
                                                     <TableRow>
                                                         <TableCell
-                                                            colSpan={5}
+                                                            colSpan={6}
                                                             className="py-6 text-center text-sm text-slate-500"
                                                         >
                                                             No participants assigned yet.
@@ -845,6 +846,33 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                                         Save
                                                                     </Button>
                                                                 </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Input
+                                                                    type="number"
+                                                                    min={1}
+                                                                    max={table.capacity}
+                                                                    value={seatNumberDrafts[assignment.id] ?? ''}
+                                                                    onChange={(e) =>
+                                                                        setSeatNumberDrafts((prev) => ({
+                                                                            ...prev,
+                                                                            [assignment.id]: e.target.value,
+                                                                        }))
+                                                                    }
+                                                                    className="h-8 w-20"
+                                                                    disabled={isEventClosed}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => updateAssignmentSeat(assignment.id, table.capacity)}
+                                                                    disabled={isEventClosed}
+                                                                >
+                                                                    Save
+                                                                </Button>
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Badge variant="secondary">
