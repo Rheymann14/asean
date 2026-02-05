@@ -13,6 +13,7 @@ class TransportVehicleController extends Controller
             'programme_id' => ['required', 'exists:programmes,id'],
             'label' => ['required', 'string', 'max:255'],
             'driver_name' => ['required', 'string', 'max:255'],
+            'plate_number' => ['nullable', 'string', 'max:255'],
             'driver_contact_number' => ['required', 'string', 'max:50'],
             'incharge_user_id' => ['required', 'exists:users,id'],
         ]);

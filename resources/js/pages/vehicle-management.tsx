@@ -37,6 +37,7 @@ type VehicleRow = {
     id: number;
     label: string;
     driver_name: string | null;
+    plate_number: string | null;
     driver_contact_number: string | null;
     assignments_count: number;
     incharge: {
@@ -135,6 +136,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
         programme_id: selectedEventId,
         label: '',
         driver_name: '',
+        plate_number: '',
         driver_contact_number: '',
         incharge_user_id: ched_lo_users[0] ? String(ched_lo_users[0].id) : '',
     });
@@ -151,7 +153,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
             preserveScroll: true,
             onSuccess: () => {
                 toast.success('Vehicle added successfully.');
-                form.reset('label', 'driver_name', 'driver_contact_number');
+                form.reset('label', 'driver_name', 'plate_number', 'driver_contact_number');
             },
             onError: (errors) => showToastError(errors as Record<string, string | string[]>),
         });
@@ -221,6 +223,16 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                     {form.errors.driver_name ? <p className="text-xs text-rose-500">{form.errors.driver_name}</p> : null}
                                 </div>
                                 <div className="space-y-1">
+                                    <Label htmlFor="plate_number">Plate number</Label>
+                                    <Input
+                                        id="plate_number"
+                                        placeholder="ABC-1234"
+                                        value={form.data.plate_number}
+                                        onChange={(e) => form.setData('plate_number', e.target.value)}
+                                    />
+                                    {form.errors.plate_number ? <p className="text-xs text-rose-500">{form.errors.plate_number}</p> : null}
+                                </div>
+                                <div className="space-y-1">
                                     <Label htmlFor="driver_contact_number">Driver contact number <span className="text-[11px] font-semibold text-red-600">*</span></Label>
                                     <Input
                                         id="driver_contact_number"
@@ -266,6 +278,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                     <TableRow>
                                         <TableHead>Vehicle</TableHead>
                                         <TableHead>Driver</TableHead>
+                                        <TableHead>Plate #</TableHead>
                                         <TableHead>Contact</TableHead>
                                         <TableHead>CHED LO In Charge</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
@@ -277,6 +290,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                             <TableRow key={vehicle.id}>
                                                 <TableCell className="font-medium">{vehicle.label}</TableCell>
                                                 <TableCell>{vehicle.driver_name || '—'}</TableCell>
+                                                <TableCell>{vehicle.plate_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.driver_contact_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.incharge?.full_name || '—'}</TableCell>
                                                 <TableCell className="text-right">
@@ -300,7 +314,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="py-6 text-center text-slate-500">
+                                            <TableCell colSpan={6} className="py-6 text-center text-slate-500">
                                                 No vehicles yet for this event.
                                             </TableCell>
                                         </TableRow>

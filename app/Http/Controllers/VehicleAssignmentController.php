@@ -29,6 +29,7 @@ class VehicleAssignmentController extends Controller
                 'id' => $vehicle->id,
                 'label' => $vehicle->label,
                 'driver_name' => $vehicle->driver_name,
+                'plate_number' => $vehicle->plate_number,
                 'driver_contact_number' => $vehicle->driver_contact_number,
                 'incharge' => $vehicle->incharge
                     ? [
@@ -99,6 +100,7 @@ class VehicleAssignmentController extends Controller
                 'id' => $vehicle->id,
                 'label' => $vehicle->label,
                 'driver_name' => $vehicle->driver_name,
+                'plate_number' => $vehicle->plate_number,
                 'driver_contact_number' => $vehicle->driver_contact_number,
                 'incharge' => $vehicle->incharge
                     ? [

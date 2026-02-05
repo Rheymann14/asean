@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Assignment', href: '/vehicle-assignment' }];
 
 type EventRow = { id: number; title: string };
-type VehicleRow = { id: number; label: string };
+type VehicleRow = { id: number; label: string; plate_number?: string | null };
 type Assignment = {
     id: number;
     vehicle_id: number | null;
@@ -168,15 +168,22 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
             return;
         }
 
-        assignmentForm.setData('participant_ids', participantIds);
-        assignmentForm.post('/vehicle-assignments', {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success(successMessage);
-                setSelectedIds([]);
-            },
-            onError: (errors) => showToastError(errors as Record<string, string | string[]>),
-        });
+        assignmentForm
+            .transform((data) => ({
+                ...data,
+                participant_ids: participantIds,
+            }))
+            .post('/vehicle-assignments', {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(successMessage);
+                    setSelectedIds([]);
+                },
+                onError: (errors) => showToastError(errors as Record<string, string | string[]>),
+                onFinish: () => {
+                    assignmentForm.transform((data) => data);
+                },
+            });
     };
 
     const assignBulk = () => doAssign(selectedIds, 'Participants assigned to vehicle.');
@@ -253,7 +260,11 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                     placeholder="Select vehicle"
                                     searchPlaceholder="Search vehicles..."
                                     emptyText="No vehicles found."
-                                    items={vehicles.map((vehicle) => ({ value: String(vehicle.id), label: vehicle.label }))}
+                                    items={vehicles.map((vehicle) => ({
+                                        value: String(vehicle.id),
+                                        label: vehicle.label,
+                                        description: vehicle.plate_number || '',
+                                    }))}
                                 />
                                 {assignmentForm.errors.vehicle_id ? (
                                     <p className="text-xs text-rose-500">{assignmentForm.errors.vehicle_id}</p>
