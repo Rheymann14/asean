@@ -11,10 +11,22 @@ use App\Services\WelcomeNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ParticipantController extends Controller
 {
+    private const FOOD_RESTRICTION_OPTIONS = [
+        'vegetarian',
+        'vegan',
+        'halal',
+        'kosher',
+        'gluten_free',
+        'lactose_intolerant',
+        'nut_allergy',
+        'seafood_allergy',
+    ];
+
     public function index()
     {
         $countries = Country::orderBy('name')->get()->map(fn (Country $country) => [
@@ -55,6 +67,8 @@ class ParticipantController extends Controller
                     'is_active' => $user->is_active,
                     'consent_contact_sharing' => $user->consent_contact_sharing,
                     'consent_photo_video' => $user->consent_photo_video,
+                    'has_food_restrictions' => $user->has_food_restrictions,
+                    'food_restrictions' => $user->food_restrictions ?? [],
                     'created_at' => $user->created_at?->toISOString(),
                     'joined_programme_ids' => $user->joinedProgrammes
                         ? $user->joinedProgrammes->pluck('id')->values()->all()
@@ -134,7 +148,13 @@ class ParticipantController extends Controller
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'is_active' => ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
+            'has_food_restrictions' => ['nullable', 'boolean'],
+            'food_restrictions' => ['nullable', 'array'],
+            'food_restrictions.*' => ['string', Rule::in(self::FOOD_RESTRICTION_OPTIONS)],
         ]);
+
+        $userTypeId = $validated['user_type_id'] ?? null;
+        $foodRestrictions = array_values(array_unique($validated['food_restrictions'] ?? []));
 
         $user = User::create([
             'name' => $validated['full_name'],
@@ -144,6 +164,10 @@ class ParticipantController extends Controller
             'country_id' => $validated['country_id'] ?? null,
             'user_type_id' => $validated['user_type_id'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
+            'has_food_restrictions' => $this->canHaveFoodRestrictions($userTypeId)
+                ? ! empty($foodRestrictions)
+                : false,
+            'food_restrictions' => $this->canHaveFoodRestrictions($userTypeId) ? $foodRestrictions : [],
         ])->refresh();
 
         app(WelcomeNotificationService::class)->dispatch($user);
@@ -161,6 +185,9 @@ class ParticipantController extends Controller
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'is_active' => ['sometimes', 'boolean'],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
+            'has_food_restrictions' => ['sometimes', 'boolean'],
+            'food_restrictions' => ['sometimes', 'array'],
+            'food_restrictions.*' => ['string', Rule::in(self::FOOD_RESTRICTION_OPTIONS)],
         ]);
 
         $wasActive = (bool) $participant->is_active;
@@ -188,6 +215,24 @@ class ParticipantController extends Controller
 
         if (array_key_exists('is_active', $validated)) {
             $updates['is_active'] = $validated['is_active'];
+        }
+
+        $nextUserTypeId = array_key_exists('user_type_id', $validated)
+            ? $validated['user_type_id']
+            : $participant->user_type_id;
+
+        if (array_key_exists('food_restrictions', $validated)) {
+            $foodRestrictions = array_values(array_unique($validated['food_restrictions'] ?? []));
+            $updates['food_restrictions'] = $this->canHaveFoodRestrictions($nextUserTypeId)
+                ? $foodRestrictions
+                : [];
+            $updates['has_food_restrictions'] = ! empty($updates['food_restrictions']);
+        } elseif (! $this->canHaveFoodRestrictions($nextUserTypeId)) {
+            $updates['food_restrictions'] = [];
+            $updates['has_food_restrictions'] = false;
+        } elseif (array_key_exists('has_food_restrictions', $validated) && ! $validated['has_food_restrictions']) {
+            $updates['food_restrictions'] = [];
+            $updates['has_food_restrictions'] = false;
         }
 
         if (array_key_exists('password', $validated) && $validated['password'] !== null) {
@@ -223,6 +268,25 @@ class ParticipantController extends Controller
         $participant->joinedProgrammes()->detach($programme->id);
 
         return back();
+    }
+
+    private function canHaveFoodRestrictions(?int $userTypeId): bool
+    {
+        if (! $userTypeId) {
+            return true;
+        }
+
+        $userType = UserType::query()->find($userTypeId);
+        if (! $userType) {
+            return true;
+        }
+
+        $value = Str::of((string) ($userType->slug ?: $userType->name))
+            ->lower()
+            ->replace(['_', '-'], ' ')
+            ->trim();
+
+        return $value !== 'ched' && ! $value->startsWith('ched ');
     }
 
     public function revertAttendance(Request $request, User $participant, Programme $programme)
