@@ -816,6 +816,63 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                                     </div>
                                                                 </div>
                                                             </TableCell>
+                                                            <TableCell className="text-slate-700 dark:text-slate-300">
+                                                                #{assignment.seat_number}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Input
+                                                                        type="number"
+                                                                        min={1}
+                                                                        max={table.capacity}
+                                                                        value={seatNumberDrafts[assignment.id] ?? ''}
+                                                                        onChange={(e) =>
+                                                                            setSeatNumberDrafts((prev) => ({
+                                                                                ...prev,
+                                                                                [assignment.id]: e.target.value,
+                                                                            }))
+                                                                        }
+                                                                        className="h-8 w-20"
+                                                                        disabled={isEventClosed}
+                                                                    />
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => updateAssignmentSeat(assignment.id, table.capacity)}
+                                                                        disabled={isEventClosed}
+                                                                    >
+                                                                        Save
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Input
+                                                                    type="number"
+                                                                    min={1}
+                                                                    max={table.capacity}
+                                                                    value={seatNumberDrafts[assignment.id] ?? ''}
+                                                                    onChange={(e) =>
+                                                                        setSeatNumberDrafts((prev) => ({
+                                                                            ...prev,
+                                                                            [assignment.id]: e.target.value,
+                                                                        }))
+                                                                    }
+                                                                    className="h-8 w-20"
+                                                                    disabled={isEventClosed}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => updateAssignmentSeat(assignment.id, table.capacity)}
+                                                                    disabled={isEventClosed}
+                                                                >
+                                                                    Save
+                                                                </Button>
+                                                            </TableCell>
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     <Input
