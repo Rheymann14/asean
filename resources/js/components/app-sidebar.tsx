@@ -34,7 +34,7 @@ export function AppSidebar() {
     const roleName = (userType?.name ?? '').toUpperCase();
     const roleSlug = (userType?.slug ?? '').toUpperCase();
     const isChed = roleName === 'CHED' || roleSlug === 'CHED';
-
+    const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
     const mainNavItems: NavItem[] = isChed
         ? [
               {
@@ -88,6 +88,24 @@ export function AppSidebar() {
                   icon: MapPin,
               },
           ]
+        : isChedLo
+          ? [
+              {
+                  title: 'Create Table',
+                  href: '/table-assignment/create',
+                  icon: Table,
+              },
+              {
+                  title: 'Table Assignment',
+                  href: '/table-assignment/assignment',
+                  icon: Table,
+              },
+              {
+                  title: 'Vehicle Management',
+                  href: '/vehicle-management',
+                  icon: Truck,
+              },
+          ]
         : [
               {
                   title: 'Profile',
@@ -116,7 +134,7 @@ export function AppSidebar() {
           ]
         : [];
 
-    const homeHref = isChed ? dashboard() : '/participant-dashboard';
+    const homeHref = isChed ? dashboard() : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
 
     return (
         <Sidebar collapsible="icon" variant="inset">
