@@ -88,6 +88,8 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
             ->name('vehicle-assignments.dropoff');
         Route::post('transport-vehicles', [TransportVehicleController::class, 'store'])
             ->name('transport-vehicles.store');
+        Route::delete('transport-vehicles/{transportVehicle}', [TransportVehicleController::class, 'destroy'])
+            ->name('transport-vehicles.destroy');
 
         Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
         Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');

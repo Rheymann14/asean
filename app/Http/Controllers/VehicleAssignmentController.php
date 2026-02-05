@@ -21,6 +21,7 @@ class VehicleAssignmentController extends Controller
 
         $vehicles = TransportVehicle::query()
             ->with(['incharge'])
+            ->withCount('assignments')
             ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
             ->orderBy('label')
             ->get()
@@ -37,6 +38,7 @@ class VehicleAssignmentController extends Controller
                     ]
                     : null,
                 'created_at' => $vehicle->created_at?->toISOString(),
+                'assignments_count' => $vehicle->assignments_count,
             ]);
 
         $chedLoTypeIds = UserType::query()

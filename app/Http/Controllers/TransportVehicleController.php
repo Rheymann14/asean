@@ -21,4 +21,19 @@ class TransportVehicleController extends Controller
 
         return back();
     }
+
+    public function destroy(TransportVehicle $transportVehicle)
+    {
+        $hasAssignments = $transportVehicle->assignments()->exists();
+
+        if ($hasAssignments) {
+            return back()->withErrors([
+                'vehicle' => 'Cannot remove vehicle. It already has participant assignments.',
+            ]);
+        }
+
+        $transportVehicle->delete();
+
+        return back();
+    }
 }

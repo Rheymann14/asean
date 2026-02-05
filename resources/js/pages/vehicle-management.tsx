@@ -38,6 +38,7 @@ type VehicleRow = {
     label: string;
     driver_name: string | null;
     driver_contact_number: string | null;
+    assignments_count: number;
     incharge: {
         id: number;
         full_name: string;
@@ -267,6 +268,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                         <TableHead>Driver</TableHead>
                                         <TableHead>Contact</TableHead>
                                         <TableHead>CHED LO In Charge</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -277,11 +279,28 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                                 <TableCell>{vehicle.driver_name || '—'}</TableCell>
                                                 <TableCell>{vehicle.driver_contact_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.incharge?.full_name || '—'}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={vehicle.assignments_count > 0}
+                                                        onClick={() => {
+                                                            router.delete(`/transport-vehicles/${vehicle.id}`, {
+                                                                preserveScroll: true,
+                                                                onSuccess: () => toast.success('Vehicle removed.'),
+                                                                onError: (errors) => showToastError(errors as Record<string, string | string[]>),
+                                                            });
+                                                        }}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="py-6 text-center text-slate-500">
+                                            <TableCell colSpan={5} className="py-6 text-center text-slate-500">
                                                 No vehicles yet for this event.
                                             </TableCell>
                                         </TableRow>
