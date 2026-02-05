@@ -52,7 +52,7 @@ export function AppSidebar() {
             icon: Bus,
         },
         {
-            title: 'Vehicle Assignment',
+            title: 'Van Assignment',
             href: '/vehicle-assignment',
             icon: Bus,
         },
@@ -111,6 +111,11 @@ export function AppSidebar() {
                   title: 'Event List',
                   href: '/event-list',
                   icon: CalendarDays,
+              },
+              {
+                  title: 'Van Assignment',
+                  href: '/vehicle-assignment',
+                  icon: Bus,
               },
               {
                   title: 'Table Assignment',
