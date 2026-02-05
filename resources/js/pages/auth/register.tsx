@@ -70,6 +70,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const [successOpen, setSuccessOpen] = React.useState(false);
     const [consentContact, setConsentContact] = React.useState(false);
     const [consentMedia, setConsentMedia] = React.useState(false);
+    const [hasFoodRestrictions, setHasFoodRestrictions] = React.useState(false);
 
     const canContinue = consentContact && consentMedia;
 
@@ -120,6 +121,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
         setShowConfirmPassword(false);
         setConsentContact(false);
         setConsentMedia(false);
+        setHasFoodRestrictions(false);
     }, [setCountry, setProgrammeIds, setRegistrantType]);
 
     React.useEffect(() => {
@@ -621,6 +623,25 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     <div className="grid gap-3 text-left">
                                         <input type="hidden" name="consent_contact_sharing" value={consentContact ? '1' : '0'} />
                                         <input type="hidden" name="consent_photo_video" value={consentMedia ? '1' : '0'} />
+                                        <input type="hidden" name="has_food_restrictions" value={hasFoodRestrictions ? '1' : '0'} />
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                        Food restriction
+                                                    </p>
+                                                    <p className="mt-1 text-sm leading-snug text-slate-600">
+                                                        Check this if you have food restrictions.
+                                                    </p>
+                                                </div>
+                                                <Checkbox
+                                                    id="has-food-restrictions"
+                                                    checked={hasFoodRestrictions}
+                                                    onCheckedChange={(v) => setHasFoodRestrictions(Boolean(v))}
+                                                />
+                                            </div>
+                                        </div>
+
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">

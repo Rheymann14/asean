@@ -55,6 +55,7 @@ class ParticipantController extends Controller
                     'is_active' => $user->is_active,
                     'consent_contact_sharing' => $user->consent_contact_sharing,
                     'consent_photo_video' => $user->consent_photo_video,
+                    'has_food_restrictions' => $user->has_food_restrictions,
                     'created_at' => $user->created_at?->toISOString(),
                     'joined_programme_ids' => $user->joinedProgrammes
                         ? $user->joinedProgrammes->pluck('id')->values()->all()
@@ -134,7 +135,10 @@ class ParticipantController extends Controller
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'is_active' => ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
+            'has_food_restrictions' => ['nullable', 'boolean'],
         ]);
+
+        $userTypeId = $validated['user_type_id'] ?? null;
 
         $user = User::create([
             'name' => $validated['full_name'],
@@ -144,6 +148,9 @@ class ParticipantController extends Controller
             'country_id' => $validated['country_id'] ?? null,
             'user_type_id' => $validated['user_type_id'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
+            'has_food_restrictions' => $this->canHaveFoodRestrictions($userTypeId)
+                ? (bool) ($validated['has_food_restrictions'] ?? false)
+                : false,
         ])->refresh();
 
         app(WelcomeNotificationService::class)->dispatch($user);
@@ -161,6 +168,7 @@ class ParticipantController extends Controller
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'is_active' => ['sometimes', 'boolean'],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
+            'has_food_restrictions' => ['sometimes', 'boolean'],
         ]);
 
         $wasActive = (bool) $participant->is_active;
@@ -188,6 +196,18 @@ class ParticipantController extends Controller
 
         if (array_key_exists('is_active', $validated)) {
             $updates['is_active'] = $validated['is_active'];
+        }
+
+        $nextUserTypeId = array_key_exists('user_type_id', $validated)
+            ? $validated['user_type_id']
+            : $participant->user_type_id;
+
+        if (array_key_exists('has_food_restrictions', $validated)) {
+            $updates['has_food_restrictions'] = $this->canHaveFoodRestrictions($nextUserTypeId)
+                ? (bool) $validated['has_food_restrictions']
+                : false;
+        } elseif (! $this->canHaveFoodRestrictions($nextUserTypeId)) {
+            $updates['has_food_restrictions'] = false;
         }
 
         if (array_key_exists('password', $validated) && $validated['password'] !== null) {
@@ -223,6 +243,25 @@ class ParticipantController extends Controller
         $participant->joinedProgrammes()->detach($programme->id);
 
         return back();
+    }
+
+    private function canHaveFoodRestrictions(?int $userTypeId): bool
+    {
+        if (! $userTypeId) {
+            return true;
+        }
+
+        $userType = UserType::query()->find($userTypeId);
+        if (! $userType) {
+            return true;
+        }
+
+        $value = Str::of((string) ($userType->slug ?: $userType->name))
+            ->lower()
+            ->replace(['_', '-'], ' ')
+            ->trim();
+
+        return $value !== 'ched' && ! $value->startsWith('ched ');
     }
 
     public function revertAttendance(Request $request, User $participant, Programme $programme)

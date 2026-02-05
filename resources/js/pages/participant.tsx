@@ -105,6 +105,7 @@ type ParticipantRow = {
     is_active: boolean;
     consent_contact_sharing?: boolean;
     consent_photo_video?: boolean;
+    has_food_restrictions?: boolean;
     created_at?: string | null;
     joined_programme_ids?: number[];
     checked_in_programme_ids?: number[];
@@ -887,6 +888,7 @@ export default function ParticipantPage(props: PageProps) {
         user_type_id: string; // Select uses string
         is_active: boolean;
         password: string;
+        has_food_restrictions: boolean;
     }>({
         full_name: '',
         email: '',
@@ -895,6 +897,7 @@ export default function ParticipantPage(props: PageProps) {
         user_type_id: '',
         is_active: true,
         password: 'aseanph2026',
+        has_food_restrictions: false,
     });
 
     const countryForm = useForm<{
@@ -1040,6 +1043,26 @@ export default function ParticipantPage(props: PageProps) {
         return out;
     }, [selectedParticipantIds, participantById]);
 
+    const selectedParticipantUserType = React.useMemo(() => {
+        if (participantForm.data.user_type_id) {
+            return userTypeById.get(Number(participantForm.data.user_type_id)) ?? null;
+        }
+
+        if (editingParticipant?.user_type) {
+            return editingParticipant.user_type;
+        }
+
+        return null;
+    }, [participantForm.data.user_type_id, userTypeById, editingParticipant]);
+
+    const showFoodRestrictionsField = !isChedUserType(selectedParticipantUserType);
+
+    React.useEffect(() => {
+        if (!showFoodRestrictionsField && participantForm.data.has_food_restrictions) {
+            participantForm.setData('has_food_restrictions', false);
+        }
+    }, [showFoodRestrictionsField, participantForm]);
+
     const allVisibleSelected =
         selectableVisibleParticipants.length > 0 &&
         selectableVisibleParticipants.every((p) => selectedParticipantIds.has(p.id));
@@ -1102,6 +1125,7 @@ export default function ParticipantPage(props: PageProps) {
             country_id: p.country_id ? String(p.country_id) : '',
             user_type_id: p.user_type_id ? String(p.user_type_id) : '',
             is_active: !!p.is_active,
+            has_food_restrictions: !!p.has_food_restrictions,
         });
         participantForm.clearErrors();
         setParticipantDialogOpen(true);
@@ -1117,6 +1141,7 @@ export default function ParticipantPage(props: PageProps) {
             country_id: data.country_id ? Number(data.country_id) : null,
             user_type_id: data.user_type_id ? Number(data.user_type_id) : null,
             is_active: data.is_active,
+            has_food_restrictions: data.has_food_restrictions,
             ...(editingParticipant ? {} : { password: data.password }),
         }));
 
@@ -2222,6 +2247,21 @@ export default function ParticipantPage(props: PageProps) {
                                 </Select>
                                 {participantForm.errors.user_type_id ? <div className="text-xs text-red-600">{participantForm.errors.user_type_id}</div> : null}
                             </div>
+
+                            {showFoodRestrictionsField ? (
+                                <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                    <div className="space-y-0.5">
+                                        <div className="text-sm font-medium">Food restriction</div>
+                                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                                            Check if this participant has food restrictions.
+                                        </div>
+                                    </div>
+                                    <Checkbox
+                                        checked={participantForm.data.has_food_restrictions}
+                                        onCheckedChange={(value) => participantForm.setData('has_food_restrictions', Boolean(value))}
+                                    />
+                                </div>
+                            ) : null}
 
                             <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
                                 <div className="space-y-0.5">
