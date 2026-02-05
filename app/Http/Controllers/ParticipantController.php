@@ -148,7 +148,7 @@ class ParticipantController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ])->refresh();
 
-        Mail::to($user->email)->queue(new ParticipantWelcomeMail($user));
+        Mail::to($user->email)->send(new ParticipantWelcomeMail($user));
         app(SemaphoreSms::class)->sendWelcome($user);
 
         return back();
