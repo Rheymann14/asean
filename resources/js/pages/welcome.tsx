@@ -418,12 +418,12 @@ function HeroStickyParallax() {
                         </motion.div>
                     </div>
 
-                    <div className="scrolldown">
+                    {/* <div className="scrolldown">
                         <div className="chevrons">
                             <div className="chevrondown"></div>
                             <div className="chevrondown"></div>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Tagline + CTA */}
                     <motion.div
@@ -452,29 +452,7 @@ function HeroStickyParallax() {
                             animate={shouldReduceMotion ? undefined : { y: [0, -3, 0] }}
                             transition={shouldReduceMotion ? undefined : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                         >
-                            <Button
-                                asChild
-                                size="lg"
-                                className={cn(
-                                    'group relative h-14 w-full overflow-hidden rounded-2xl px-7 text-base font-semibold text-white',
-                                    'bg-gradient-to-r from-[#1e3c73] via-[#2a5aa8] to-[#1e3c73]',
-                                    'shadow-[0_18px_45px_-25px_rgba(30,60,115,0.9)] ring-1 ring-white/20',
-                                    'transition will-change-transform hover:brightness-110 active:scale-[0.985]',
-                                    'before:absolute before:inset-0 before:-translate-x-full before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:transition-transform before:duration-700 group-hover:before:translate-x-full',
-                                    'after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.22),transparent_45%)] after:opacity-80 after:transition-opacity group-hover:after:opacity-100',
-                                )}
-                            >
-                                <Link href={register()} className="relative inline-flex w-full items-center justify-center gap-2">
-                                    <span className="tracking-wide">Register Now</span>
-                                    <motion.span
-                                        className="inline-flex"
-                                        animate={shouldReduceMotion ? undefined : { x: [0, 3, 0] }}
-                                        transition={shouldReduceMotion ? undefined : { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                                    >
-                                        <ArrowRight className="h-5 w-5" />
-                                    </motion.span>
-                                </Link>
-                            </Button>
+                     
 
                             <p className="mt-3 text-xs font-medium text-slate-500 dark:text-slate-400">
                                 Secure registration • Verified access • Fast check-in via QR

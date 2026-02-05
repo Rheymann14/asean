@@ -207,7 +207,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                 <div className="grid gap-5">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="country_id">Country  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
+                                        <Label htmlFor="country_id">Country of Origin <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <input type="hidden" name="country_id" value={country} />
 
                                         <Popover open={countryOpen} onOpenChange={setCountryOpen}>
