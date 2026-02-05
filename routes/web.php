@@ -76,11 +76,20 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         });
 
     Route::middleware(['verified', 'role:ched_admin'])->group(function () {
-        Route::get('vehicle-management', [VehicleAssignmentController::class, 'index'])->name('vehicle-management');
+        Route::get('vehicle-management', [VehicleAssignmentController::class, 'managementIndex'])->name('vehicle-management');
+        Route::get('vehicle-assignment', [VehicleAssignmentController::class, 'assignmentIndex'])->name('vehicle-assignment');
         Route::post('vehicle-assignments', [VehicleAssignmentController::class, 'store'])
             ->name('vehicle-assignments.store');
+        Route::delete('vehicle-assignments/{vehicleAssignment}', [VehicleAssignmentController::class, 'destroy'])
+            ->name('vehicle-assignments.destroy');
+        Route::patch('vehicle-assignments/{vehicleAssignment}/pickup', [VehicleAssignmentController::class, 'storePickup'])
+            ->name('vehicle-assignments.pickup');
+        Route::patch('vehicle-assignments/{vehicleAssignment}/dropoff', [VehicleAssignmentController::class, 'storeDropoff'])
+            ->name('vehicle-assignments.dropoff');
         Route::post('transport-vehicles', [TransportVehicleController::class, 'store'])
             ->name('transport-vehicles.store');
+        Route::delete('transport-vehicles/{transportVehicle}', [TransportVehicleController::class, 'destroy'])
+            ->name('transport-vehicles.destroy');
 
         Route::post('table-assignment/tables', [TableAssignmentController::class, 'storeTable'])->name('table-assignment.tables.store');
         Route::patch('table-assignment/tables/{participantTable}', [TableAssignmentController::class, 'updateTable'])->name('table-assignment.tables.update');
