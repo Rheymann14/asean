@@ -83,11 +83,18 @@ class FortifyServiceProvider extends ServiceProvider
 
                     if ($user) {
                         $user->loadMissing('userType');
-                        $roleName = Str::upper((string) ($user->userType->name ?? ''));
-                        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
 
-                        if (in_array('CHED', [$roleName, $roleSlug], true)) {
+                        $roleValue = (string) Str::of((string) ($user->userType->slug ?: $user->userType->name))
+                            ->upper()
+                            ->replace(['_', '-'], ' ')
+                            ->trim();
+
+                        if ($roleValue === 'CHED') {
                             return redirect('/dashboard');
+                        }
+
+                        if (Str::startsWith($roleValue, 'CHED ')) {
+                            return redirect('/table-assignment/create');
                         }
                     }
 
