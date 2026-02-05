@@ -402,9 +402,10 @@ function getFlagSrc(country?: Country | null) {
 function isChedUserType(userType?: UserType | null) {
     const t = String(userType?.slug ?? userType?.name ?? '')
         .toLowerCase()
+        .replace(/[_-]+/g, ' ')
         .trim();
 
-    // covers "ched", "ched staff", etc.
+    // covers "CHED", "CHED LO", "CHED staff", etc.
     return t === 'ched' || t.startsWith('ched ');
 }
 

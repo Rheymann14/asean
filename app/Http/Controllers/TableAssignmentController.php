@@ -17,12 +17,8 @@ class TableAssignmentController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $user->loadMissing('userType');
-        $roleName = Str::upper((string) ($user->userType->name ?? ''));
-        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
-        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
 
-        if (! $isChed) {
+        if (! $this->isChedAdmin($user)) {
             return $this->participantIndex($request);
         }
 
@@ -31,31 +27,11 @@ class TableAssignmentController extends Controller
 
     public function create(Request $request)
     {
-        $user = $request->user();
-        $user->loadMissing('userType');
-        $roleName = Str::upper((string) ($user->userType->name ?? ''));
-        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
-        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
-
-        if (! $isChed) {
-            return $this->participantIndex($request);
-        }
-
         return $this->chedIndex($request, 'create');
     }
 
     public function assignment(Request $request)
     {
-        $user = $request->user();
-        $user->loadMissing('userType');
-        $roleName = Str::upper((string) ($user->userType->name ?? ''));
-        $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
-        $isChed = in_array('CHED', [$roleName, $roleSlug], true);
-
-        if (! $isChed) {
-            return $this->participantIndex($request);
-        }
-
         return $this->chedIndex($request, 'assignment');
     }
 
@@ -135,9 +111,9 @@ class TableAssignmentController extends Controller
                 $query->whereDoesntHave('userType')
                     ->orWhereHas('userType', function ($subQuery) {
                         $subQuery->where(function ($nameQuery) {
-                            $nameQuery->whereNull('name')->orWhere('name', '!=', 'CHED');
+                            $nameQuery->whereNull('name')->orWhereRaw("UPPER(name) NOT LIKE 'CHED%'");
                         })->where(function ($slugQuery) {
-                            $slugQuery->whereNull('slug')->orWhere('slug', '!=', 'CHED');
+                            $slugQuery->whereNull('slug')->orWhereRaw("UPPER(slug) NOT LIKE 'CHED%'");
                         });
                     });
             })
@@ -307,9 +283,9 @@ class TableAssignmentController extends Controller
                 $query->whereDoesntHave('userType')
                     ->orWhereHas('userType', function ($subQuery) {
                         $subQuery->where(function ($nameQuery) {
-                            $nameQuery->whereNull('name')->orWhere('name', '!=', 'CHED');
+                            $nameQuery->whereNull('name')->orWhereRaw("UPPER(name) NOT LIKE 'CHED%'");
                         })->where(function ($slugQuery) {
-                            $slugQuery->whereNull('slug')->orWhere('slug', '!=', 'CHED');
+                            $slugQuery->whereNull('slug')->orWhereRaw("UPPER(slug) NOT LIKE 'CHED%'");
                         });
                     });
             })
@@ -442,6 +418,23 @@ class TableAssignmentController extends Controller
         foreach ($assignments as $index => $assignment) {
             $assignment->update(['seat_number' => $index + 1]);
         }
+    }
+
+
+    private function isChedAdmin(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $user->loadMissing('userType');
+
+        $value = Str::of((string) ($user->userType->slug ?: $user->userType->name))
+            ->upper()
+            ->replace(['_', '-'], ' ')
+            ->trim();
+
+        return $value === 'CHED' || $value->startsWith('CHED ');
     }
 
     private function isProgrammeOpen(Programme $event, $now): bool

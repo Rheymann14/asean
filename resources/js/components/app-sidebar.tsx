@@ -34,6 +34,24 @@ export function AppSidebar() {
     const roleName = (userType?.name ?? '').toUpperCase();
     const roleSlug = (userType?.slug ?? '').toUpperCase();
     const isChed = roleName === 'CHED' || roleSlug === 'CHED';
+    const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
+    const managementNavItems: NavItem[] = [
+        {
+            title: 'Create Table',
+            href: '/table-assignment/create',
+            icon: Table,
+        },
+        {
+            title: 'Table Assignment',
+            href: '/table-assignment/assignment',
+            icon: Table,
+        },
+        {
+            title: 'Vehicle Management',
+            href: '/vehicle-management',
+            icon: Truck,
+        },
+    ];
 
     const mainNavItems: NavItem[] = isChed
         ? [
@@ -47,21 +65,7 @@ export function AppSidebar() {
                   href: participant(),
                   icon: Users,
               },
-              {
-                  title: 'Create Table',
-                  href: '/table-assignment/create',
-                  icon: Table,
-              },
-              {
-                  title: 'Table Assignment',
-                  href: '/table-assignment/assignment',
-                  icon: Table,
-              },
-              {
-                  title: 'Vehicle Management',
-                  href: '/vehicle-management',
-                  icon: Truck,
-              },
+              ...managementNavItems,
               {
                   title: 'Venue',
                   href: venueManagement(),
@@ -87,6 +91,10 @@ export function AppSidebar() {
                   href: contactDetails(),
                   icon: MapPin,
               },
+          ]
+        : isChedLo
+          ? [
+              ...managementNavItems,
           ]
         : [
               {
@@ -116,7 +124,7 @@ export function AppSidebar() {
           ]
         : [];
 
-    const homeHref = isChed ? dashboard() : '/participant-dashboard';
+    const homeHref = isChed ? dashboard() : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
 
     return (
         <Sidebar collapsible="icon" variant="inset">
