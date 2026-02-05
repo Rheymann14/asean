@@ -133,8 +133,11 @@ export default function EventKitSurvey() {
                         </Card>
                     </div>
 
-                    <form onSubmit={submit} className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-                        <Card className="border-slate-200/70 bg-white/70 p-6 dark:border-slate-800 dark:bg-slate-950/40">
+                    <form
+                        onSubmit={submit}
+                        className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]"
+                    >
+                        <Card className="min-w-0 border-slate-200/70 bg-white/70 p-6 dark:border-slate-800 dark:bg-slate-950/40">
                             <div className="space-y-5">
                                 <div>
                                     <label className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -160,49 +163,73 @@ export default function EventKitSurvey() {
                                                 <ChevronDown className="h-4 w-4 text-slate-400" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                            <Command>
+                                        <PopoverContent
+                                            align="start"
+                                            sideOffset={8}
+                                            className={cn(
+                                                "p-0",
+                                                // responsive width: never exceed viewport, and match trigger width on desktop
+                                                "w-[min(100vw-2rem,var(--radix-popover-trigger-width))]",
+                                                "max-w-[min(100vw-2rem,var(--radix-popover-trigger-width))]",
+                                            )}
+                                        >
+                                            <Command className="w-full">
                                                 <CommandInput placeholder="Search events..." />
-                                                <CommandList>
+                                                <CommandList className="max-h-[min(60vh,420px)] overflow-y-auto">
                                                     <CommandEmpty>No events found.</CommandEmpty>
+
                                                     <CommandGroup>
                                                         {programmes.map((programme) => {
                                                             const scannedAt = attendanceByProgramme.get(programme.id) ?? null;
                                                             const isSelected = programme.id === selectedProgrammeId;
+
                                                             return (
                                                                 <CommandItem
                                                                     key={programme.id}
                                                                     value={programme.title}
                                                                     onSelect={() => {
-                                                                        form.setData('programme_id', programme.id);
+                                                                        form.setData("programme_id", programme.id);
                                                                         setOpen(false);
                                                                     }}
+                                                                    className="px-3 py-3"
                                                                 >
-                                                                    <div className="flex w-full flex-col gap-1">
-                                                                        <div className="flex items-center justify-between">
-                                                                            <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                                                {programme.title}
-                                                                            </span>
-                                                                            {isSelected ? (
-                                                                                <CircleCheck className="h-4 w-4 text-emerald-500" />
-                                                                            ) : null}
-                                                                        </div>
-                                                                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                                            <span>{formatEventWindow(programme.starts_at, programme.ends_at)}</span>
-                                                                            {programme.location ? <span>• {programme.location}</span> : null}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-2 text-[11px]">
-                                                                            {scannedAt ? (
-                                                                                <span className="inline-flex items-center gap-1 text-emerald-600">
-                                                                                    <CircleCheck className="h-3 w-3" />
-                                                                                    Checked-in
+                                                                    <div className="flex w-full items-start gap-3">
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                <span
+                                                                                    className={cn(
+                                                                                        "min-w-0 flex-1 text-sm font-medium text-slate-900 dark:text-slate-100",
+                                                                                        // prevents forcing width; wraps nicely
+                                                                                        "whitespace-normal break-words line-clamp-2",
+                                                                                    )}
+                                                                                    title={programme.title}
+                                                                                >
+                                                                                    {programme.title}
                                                                                 </span>
-                                                                            ) : (
-                                                                                <span className="inline-flex items-center gap-1 text-rose-500">
-                                                                                    <CircleX className="h-3 w-3" />
-                                                                                    No attendance
-                                                                                </span>
-                                                                            )}
+
+                                                                                {isSelected ? (
+                                                                                    <CircleCheck className="h-4 w-4 flex-none text-emerald-500" />
+                                                                                ) : null}
+                                                                            </div>
+
+                                                                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                                <span>{formatEventWindow(programme.starts_at, programme.ends_at)}</span>
+                                                                                {programme.location ? <span>• {programme.location}</span> : null}
+                                                                            </div>
+
+                                                                            <div className="mt-1 flex items-center gap-2 text-[11px]">
+                                                                                {scannedAt ? (
+                                                                                    <span className="inline-flex items-center gap-1 text-emerald-600">
+                                                                                        <CircleCheck className="h-3 w-3" />
+                                                                                        Checked-in
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <span className="inline-flex items-center gap-1 text-rose-500">
+                                                                                        <CircleX className="h-3 w-3" />
+                                                                                        No attendance
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </CommandItem>
@@ -212,6 +239,7 @@ export default function EventKitSurvey() {
                                                 </CommandList>
                                             </Command>
                                         </PopoverContent>
+
                                     </Popover>
                                     {errors?.programme_id ? (
                                         <p className="mt-2 text-xs text-rose-500">{errors.programme_id}</p>
