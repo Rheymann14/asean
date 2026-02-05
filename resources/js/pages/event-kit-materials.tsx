@@ -267,11 +267,11 @@ export default function EventKitMaterials() {
                                             type="button"
                                             variant="outline"
                                             className={cn(
-                                                'h-10 w-full justify-between rounded-xl border-slate-200 bg-white/80 text-left dark:border-slate-700 dark:bg-slate-900/60',
+                                                'h-10 w-full max-w-full min-w-0 justify-between overflow-hidden rounded-xl border-slate-200 bg-white/80 text-left dark:border-slate-700 dark:bg-slate-900/60',
                                                 'md:w-[360px]',
                                             )}
                                         >
-                                            <span className="min-w-0 truncate">
+                                            <span className="block min-w-0 flex-1 truncate pr-2">
                                                 {selectedProgramme
                                                     ? selectedProgramme.title
                                                     : 'Select event'}
