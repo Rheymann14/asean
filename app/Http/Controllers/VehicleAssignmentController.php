@@ -239,6 +239,6 @@ class VehicleAssignmentController extends Controller
             ->replace(['_', '-'], ' ')
             ->trim();
 
-        return $value === 'CHED LO';
+        return $value === 'CHED LO' || $value->startsWith('CHED LO ');
     }
 }

@@ -2,14 +2,23 @@ import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Bus, CheckCircle2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
+import { Bus, Check, CheckCircle2, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Assignment', href: '/vehicle-assignment' }];
@@ -39,6 +48,76 @@ type PageProps = {
     vehicles: VehicleRow[];
     participants: Participant[];
 };
+
+type SearchItem = {
+    value: string;
+    label: string;
+    description?: string;
+};
+
+function SearchableDropdown({
+    value,
+    onValueChange,
+    items,
+    placeholder,
+    searchPlaceholder,
+    emptyText,
+}: {
+    value: string;
+    onValueChange: (value: string) => void;
+    items: SearchItem[];
+    placeholder: string;
+    searchPlaceholder: string;
+    emptyText: string;
+}) {
+    const [open, setOpen] = React.useState(false);
+    const selected = items.find((item) => item.value === value) ?? null;
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" className="w-full justify-between" type="button">
+                    <span className={cn('truncate', !selected && 'text-slate-500')}>
+                        {selected ? selected.label : placeholder}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 opacity-60" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent
+                align="start"
+                className="w-[--radix-popover-trigger-width] max-w-[min(22rem,calc(100vw-2rem))] p-0"
+            >
+                <Command>
+                    <CommandInput placeholder={searchPlaceholder} />
+                    <CommandEmpty>{emptyText}</CommandEmpty>
+                    <CommandList>
+                        <CommandGroup>
+                            {items.map((item) => (
+                                <CommandItem
+                                    key={item.value}
+                                    value={`${item.label} ${item.description ?? ''}`.trim()}
+                                    onSelect={() => {
+                                        onValueChange(item.value);
+                                        setOpen(false);
+                                    }}
+                                    className="gap-2"
+                                >
+                                    <Check className={cn('h-4 w-4', value === item.value ? 'opacity-100' : 'opacity-0')} />
+                                    <div className="min-w-0">
+                                        <div className="truncate">{item.label}</div>
+                                        {item.description ? (
+                                            <div className="truncate text-xs text-slate-500">{item.description}</div>
+                                        ) : null}
+                                    </div>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
 
 function showToastError(errors: Record<string, string | string[]>) {
     const first = Object.values(errors ?? {})[0];
@@ -153,18 +232,14 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-1">
                                 <Label>Event <span className="text-[11px] font-semibold text-red-600">*</span></Label>
-                                <Select value={assignmentForm.data.programme_id} onValueChange={onChangeEvent}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select event" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {events.map((event) => (
-                                            <SelectItem key={event.id} value={String(event.id)}>
-                                                {event.title}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <SearchableDropdown
+                                    value={assignmentForm.data.programme_id}
+                                    onValueChange={onChangeEvent}
+                                    placeholder="Select event"
+                                    searchPlaceholder="Search events..."
+                                    emptyText="No events found."
+                                    items={events.map((event) => ({ value: String(event.id), label: event.title }))}
+                                />
                                 {assignmentForm.errors.programme_id ? (
                                     <p className="text-xs text-rose-500">{assignmentForm.errors.programme_id}</p>
                                 ) : null}
@@ -172,21 +247,14 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
 
                             <div className="space-y-1">
                                 <Label>Vehicle <span className="text-[11px] font-semibold text-red-600">*</span></Label>
-                                <Select
+                                <SearchableDropdown
                                     value={assignmentForm.data.vehicle_id}
                                     onValueChange={(value) => assignmentForm.setData('vehicle_id', value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select vehicle" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {vehicles.map((vehicle) => (
-                                            <SelectItem key={vehicle.id} value={String(vehicle.id)}>
-                                                {vehicle.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    placeholder="Select vehicle"
+                                    searchPlaceholder="Search vehicles..."
+                                    emptyText="No vehicles found."
+                                    items={vehicles.map((vehicle) => ({ value: String(vehicle.id), label: vehicle.label }))}
+                                />
                                 {assignmentForm.errors.vehicle_id ? (
                                     <p className="text-xs text-rose-500">{assignmentForm.errors.vehicle_id}</p>
                                 ) : null}
