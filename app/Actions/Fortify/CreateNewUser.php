@@ -56,8 +56,10 @@ class CreateNewUser implements CreatesNewUsers
             $user->joinedProgrammes()->sync($programmeIds);
         }
 
-        rescue(fn () => Mail::to($user->email)->send(new ParticipantWelcomeMail($user)), report: true);
-        rescue(fn () => app(SemaphoreSms::class)->sendWelcome($user), report: true);
+        dispatch(function () use ($user) {
+            rescue(fn () => Mail::to($user->email)->send(new ParticipantWelcomeMail($user)), report: true);
+            rescue(fn () => app(SemaphoreSms::class)->sendWelcome($user), report: true);
+        })->afterResponse();
 
         return $user;
     }
