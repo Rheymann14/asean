@@ -142,6 +142,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
 
     const onChangeEvent = (value: string) => {
         assignmentForm.setData('programme_id', value);
+        assignmentForm.setData('vehicle_id', '');
         setSelectedIds([]);
         router.get('/vehicle-assignment', { event_id: value || undefined }, { preserveState: true, preserveScroll: true, replace: true });
     };
@@ -168,22 +169,27 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
             return;
         }
 
-        assignmentForm
-            .transform((data) => ({
-                ...data,
+        assignmentForm.clearErrors();
+
+        router.post(
+            '/vehicle-assignments',
+            {
+                programme_id: assignmentForm.data.programme_id,
+                vehicle_id: assignmentForm.data.vehicle_id,
                 participant_ids: participantIds,
-            }))
-            .post('/vehicle-assignments', {
+            },
+            {
                 preserveScroll: true,
                 onSuccess: () => {
                     toast.success(successMessage);
                     setSelectedIds([]);
                 },
-                onError: (errors) => showToastError(errors as Record<string, string | string[]>),
-                onFinish: () => {
-                    assignmentForm.transform((data) => data);
+                onError: (errors) => {
+                    assignmentForm.setError(errors as Record<string, string>);
+                    showToastError(errors as Record<string, string | string[]>);
                 },
-            });
+            },
+        );
     };
 
     const assignBulk = () => doAssign(selectedIds, 'Participants assigned to vehicle.');
