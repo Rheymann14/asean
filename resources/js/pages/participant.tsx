@@ -106,6 +106,7 @@ type ParticipantRow = {
     consent_contact_sharing?: boolean;
     consent_photo_video?: boolean;
     has_food_restrictions?: boolean;
+    food_restrictions?: string[];
     created_at?: string | null;
     joined_programme_ids?: number[];
     checked_in_programme_ids?: number[];
@@ -167,6 +168,17 @@ const ENDPOINTS = {
 // ✅ Accent color requested (#00359c) — apply to all primary buttons
 const PRIMARY_BTN =
     'bg-[#00359c] text-white hover:bg-[#00359c]/90 focus-visible:ring-[#00359c]/30 dark:bg-[#00359c] dark:hover:bg-[#00359c]/90';
+
+const FOOD_RESTRICTION_OPTIONS = [
+    { value: 'vegetarian', label: 'Vegetarian' },
+    { value: 'vegan', label: 'Vegan' },
+    { value: 'halal', label: 'Halal' },
+    { value: 'kosher', label: 'Kosher' },
+    { value: 'gluten_free', label: 'Gluten-free' },
+    { value: 'lactose_intolerant', label: 'Lactose intolerant' },
+    { value: 'nut_allergy', label: 'Nut allergy' },
+    { value: 'seafood_allergy', label: 'Seafood allergy' },
+] as const;
 
 function formatDateSafe(value?: string | null) {
     if (!value) return '—';
@@ -889,6 +901,7 @@ export default function ParticipantPage(props: PageProps) {
         is_active: boolean;
         password: string;
         has_food_restrictions: boolean;
+        food_restrictions: string[];
     }>({
         full_name: '',
         email: '',
@@ -898,6 +911,7 @@ export default function ParticipantPage(props: PageProps) {
         is_active: true,
         password: 'aseanph2026',
         has_food_restrictions: false,
+        food_restrictions: [],
     });
 
     const countryForm = useForm<{
@@ -1058,7 +1072,8 @@ export default function ParticipantPage(props: PageProps) {
     const showFoodRestrictionsField = !isChedUserType(selectedParticipantUserType);
 
     React.useEffect(() => {
-        if (!showFoodRestrictionsField && participantForm.data.has_food_restrictions) {
+        if (!showFoodRestrictionsField && participantForm.data.food_restrictions.length > 0) {
+            participantForm.setData('food_restrictions', []);
             participantForm.setData('has_food_restrictions', false);
         }
     }, [showFoodRestrictionsField, participantForm]);
@@ -1126,6 +1141,7 @@ export default function ParticipantPage(props: PageProps) {
             user_type_id: p.user_type_id ? String(p.user_type_id) : '',
             is_active: !!p.is_active,
             has_food_restrictions: !!p.has_food_restrictions,
+            food_restrictions: p.food_restrictions ?? [],
         });
         participantForm.clearErrors();
         setParticipantDialogOpen(true);
@@ -1141,7 +1157,8 @@ export default function ParticipantPage(props: PageProps) {
             country_id: data.country_id ? Number(data.country_id) : null,
             user_type_id: data.user_type_id ? Number(data.user_type_id) : null,
             is_active: data.is_active,
-            has_food_restrictions: data.has_food_restrictions,
+            food_restrictions: data.food_restrictions,
+            has_food_restrictions: data.food_restrictions.length > 0,
             ...(editingParticipant ? {} : { password: data.password }),
         }));
 
@@ -2249,17 +2266,48 @@ export default function ParticipantPage(props: PageProps) {
                             </div>
 
                             {showFoodRestrictionsField ? (
-                                <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
                                     <div className="space-y-0.5">
-                                        <div className="text-sm font-medium">Food restriction</div>
+                                        <div className="text-sm font-medium">Food restrictions</div>
                                         <div className="text-xs text-slate-600 dark:text-slate-400">
-                                            Check if this participant has food restrictions.
+                                            Select all applicable food restrictions.
                                         </div>
                                     </div>
-                                    <Checkbox
-                                        checked={participantForm.data.has_food_restrictions}
-                                        onCheckedChange={(value) => participantForm.setData('has_food_restrictions', Boolean(value))}
-                                    />
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                        {FOOD_RESTRICTION_OPTIONS.map((option) => {
+                                            const checked = participantForm.data.food_restrictions.includes(option.value);
+
+                                            return (
+                                                <label
+                                                    key={option.value}
+                                                    className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm dark:border-slate-700"
+                                                >
+                                                    <Checkbox
+                                                        checked={checked}
+                                                        onCheckedChange={(value) => {
+                                                            const current = participantForm.data.food_restrictions;
+
+                                                            if (value) {
+                                                                participantForm.setData(
+                                                                    'food_restrictions',
+                                                                    current.includes(option.value)
+                                                                        ? current
+                                                                        : [...current, option.value],
+                                                                );
+                                                                return;
+                                                            }
+
+                                                            participantForm.setData(
+                                                                'food_restrictions',
+                                                                current.filter((item) => item !== option.value),
+                                                            );
+                                                        }}
+                                                    />
+                                                    <span>{option.label}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ) : null}
 

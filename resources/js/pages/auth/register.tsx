@@ -59,6 +59,17 @@ type RegisterProps = {
     status?: string | null;
 };
 
+const FOOD_RESTRICTION_OPTIONS = [
+    { value: 'vegetarian', label: 'Vegetarian' },
+    { value: 'vegan', label: 'Vegan' },
+    { value: 'halal', label: 'Halal' },
+    { value: 'kosher', label: 'Kosher' },
+    { value: 'gluten_free', label: 'Gluten-free' },
+    { value: 'lactose_intolerant', label: 'Lactose intolerant' },
+    { value: 'nut_allergy', label: 'Nut allergy' },
+    { value: 'seafood_allergy', label: 'Seafood allergy' },
+] as const;
+
 export default function Register({ countries, registrantTypes, programmes, status }: RegisterProps) {
     const [formKey, setFormKey] = React.useState(0);
 
@@ -70,7 +81,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const [successOpen, setSuccessOpen] = React.useState(false);
     const [consentContact, setConsentContact] = React.useState(false);
     const [consentMedia, setConsentMedia] = React.useState(false);
-    const [hasFoodRestrictions, setHasFoodRestrictions] = React.useState(false);
+    const [foodRestrictions, setFoodRestrictions] = React.useState<string[]>([]);
 
     const canContinue = consentContact && consentMedia;
 
@@ -121,7 +132,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
         setShowConfirmPassword(false);
         setConsentContact(false);
         setConsentMedia(false);
-        setHasFoodRestrictions(false);
+        setFoodRestrictions([]);
     }, [setCountry, setProgrammeIds, setRegistrantType]);
 
     React.useEffect(() => {
@@ -623,23 +634,46 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     <div className="grid gap-3 text-left">
                                         <input type="hidden" name="consent_contact_sharing" value={consentContact ? '1' : '0'} />
                                         <input type="hidden" name="consent_photo_video" value={consentMedia ? '1' : '0'} />
-                                        <input type="hidden" name="has_food_restrictions" value={hasFoodRestrictions ? '1' : '0'} />
+                                        <input type="hidden" name="has_food_restrictions" value={foodRestrictions.length > 0 ? '1' : '0'} />
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
                                                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                                                        Food restriction
+                                                        Food restrictions
                                                     </p>
                                                     <p className="mt-1 text-sm leading-snug text-slate-600">
-                                                        Check this if you have food restrictions.
+                                                        Select all that apply.
                                                     </p>
                                                 </div>
-                                                <Checkbox
-                                                    id="has-food-restrictions"
-                                                    checked={hasFoodRestrictions}
-                                                    onCheckedChange={(v) => setHasFoodRestrictions(Boolean(v))}
-                                                />
                                             </div>
+
+                                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                {FOOD_RESTRICTION_OPTIONS.map((option) => {
+                                                    const checked = foodRestrictions.includes(option.value);
+
+                                                    return (
+                                                        <label key={option.value} className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                            <Checkbox
+                                                                checked={checked}
+                                                                onCheckedChange={(value) => {
+                                                                    setFoodRestrictions((prev) => {
+                                                                        if (value) {
+                                                                            return prev.includes(option.value) ? prev : [...prev, option.value];
+                                                                        }
+
+                                                                        return prev.filter((item) => item !== option.value);
+                                                                    });
+                                                                }}
+                                                            />
+                                                            <span>{option.label}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {foodRestrictions.map((restriction) => (
+                                                <input key={restriction} type="hidden" name="food_restrictions[]" value={restriction} />
+                                            ))}
                                         </div>
 
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">

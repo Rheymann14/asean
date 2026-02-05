@@ -41,6 +41,7 @@ class User extends Authenticatable
         'consent_contact_sharing',
         'consent_photo_video',
         'has_food_restrictions',
+        'food_restrictions',
     ];
 
     /**
@@ -70,6 +71,7 @@ class User extends Authenticatable
             'consent_contact_sharing' => 'boolean',
             'consent_photo_video' => 'boolean',
             'has_food_restrictions' => 'boolean',
+            'food_restrictions' => 'array',
         ];
     }
 

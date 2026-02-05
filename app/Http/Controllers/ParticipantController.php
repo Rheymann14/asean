@@ -11,10 +11,22 @@ use App\Services\WelcomeNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ParticipantController extends Controller
 {
+    private const FOOD_RESTRICTION_OPTIONS = [
+        'vegetarian',
+        'vegan',
+        'halal',
+        'kosher',
+        'gluten_free',
+        'lactose_intolerant',
+        'nut_allergy',
+        'seafood_allergy',
+    ];
+
     public function index()
     {
         $countries = Country::orderBy('name')->get()->map(fn (Country $country) => [
@@ -56,6 +68,7 @@ class ParticipantController extends Controller
                     'consent_contact_sharing' => $user->consent_contact_sharing,
                     'consent_photo_video' => $user->consent_photo_video,
                     'has_food_restrictions' => $user->has_food_restrictions,
+                    'food_restrictions' => $user->food_restrictions ?? [],
                     'created_at' => $user->created_at?->toISOString(),
                     'joined_programme_ids' => $user->joinedProgrammes
                         ? $user->joinedProgrammes->pluck('id')->values()->all()
@@ -136,9 +149,12 @@ class ParticipantController extends Controller
             'is_active' => ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
             'has_food_restrictions' => ['nullable', 'boolean'],
+            'food_restrictions' => ['nullable', 'array'],
+            'food_restrictions.*' => ['string', Rule::in(self::FOOD_RESTRICTION_OPTIONS)],
         ]);
 
         $userTypeId = $validated['user_type_id'] ?? null;
+        $foodRestrictions = array_values(array_unique($validated['food_restrictions'] ?? []));
 
         $user = User::create([
             'name' => $validated['full_name'],
@@ -149,8 +165,9 @@ class ParticipantController extends Controller
             'user_type_id' => $validated['user_type_id'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
             'has_food_restrictions' => $this->canHaveFoodRestrictions($userTypeId)
-                ? (bool) ($validated['has_food_restrictions'] ?? false)
+                ? ! empty($foodRestrictions)
                 : false,
+            'food_restrictions' => $this->canHaveFoodRestrictions($userTypeId) ? $foodRestrictions : [],
         ])->refresh();
 
         app(WelcomeNotificationService::class)->dispatch($user);
@@ -169,6 +186,8 @@ class ParticipantController extends Controller
             'is_active' => ['sometimes', 'boolean'],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
             'has_food_restrictions' => ['sometimes', 'boolean'],
+            'food_restrictions' => ['sometimes', 'array'],
+            'food_restrictions.*' => ['string', Rule::in(self::FOOD_RESTRICTION_OPTIONS)],
         ]);
 
         $wasActive = (bool) $participant->is_active;
@@ -202,11 +221,17 @@ class ParticipantController extends Controller
             ? $validated['user_type_id']
             : $participant->user_type_id;
 
-        if (array_key_exists('has_food_restrictions', $validated)) {
-            $updates['has_food_restrictions'] = $this->canHaveFoodRestrictions($nextUserTypeId)
-                ? (bool) $validated['has_food_restrictions']
-                : false;
+        if (array_key_exists('food_restrictions', $validated)) {
+            $foodRestrictions = array_values(array_unique($validated['food_restrictions'] ?? []));
+            $updates['food_restrictions'] = $this->canHaveFoodRestrictions($nextUserTypeId)
+                ? $foodRestrictions
+                : [];
+            $updates['has_food_restrictions'] = ! empty($updates['food_restrictions']);
         } elseif (! $this->canHaveFoodRestrictions($nextUserTypeId)) {
+            $updates['food_restrictions'] = [];
+            $updates['has_food_restrictions'] = false;
+        } elseif (array_key_exists('has_food_restrictions', $validated) && ! $validated['has_food_restrictions']) {
+            $updates['food_restrictions'] = [];
             $updates['has_food_restrictions'] = false;
         }
 
