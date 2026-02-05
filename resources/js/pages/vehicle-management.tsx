@@ -181,12 +181,12 @@ export default function VehicleManagement({ participants, drivers, vehicles, ass
                                 Add vehicles, assign participants and drivers, and notify admins about pickup details.
                             </p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        {/* <div className="flex flex-wrap gap-2">
                             <Button variant="outline" className="rounded-full">
                                 Export manifest
                             </Button>
                             <Button className={cn('rounded-full', PRIMARY_BTN)}>Create assignment</Button>
-                        </div>
+                        </div> */}
                     </div>
                     <Separator className="my-4" />
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
