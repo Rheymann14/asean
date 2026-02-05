@@ -148,8 +148,10 @@ class ParticipantController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ])->refresh();
 
-        rescue(fn () => Mail::to($user->email)->send(new ParticipantWelcomeMail($user)), report: true);
-        app(SemaphoreSms::class)->sendWelcome($user);
+        dispatch(function () use ($user) {
+            rescue(fn () => Mail::to($user->email)->send(new ParticipantWelcomeMail($user)), report: true);
+            rescue(fn () => app(SemaphoreSms::class)->sendWelcome($user), report: true);
+        })->afterResponse();
 
         return back();
     }
