@@ -12,6 +12,17 @@ class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules;
 
+    private const FOOD_RESTRICTION_OPTIONS = [
+        'vegetarian',
+        'vegan',
+        'halal',
+        'kosher',
+        'gluten_free',
+        'lactose_intolerant',
+        'nut_allergy',
+        'seafood_allergy',
+    ];
+
     /**
      * Validate and create a newly registered user.
      *
@@ -35,8 +46,13 @@ class CreateNewUser implements CreatesNewUsers
             'programme_ids.*' => ['integer', 'exists:programmes,id'],
             'consent_contact_sharing' => ['required', 'accepted'],
             'consent_photo_video' => ['required', 'accepted'],
+            'has_food_restrictions' => ['nullable', 'boolean'],
+            'food_restrictions' => ['nullable', 'array'],
+            'food_restrictions.*' => ['string', Rule::in(self::FOOD_RESTRICTION_OPTIONS)],
             'password' => $this->passwordRules(),
         ])->validate();
+
+        $foodRestrictions = array_values(array_unique($input['food_restrictions'] ?? []));
 
         $user = User::create([
             'name' => $input['name'],
@@ -47,6 +63,8 @@ class CreateNewUser implements CreatesNewUsers
             'user_type_id' => $input['user_type_id'],
             'consent_contact_sharing' => (bool) $input['consent_contact_sharing'],
             'consent_photo_video' => (bool) $input['consent_photo_video'],
+            'has_food_restrictions' => ! empty($foodRestrictions),
+            'food_restrictions' => $foodRestrictions,
         ])->refresh();
 
         $programmeIds = $input['programme_ids'] ?? [];

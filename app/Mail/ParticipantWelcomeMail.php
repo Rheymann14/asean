@@ -4,7 +4,6 @@ namespace App\Mail;
 
 use App\Models\Programme;
 use App\Models\User;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -64,7 +63,7 @@ class ParticipantWelcomeMail extends Mailable
                 'bagongPilipinasPath' => is_file($bagongPilipinasPath) ? $bagongPilipinasPath : null,
                 'events' => $events,
                 'assignments' => $assignments,
-                'qrImage' => $this->fetchQrImage($qrUrl),
+                'qrImage' => null,
                 'qrUrl' => $qrUrl,
                 'user' => $this->user,
             ],
@@ -82,20 +81,5 @@ class ParticipantWelcomeMail extends Mailable
         $payload = urlencode((string) $this->user->qr_payload);
 
         return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data={$payload}";
-    }
-
-    private function fetchQrImage(string $url): ?string
-    {
-        try {
-            $response = Http::timeout(6)->get($url);
-
-            if (! $response->successful()) {
-                return null;
-            }
-
-            return $response->body();
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }
