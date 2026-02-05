@@ -16,6 +16,12 @@ $localDomain = env(
     $defaultEhloDomain ?: parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST),
 );
 
+
+$failoverMailers = array_values(array_filter(array_map(
+    static fn (string $mailer): string => trim($mailer),
+    explode(',', (string) env('MAIL_FAILOVER_MAILERS', 'smtp,sendmail,log')),
+)));
+
 return [
 
     /*
@@ -97,10 +103,7 @@ return [
 
         'failover' => [
             'transport' => 'failover',
-            'mailers' => [
-                'smtp',
-                'log',
-            ],
+            'mailers' => $failoverMailers,
             'retry_after' => 60,
         ],
 
