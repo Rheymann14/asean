@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Truck } from 'lucide-react';
+import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Management', href: '/vehicle-management' }];
 
@@ -41,11 +43,16 @@ type PageProps = {
     vehicles: VehicleRow[];
 };
 
+function showToastError(errors: Record<string, string | string[]>) {
+    const first = Object.values(errors ?? {})[0];
+    toast.error(Array.isArray(first) ? first[0] : first || 'Please review the form and try again.');
+}
+
 export default function VehicleManagementPage({ events, selected_event_id, ched_lo_users, vehicles }: PageProps) {
-    const selectedEventId = selected_event_id ?? events[0]?.id ?? null;
+    const selectedEventId = selected_event_id ? String(selected_event_id) : events[0] ? String(events[0].id) : '';
 
     const form = useForm({
-        programme_id: selectedEventId ? String(selectedEventId) : '',
+        programme_id: selectedEventId,
         label: '',
         driver_name: '',
         driver_contact_number: '',
@@ -53,31 +60,47 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
     });
 
     const onChangeEvent = (value: string) => {
-        router.get('/vehicle-management', { event_id: value }, { preserveState: true, replace: true });
         form.setData('programme_id', value);
+        router.get('/vehicle-management', { event_id: value || undefined }, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     const submit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+
         form.post('/transport-vehicles', {
             preserveScroll: true,
-            onSuccess: () => form.reset('label', 'driver_name', 'driver_contact_number'),
+            onSuccess: () => {
+                toast.success('Vehicle added successfully.');
+                form.reset('label', 'driver_name', 'driver_contact_number');
+            },
+            onError: (errors) => showToastError(errors as Record<string, string | string[]>),
         });
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Vehicle Management" />
-            <div className="space-y-6">
+
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <Truck className="h-5 w-5 text-[#00359c]" />
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Vehicle Management</h1>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                        Add vehicles per event, set driver details, and assign CHED LO in charge.
+                    </p>
+                </div>
+
                 <Card>
                     <CardHeader>
-                        <CardTitle>Vehicle Management</CardTitle>
-                        <CardDescription>Add vehicles per event and assign CHED LO in charge.</CardDescription>
+                        <CardTitle className="text-base">Event filter</CardTitle>
+                        <CardDescription>Show and add vehicles by event.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label>Event</Label>
-                            <Select value={selectedEventId ? String(selectedEventId) : ''} onValueChange={onChangeEvent}>
+                    <CardContent className="space-y-3">
+                        <div className="space-y-1">
+                            <Label>Event <span className="text-[11px] font-semibold text-red-600">*</span></Label>
+                            <Select value={form.data.programme_id} onValueChange={onChangeEvent}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select event" />
                                 </SelectTrigger>
@@ -89,72 +112,79 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                     ))}
                                 </SelectContent>
                             </Select>
+                            {form.errors.programme_id ? <p className="text-xs text-rose-500">{form.errors.programme_id}</p> : null}
                         </div>
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Add Vehicle</CardTitle>
+                        <CardTitle className="text-base">Add Vehicle</CardTitle>
+                        <CardDescription>Example: Van 1, Van 2</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
-                            <input type="hidden" value={form.data.programme_id} />
-                            <div className="space-y-2">
-                                <Label htmlFor="label">Vehicle Name</Label>
-                                <Input
-                                    id="label"
-                                    placeholder="Van 1"
-                                    value={form.data.label}
-                                    onChange={(e) => form.setData('label', e.target.value)}
-                                />
+                        <form onSubmit={submit} className="space-y-4">
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-1">
+                                    <Label htmlFor="label">Vehicle name <span className="text-[11px] font-semibold text-red-600">*</span></Label>
+                                    <Input
+                                        id="label"
+                                        placeholder="Van 1"
+                                        value={form.data.label}
+                                        onChange={(e) => form.setData('label', e.target.value)}
+                                    />
+                                    {form.errors.label ? <p className="text-xs text-rose-500">{form.errors.label}</p> : null}
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="driver_name">Driver name <span className="text-[11px] font-semibold text-red-600">*</span></Label>
+                                    <Input
+                                        id="driver_name"
+                                        value={form.data.driver_name}
+                                        onChange={(e) => form.setData('driver_name', e.target.value)}
+                                    />
+                                    {form.errors.driver_name ? <p className="text-xs text-rose-500">{form.errors.driver_name}</p> : null}
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="driver_contact_number">Driver contact number <span className="text-[11px] font-semibold text-red-600">*</span></Label>
+                                    <Input
+                                        id="driver_contact_number"
+                                        value={form.data.driver_contact_number}
+                                        onChange={(e) => form.setData('driver_contact_number', e.target.value)}
+                                    />
+                                    {form.errors.driver_contact_number ? (
+                                        <p className="text-xs text-rose-500">{form.errors.driver_contact_number}</p>
+                                    ) : null}
+                                </div>
+                                <div className="space-y-1">
+                                    <Label>CHED LO in charge <span className="text-[11px] font-semibold text-red-600">*</span></Label>
+                                    <Select
+                                        value={form.data.incharge_user_id}
+                                        onValueChange={(value) => form.setData('incharge_user_id', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select CHED LO" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {ched_lo_users.map((user) => (
+                                                <SelectItem key={user.id} value={String(user.id)}>
+                                                    {user.full_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {form.errors.incharge_user_id ? <p className="text-xs text-rose-500">{form.errors.incharge_user_id}</p> : null}
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="driver_name">Driver Name</Label>
-                                <Input
-                                    id="driver_name"
-                                    value={form.data.driver_name}
-                                    onChange={(e) => form.setData('driver_name', e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="driver_contact_number">Driver Contact Number</Label>
-                                <Input
-                                    id="driver_contact_number"
-                                    value={form.data.driver_contact_number}
-                                    onChange={(e) => form.setData('driver_contact_number', e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>CHED LO In Charge</Label>
-                                <Select
-                                    value={form.data.incharge_user_id}
-                                    onValueChange={(value) => form.setData('incharge_user_id', value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select CHED LO" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {ched_lo_users.map((user) => (
-                                            <SelectItem key={user.id} value={String(user.id)}>
-                                                {user.full_name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="md:col-span-2">
-                                <Button type="submit" className="bg-[#00359c] text-white hover:bg-[#00359c]/90">
-                                    Add Vehicle
-                                </Button>
-                            </div>
+                            <Button type="submit" className="bg-[#00359c] text-white hover:bg-[#00359c]/90" disabled={form.processing}>
+                                {form.processing ? 'Adding...' : 'Add Vehicle'}
+                            </Button>
                         </form>
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Vehicle List</CardTitle>
+                        <CardTitle className="text-base">Vehicle List</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-hidden rounded-xl border">
@@ -179,7 +209,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center text-slate-500">
+                                            <TableCell colSpan={4} className="py-6 text-center text-slate-500">
                                                 No vehicles yet for this event.
                                             </TableCell>
                                         </TableRow>
