@@ -40,6 +40,7 @@ class User extends Authenticatable
         'is_active',
         'consent_contact_sharing',
         'consent_photo_video',
+        'has_food_restrictions',
     ];
 
     /**
@@ -68,6 +69,7 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'consent_contact_sharing' => 'boolean',
             'consent_photo_video' => 'boolean',
+            'has_food_restrictions' => 'boolean',
         ];
     }
 
