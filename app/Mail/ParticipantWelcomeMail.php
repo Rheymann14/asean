@@ -2,21 +2,17 @@
 
 namespace App\Mail;
 
-use App\Models\ParticipantTableAssignment;
 use App\Models\Programme;
 use App\Models\User;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Collection;
 
-class ParticipantWelcomeMail extends Mailable implements ShouldQueue
+class ParticipantWelcomeMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     public function __construct(public User $user)
     {
