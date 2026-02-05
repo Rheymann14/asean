@@ -40,7 +40,7 @@ class ParticipantSeeder extends Seeder
             );
         }
 
-        $userTypes = ['Prime Minister', 'Staff', 'CHED'];
+        $userTypes = ['Prime Minister', 'Staff', 'CHED', 'CHED LO'];
 
         foreach ($userTypes as $type) {
             UserType::updateOrCreate(
