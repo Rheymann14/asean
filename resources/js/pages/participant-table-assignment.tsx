@@ -19,6 +19,7 @@ import { CalendarDays, Check, ChevronsUpDown, MapPin, Table, Armchair } from 'lu
 type TableAssignment = {
     table_number: string;
     capacity: number;
+    seat_number?: number | null;
     assigned_at?: string | null;
 };
 
@@ -241,6 +242,12 @@ function Section({
                                                     >
                                                          {event.table?.table_number}
                                                     </Badge>
+                                                    {event.table?.seat_number ? (
+                                                        <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                                                            <Armchair className="mr-1 h-3.5 w-3.5" />
+                                                            Seat #{event.table.seat_number}
+                                                        </Badge>
+                                                    ) : null}
                                                 </div>
 
 

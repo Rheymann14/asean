@@ -45,6 +45,7 @@ type Participant = {
 
 type TableAssignment = {
     id: number;
+    seat_number: number;
     assigned_at?: string | null;
     participant?: Participant | null;
 };
@@ -83,6 +84,7 @@ const ENDPOINTS = {
     },
     assignments: {
         store: '/table-assignment/assignments',
+        update: (id: number) => `/table-assignment/assignments/${id}`,
         destroy: (id: number) => `/table-assignment/assignments/${id}`,
     },
 };
@@ -278,6 +280,7 @@ export default function TableAssignmenyPage(props: PageProps) {
     const [selectedParticipantIds, setSelectedParticipantIds] = React.useState<Set<number>>(new Set());
     const [capacityDrafts, setCapacityDrafts] = React.useState<Record<number, string>>({});
     const [tableNumberDrafts, setTableNumberDrafts] = React.useState<Record<number, string>>({});
+    const [seatNumberDrafts, setSeatNumberDrafts] = React.useState<Record<number, string>>({});
     const hasHydrated = React.useRef(false);
     const selectedEvent = selectedEventId ? events.find((event) => String(event.id) === selectedEventId) : null;
     const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, Date.now()) : null;
@@ -286,12 +289,17 @@ export default function TableAssignmenyPage(props: PageProps) {
     React.useEffect(() => {
         const nextDrafts: Record<number, string> = {};
         const nextNumberDrafts: Record<number, string> = {};
+        const nextSeatDrafts: Record<number, string> = {};
         tables.forEach((table) => {
             nextDrafts[table.id] = String(table.capacity ?? '');
             nextNumberDrafts[table.id] = table.table_number ?? '';
+            table.assignments.forEach((assignment) => {
+                nextSeatDrafts[assignment.id] = String(assignment.seat_number ?? '');
+            });
         });
         setCapacityDrafts(nextDrafts);
         setTableNumberDrafts(nextNumberDrafts);
+        setSeatNumberDrafts(nextSeatDrafts);
     }, [tables]);
 
     const chedBasePath = chedView === 'assignment' ? '/table-assignment/assignment' : '/table-assignment/create';
@@ -440,6 +448,30 @@ export default function TableAssignmenyPage(props: PageProps) {
         });
     }
 
+    function updateAssignmentSeat(assignmentId: number, tableCapacity: number) {
+        const seatNumber = Number(seatNumberDrafts[assignmentId]);
+
+        if (!Number.isInteger(seatNumber) || seatNumber < 1) {
+            toast.error('Enter a valid seat number.');
+            return;
+        }
+
+        if (seatNumber > tableCapacity) {
+            toast.error(`Seat number must be between 1 and ${tableCapacity}.`);
+            return;
+        }
+
+        router.patch(
+            ENDPOINTS.assignments.update(assignmentId),
+            { seat_number: seatNumber },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Participant seat number updated.'),
+                onError: () => toast.error('Unable to update seat number.'),
+            },
+        );
+    }
+
     function removeAssignment(id: number) {
         router.delete(ENDPOINTS.assignments.destroy(id), {
             preserveScroll: true,
@@ -517,7 +549,7 @@ export default function TableAssignmenyPage(props: PageProps) {
         <Card>
             <CardHeader>
                 <CardTitle className="text-base">Create Table</CardTitle>
-                <CardDescription>Set up a new table with a number and capacity.</CardDescription>
+                <CardDescription>Set up a new table with a number, capacity, and seat arrangement support.</CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={submitTable} className="space-y-4">
@@ -705,7 +737,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                     <div>
                                         <CardTitle className="text-base">{table.table_number}</CardTitle>
                                         <CardDescription>
-                                            {table.assigned_count} of {table.capacity} seats occupied
+                                            {table.assigned_count} of {table.capacity} seats occupied (seat arrangement auto-numbered)
                                         </CardDescription>
                                     </div>
                                     <Badge
@@ -746,6 +778,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                             <TableHeader>
                                                 <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                                     <TableHead>Participant</TableHead>
+                                                    <TableHead className="w-[110px]">Seat no.</TableHead>
                                                     <TableHead className="w-[140px]">Role</TableHead>
                                                     <TableHead className="w-[180px]">Assigned at</TableHead>
                                                     <TableHead className="w-[80px] text-right">Action</TableHead>
@@ -755,7 +788,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                 {table.assignments.length === 0 ? (
                                                     <TableRow>
                                                         <TableCell
-                                                            colSpan={4}
+                                                            colSpan={5}
                                                             className="py-6 text-center text-sm text-slate-500"
                                                         >
                                                             No participants assigned yet.
@@ -781,6 +814,33 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                                             {assignment.participant?.country?.name ?? 'Country unavailable'}
                                                                         </div>
                                                                     </div>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Input
+                                                                        type="number"
+                                                                        min={1}
+                                                                        max={table.capacity}
+                                                                        value={seatNumberDrafts[assignment.id] ?? ''}
+                                                                        onChange={(e) =>
+                                                                            setSeatNumberDrafts((prev) => ({
+                                                                                ...prev,
+                                                                                [assignment.id]: e.target.value,
+                                                                            }))
+                                                                        }
+                                                                        className="h-8 w-20"
+                                                                        disabled={isEventClosed}
+                                                                    />
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => updateAssignmentSeat(assignment.id, table.capacity)}
+                                                                        disabled={isEventClosed}
+                                                                    >
+                                                                        Save
+                                                                    </Button>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>

@@ -216,6 +216,26 @@ class LogActivity
                 : 'Assigned participants to a table.';
         }
 
+        if ($routeName === 'table-assignment.assignments.update') {
+            $assignment = $request->route()?->parameter('participantTableAssignment');
+            $participantName = $assignment?->user?->name;
+            $tableNumber = $assignment?->participantTable?->table_number;
+            $eventTitle = $assignment?->programme?->title;
+            $seatNumber = $request->input('seat_number');
+
+            if ($participantName && $tableNumber && $eventTitle && $seatNumber) {
+                return sprintf(
+                    'Changed "%s" to seat %s at table %s in event "%s".',
+                    $participantName,
+                    $seatNumber,
+                    $tableNumber,
+                    $eventTitle
+                );
+            }
+
+            return 'Updated participant seat assignment.';
+        }
+
         if ($routeName === 'table-assignment.assignments.destroy') {
             $assignment = $request->route()?->parameter('participantTableAssignment');
             $participantName = $assignment?->user?->name;

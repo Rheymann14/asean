@@ -14,6 +14,7 @@ class ParticipantTableAssignment extends Model
     protected $fillable = [
         'programme_id',
         'participant_table_id',
+        'seat_number',
         'user_id',
         'assigned_at',
     ];
