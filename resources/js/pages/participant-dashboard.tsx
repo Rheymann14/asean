@@ -28,10 +28,22 @@ type Participant = {
     email: string;
     contact_number?: string | null;
     country?: Country | null;
+    food_restrictions?: string[];
 };
 
 type PageProps = {
     participant: Participant;
+};
+
+const FOOD_RESTRICTION_LABELS: Record<string, string> = {
+    vegetarian: 'Vegetarian',
+    vegan: 'Vegan',
+    halal: 'Halal',
+    kosher: 'Kosher',
+    gluten_free: 'Gluten-free',
+    lactose_intolerant: 'Lactose intolerant',
+    nut_allergy: 'Nut allergy',
+    seafood_allergy: 'Seafood allergy',
 };
 
 function getFlagSrc(country?: Country | null) {
@@ -327,6 +339,14 @@ function IdCardPreview({
 
 export default function ParticipantDashboard({ participant }: PageProps) {
     const flagSrc = getFlagSrc(participant.country);
+
+    const foodRestrictionLabels = React.useMemo(
+        () =>
+            (participant.food_restrictions ?? []).map(
+                (value) => FOOD_RESTRICTION_LABELS[value] ?? value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+            ),
+        [participant.food_restrictions],
+    );
     const qrValue = participant.qr_payload;
 
     // ✅ DEFAULT OPEN = LANDSCAPE
@@ -570,6 +590,23 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                     ) : null
                                                 }
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Food Restrictions</div>
+                                        <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                            {foodRestrictionLabels.length > 0 ? (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {foodRestrictionLabels.map((label) => (
+                                                        <Badge key={label} variant="secondary" className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                                                            {label}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-slate-600 dark:text-slate-300">No food restrictions selected.</p>
+                                            )}
                                         </div>
                                     </div>
 

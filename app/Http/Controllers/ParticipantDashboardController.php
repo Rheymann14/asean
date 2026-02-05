@@ -23,6 +23,7 @@ class ParticipantDashboardController extends Controller
                     'name' => $user->country->name,
                     'flag_url' => $user->country->flag_url,
                 ] : null,
+                'food_restrictions' => $user->food_restrictions ?? [],
             ],
         ]);
 
