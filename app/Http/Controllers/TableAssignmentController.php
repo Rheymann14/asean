@@ -7,6 +7,7 @@ use App\Models\ParticipantTableAssignment;
 use App\Models\Programme;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -81,7 +82,7 @@ class TableAssignmentController extends Controller
                     'capacity' => $table->capacity,
                     'assigned_count' => $table->assignments->count(),
                     'assignments' => $table->assignments
-                        ->sortBy('assigned_at')
+                        ->sortBy([['seat_number', 'asc'], ['assigned_at', 'asc']])
                         ->values()
                         ->map(function (ParticipantTableAssignment $assignment) {
                             $participant = $assignment->user;
@@ -351,6 +352,62 @@ class TableAssignmentController extends Controller
         });
 
         ParticipantTableAssignment::insert($payload->all());
+
+        return back();
+    }
+
+
+    public function updateAssignment(Request $request, ParticipantTableAssignment $participantTableAssignment)
+    {
+        $validated = $request->validate([
+            'seat_number' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $programme = $participantTableAssignment->programme;
+        if ($programme && ! $this->isProgrammeOpen($programme, now())) {
+            return back()->withErrors([
+                'assignment' => 'This event is closed.',
+            ]);
+        }
+
+        $table = $participantTableAssignment->participantTable;
+        if (! $table) {
+            return back()->withErrors([
+                'assignment' => 'Table assignment is unavailable.',
+            ]);
+        }
+
+        $seatNumber = (int) $validated['seat_number'];
+
+        if ($seatNumber > $table->capacity) {
+            return back()->withErrors([
+                'seat_number' => 'Seat number exceeds table capacity.',
+            ]);
+        }
+
+        if ($participantTableAssignment->seat_number === $seatNumber) {
+            return back();
+        }
+
+        $existing = ParticipantTableAssignment::query()
+            ->where('participant_table_id', $table->id)
+            ->where('seat_number', $seatNumber)
+            ->where('id', '!=', $participantTableAssignment->id)
+            ->first();
+
+        if (! $existing) {
+            $participantTableAssignment->update(['seat_number' => $seatNumber]);
+
+            return back();
+        }
+
+        $currentSeat = $participantTableAssignment->seat_number;
+
+        DB::transaction(function () use ($participantTableAssignment, $existing, $seatNumber, $currentSeat) {
+            $existing->update(['seat_number' => 0]);
+            $participantTableAssignment->update(['seat_number' => $seatNumber]);
+            $existing->update(['seat_number' => $currentSeat]);
+        });
 
         return back();
     }
