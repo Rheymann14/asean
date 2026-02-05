@@ -22,7 +22,11 @@ class VehicleAssignmentController extends Controller
             return $this->participantAssignmentIndex($request);
         }
 
-        return $this->assignmentIndex($request);
+        if ($this->isChedAdmin($user)) {
+            return $this->assignmentIndex($request);
+        }
+
+        abort(403);
     }
 
     public function managementIndex(Request $request)
@@ -338,5 +342,21 @@ class VehicleAssignmentController extends Controller
         $slugNormalized = Str::of($slug)->lower()->replace(['_', '-'], ' ')->replaceMatches('/\s+/', ' ')->trim()->toString();
 
         return $nameNormalized === 'participant' || $slugNormalized === 'participant';
+    }
+
+    private function isChedAdmin(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $user->loadMissing('userType');
+
+        $value = Str::of((string) ($user->userType?->slug ?: $user->userType?->name))
+            ->upper()
+            ->replace(['_', '-'], ' ')
+            ->trim();
+
+        return $value === 'CHED' || $value->startsWith('CHED ');
     }
 }

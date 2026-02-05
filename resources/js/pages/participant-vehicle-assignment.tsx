@@ -31,7 +31,7 @@ type EventPhase = 'ongoing' | 'upcoming' | 'closed';
 
 const breadcrumbs = [
     { title: 'Dashboard', href: '/participant-dashboard' },
-    { title: 'Vehicle Assignment', href: '/vehicle-assignment' },
+    { title: 'Van Assignment', href: '/vehicle-assignment' },
 ];
 
 function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
@@ -270,12 +270,12 @@ export default function ParticipantVehicleAssignment({ events = [] }: PageProps)
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Vehicle Assignment" />
+            <Head title="Van Assignment" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                         <Bus className="h-5 w-5 text-[#00359c]" />
-                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Vehicle assignments</h1>
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Van assignments</h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                         Review your assigned vehicle and CHED LO details per event.
@@ -422,7 +422,7 @@ export default function ParticipantVehicleAssignment({ events = [] }: PageProps)
                         <Section
                             phase="upcoming"
                             title="Upcoming events"
-                            description="Vehicle assignments for upcoming events."
+                            description="Van assignments for upcoming events."
                             events={grouped.upcoming}
                         />
                         <Section
