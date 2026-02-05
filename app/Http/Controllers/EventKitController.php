@@ -72,10 +72,17 @@ class EventKitController extends Controller
 
         [$programmes, $attendanceEntries] = $this->loadProgrammesAndAttendance($participant->id);
 
+        $joinedProgrammeIds = $participant->joinedProgrammes()
+            ->pluck('programmes.id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
         return Inertia::render('event-kit-survey', [
             'participant' => $participant,
             'programmes' => $programmes,
             'attendance_entries' => $attendanceEntries,
+            'joined_programme_ids' => $joinedProgrammeIds,
             'selected_programme_id' => $request->session()->get('event_kit.programme_id'),
         ]);
     }

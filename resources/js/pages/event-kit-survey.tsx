@@ -1,14 +1,31 @@
-import * as React from 'react';
-import { Head, useForm, usePage } from '@inertiajs/react';
-import PublicLayout from '@/layouts/public-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { ChevronDown, CircleCheck, CircleX, Sparkles, Star } from 'lucide-react';
+import PublicLayout from '@/layouts/public-layout';
 import { cn } from '@/lib/utils';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import {
+    ChevronDown,
+    CircleCheck,
+    CircleX,
+    Sparkles,
+    Star,
+} from 'lucide-react';
+import * as React from 'react';
 import { toast } from 'sonner';
 
 type ProgrammeRow = {
@@ -36,6 +53,7 @@ type PageProps = {
     participant: Participant;
     programmes: ProgrammeRow[];
     attendance_entries: AttendanceEntry[];
+    joined_programme_ids: number[];
     selected_programme_id?: number | null;
     errors?: Record<string, string>;
 };
@@ -45,8 +63,15 @@ function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
     const start = new Date(startsAt);
     const end = endsAt ? new Date(endsAt) : null;
 
-    const dateFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
-    const timeFmt = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' });
+    const dateFmt = new Intl.DateTimeFormat('en-PH', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    });
+    const timeFmt = new Intl.DateTimeFormat('en-PH', {
+        hour: 'numeric',
+        minute: '2-digit',
+    });
 
     const date = dateFmt.format(start);
     const startTime = timeFmt.format(start);
@@ -65,7 +90,14 @@ function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
 }
 
 export default function EventKitSurvey() {
-    const { participant, programmes, attendance_entries, selected_programme_id, errors } = usePage<PageProps>().props;
+    const {
+        participant,
+        programmes,
+        attendance_entries,
+        joined_programme_ids,
+        selected_programme_id,
+        errors,
+    } = usePage<PageProps>().props;
     const [open, setOpen] = React.useState(false);
     const form = useForm({
         programme_id: selected_programme_id ?? '',
@@ -75,39 +107,63 @@ export default function EventKitSurvey() {
     });
 
     const [feedbackRating, setFeedbackRating] = React.useState(0);
-    const [includeUserExperience, setIncludeUserExperience] = React.useState(true);
-    const [includeEventFeedback, setIncludeEventFeedback] = React.useState(false);
-    const [eventRatings, setEventRatings] = React.useState<Record<string, number>>({});
+    const [includeUserExperience, setIncludeUserExperience] =
+        React.useState(true);
+    const [includeEventFeedback, setIncludeEventFeedback] =
+        React.useState(false);
+    const [eventRatings, setEventRatings] = React.useState<
+        Record<string, number>
+    >({});
     const [recommendations, setRecommendations] = React.useState('');
 
-    const eventCategories = React.useMemo(() => ['Venue', 'Food', 'Speaker', 'Program flow', 'Sound system'], []);
+    const eventCategories = React.useMemo(
+        () => ['Venue', 'Food', 'Speaker', 'Program flow', 'Sound system'],
+        [],
+    );
     const hasEventRatings = React.useMemo(
-        () => includeEventFeedback && Object.values(eventRatings).some((value) => value > 0),
+        () =>
+            includeEventFeedback &&
+            Object.values(eventRatings).some((value) => value > 0),
         [eventRatings, includeEventFeedback],
     );
     const hasUserExperienceRating = includeUserExperience && feedbackRating > 0;
     const canSubmitFeedback = hasEventRatings || hasUserExperienceRating;
 
     const attendanceByProgramme = React.useMemo(
-        () => new Map(attendance_entries.map((entry) => [entry.programme_id, entry.scanned_at])),
+        () =>
+            new Map(
+                attendance_entries.map((entry) => [
+                    entry.programme_id,
+                    entry.scanned_at,
+                ]),
+            ),
         [attendance_entries],
+    );
+    const joinedProgrammeIds = React.useMemo(
+        () => new Set(joined_programme_ids),
+        [joined_programme_ids],
     );
     const selectedProgrammeId = form.data.programme_id
         ? Number(form.data.programme_id)
-        : selected_programme_id ?? null;
-    const selectedProgramme = programmes.find((programme) => programme.id === selectedProgrammeId) ?? null;
+        : (selected_programme_id ?? null);
+    const selectedProgramme =
+        programmes.find((programme) => programme.id === selectedProgrammeId) ??
+        null;
 
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
         form.transform(() => ({
             programme_id: form.data.programme_id,
-            user_experience_rating: includeUserExperience ? feedbackRating : null,
+            user_experience_rating: includeUserExperience
+                ? feedbackRating
+                : null,
             event_ratings: includeEventFeedback ? eventRatings : {},
             recommendations: recommendations.trim(),
         }));
         form.post('/event-kit/survey', {
             onSuccess: () => toast.success('Survey submitted.'),
-            onError: () => toast.error('Please complete the survey before continuing.'),
+            onError: () =>
+                toast.error('Please complete the survey before continuing.'),
         });
     };
 
@@ -119,17 +175,22 @@ export default function EventKitSurvey() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <Badge variant="outline">Event Kit</Badge>
-                            <h1 className="mt-2 text-balance text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">
+                            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-balance text-slate-900 sm:text-3xl dark:text-slate-100">
                                 Event questionnaire
                             </h1>
                             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                Please complete the questionnaire before accessing the event kit materials.
+                                Please complete the questionnaire before
+                                accessing the event kit materials.
                             </p>
                         </div>
                         <Card className="border-slate-200/70 bg-white/70 px-4 py-3 text-xs text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
-                            <div className="font-semibold text-slate-900 dark:text-slate-100">{participant.name}</div>
+                            <div className="font-semibold text-slate-900 dark:text-slate-100">
+                                {participant.name}
+                            </div>
                             <div>{participant.display_id}</div>
-                            <div className="text-slate-500 dark:text-slate-400">{participant.email}</div>
+                            <div className="text-slate-500 dark:text-slate-400">
+                                {participant.email}
+                            </div>
                         </Card>
                     </div>
 
@@ -144,7 +205,8 @@ export default function EventKitSurvey() {
                                         Select event attended
                                     </label>
                                     <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                                        Search or pick the event you attended for attendance verification.
+                                        Search or pick the event you attended
+                                        for attendance verification.
                                     </p>
                                     <Popover open={open} onOpenChange={setOpen}>
                                         <PopoverTrigger asChild>
@@ -154,11 +216,14 @@ export default function EventKitSurvey() {
                                                 className={cn(
                                                     'mt-3 h-11 w-full justify-between rounded-xl border-slate-200 bg-white/80 text-left',
                                                     'dark:border-slate-700 dark:bg-slate-900/60',
-                                                    errors?.programme_id && 'border-rose-500',
+                                                    errors?.programme_id &&
+                                                        'border-rose-500',
                                                 )}
                                             >
                                                 <span className="truncate">
-                                                    {selectedProgramme ? selectedProgramme.title : 'Choose an event'}
+                                                    {selectedProgramme
+                                                        ? selectedProgramme.title
+                                                        : 'Choose an event'}
                                                 </span>
                                                 <ChevronDown className="h-4 w-4 text-slate-400" />
                                             </Button>
@@ -167,94 +232,143 @@ export default function EventKitSurvey() {
                                             align="start"
                                             sideOffset={8}
                                             className={cn(
-                                                "p-0",
+                                                'p-0',
                                                 // responsive width: never exceed viewport, and match trigger width on desktop
-                                                "w-[min(100vw-2rem,var(--radix-popover-trigger-width))]",
-                                                "max-w-[min(100vw-2rem,var(--radix-popover-trigger-width))]",
+                                                'w-[min(100vw-2rem,var(--radix-popover-trigger-width))]',
+                                                'max-w-[min(100vw-2rem,var(--radix-popover-trigger-width))]',
                                             )}
                                         >
                                             <Command className="w-full">
                                                 <CommandInput placeholder="Search events..." />
                                                 <CommandList className="max-h-[min(60vh,420px)] overflow-y-auto">
-                                                    <CommandEmpty>No events found.</CommandEmpty>
+                                                    <CommandEmpty>
+                                                        No events found.
+                                                    </CommandEmpty>
 
                                                     <CommandGroup>
-                                                        {programmes.map((programme) => {
-                                                            const scannedAt = attendanceByProgramme.get(programme.id) ?? null;
-                                                            const isSelected = programme.id === selectedProgrammeId;
+                                                        {programmes.map(
+                                                            (programme) => {
+                                                                const scannedAt =
+                                                                    attendanceByProgramme.get(
+                                                                        programme.id,
+                                                                    ) ?? null;
+                                                                const isSelected =
+                                                                    programme.id ===
+                                                                    selectedProgrammeId;
 
-                                                            return (
-                                                                <CommandItem
-                                                                    key={programme.id}
-                                                                    value={programme.title}
-                                                                    onSelect={() => {
-                                                                        form.setData("programme_id", programme.id);
-                                                                        setOpen(false);
-                                                                    }}
-                                                                    className="px-3 py-3"
-                                                                >
-                                                                    <div className="flex w-full items-start gap-3">
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <div className="flex items-start justify-between gap-2">
-                                                                                <span
-                                                                                    className={cn(
-                                                                                        "min-w-0 flex-1 text-sm font-medium text-slate-900 dark:text-slate-100",
-                                                                                        // prevents forcing width; wraps nicely
-                                                                                        "whitespace-normal break-words line-clamp-2",
+                                                                return (
+                                                                    <CommandItem
+                                                                        key={
+                                                                            programme.id
+                                                                        }
+                                                                        value={
+                                                                            programme.title
+                                                                        }
+                                                                        onSelect={() => {
+                                                                            form.setData(
+                                                                                'programme_id',
+                                                                                programme.id,
+                                                                            );
+                                                                            setOpen(
+                                                                                false,
+                                                                            );
+                                                                        }}
+                                                                        className="px-3 py-3"
+                                                                    >
+                                                                        <div className="flex w-full items-start gap-3">
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <div className="flex items-start justify-between gap-2">
+                                                                                    <span
+                                                                                        className={cn(
+                                                                                            'min-w-0 flex-1 text-sm font-medium text-slate-900 dark:text-slate-100',
+                                                                                            // prevents forcing width; wraps nicely
+                                                                                            'line-clamp-2 break-words whitespace-normal',
+                                                                                        )}
+                                                                                        title={
+                                                                                            programme.title
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            programme.title
+                                                                                        }
+                                                                                    </span>
+
+                                                                                    {isSelected ? (
+                                                                                        <CircleCheck className="h-4 w-4 flex-none text-emerald-500" />
+                                                                                    ) : null}
+                                                                                </div>
+
+                                                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                                    <span>
+                                                                                        {formatEventWindow(
+                                                                                            programme.starts_at,
+                                                                                            programme.ends_at,
+                                                                                        )}
+                                                                                    </span>
+                                                                                    {programme.location ? (
+                                                                                        <span>
+                                                                                            •{' '}
+                                                                                            {
+                                                                                                programme.location
+                                                                                            }
+                                                                                        </span>
+                                                                                    ) : null}
+                                                                                </div>
+
+                                                                                <div className="mt-1 flex items-center gap-2 text-[11px]">
+                                                                                    {scannedAt ? (
+                                                                                        <span className="inline-flex items-center gap-1 text-emerald-600">
+                                                                                            <CircleCheck className="h-3 w-3" />
+                                                                                            Checked-in
+                                                                                        </span>
+                                                                                    ) : joinedProgrammeIds.has(
+                                                                                          programme.id,
+                                                                                      ) ? (
+                                                                                        <span className="inline-flex items-center gap-1 text-sky-600">
+                                                                                            <CircleCheck className="h-3 w-3" />
+                                                                                            Joined
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="inline-flex items-center gap-1 text-rose-500">
+                                                                                            <CircleX className="h-3 w-3" />
+                                                                                            No
+                                                                                            attendance
+                                                                                        </span>
                                                                                     )}
-                                                                                    title={programme.title}
-                                                                                >
-                                                                                    {programme.title}
-                                                                                </span>
-
-                                                                                {isSelected ? (
-                                                                                    <CircleCheck className="h-4 w-4 flex-none text-emerald-500" />
-                                                                                ) : null}
-                                                                            </div>
-
-                                                                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                                                <span>{formatEventWindow(programme.starts_at, programme.ends_at)}</span>
-                                                                                {programme.location ? <span>• {programme.location}</span> : null}
-                                                                            </div>
-
-                                                                            <div className="mt-1 flex items-center gap-2 text-[11px]">
-                                                                                {scannedAt ? (
-                                                                                    <span className="inline-flex items-center gap-1 text-emerald-600">
-                                                                                        <CircleCheck className="h-3 w-3" />
-                                                                                        Checked-in
-                                                                                    </span>
-                                                                                ) : (
-                                                                                    <span className="inline-flex items-center gap-1 text-rose-500">
-                                                                                        <CircleX className="h-3 w-3" />
-                                                                                        No attendance
-                                                                                    </span>
-                                                                                )}
+                                                                                </div>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
-                                                                </CommandItem>
-                                                            );
-                                                        })}
+                                                                    </CommandItem>
+                                                                );
+                                                            },
+                                                        )}
                                                     </CommandGroup>
                                                 </CommandList>
                                             </Command>
                                         </PopoverContent>
-
                                     </Popover>
                                     {errors?.programme_id ? (
-                                        <p className="mt-2 text-xs text-rose-500">{errors.programme_id}</p>
+                                        <p className="mt-2 text-xs text-rose-500">
+                                            {errors.programme_id}
+                                        </p>
                                     ) : null}
                                 </div>
 
                                 <div className="space-y-2">
-                                    <p className="text-xs font-semibold text-slate-700">Include feedback for</p>
+                                    <p className="text-xs font-semibold text-slate-700">
+                                        Include feedback for
+                                    </p>
                                     <div className="space-y-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm">
                                         <label className="flex items-center gap-2">
                                             <input
                                                 type="checkbox"
                                                 className="h-4 w-4 rounded border-slate-300 text-[#1e3c73]"
                                                 checked={includeUserExperience}
-                                                onChange={(event) => setIncludeUserExperience(event.target.checked)}
+                                                onChange={(event) =>
+                                                    setIncludeUserExperience(
+                                                        event.target.checked,
+                                                    )
+                                                }
                                             />
                                             User experience
                                         </label>
@@ -263,7 +377,11 @@ export default function EventKitSurvey() {
                                                 type="checkbox"
                                                 className="h-4 w-4 rounded border-slate-300 text-[#1e3c73]"
                                                 checked={includeEventFeedback}
-                                                onChange={(event) => setIncludeEventFeedback(event.target.checked)}
+                                                onChange={(event) =>
+                                                    setIncludeEventFeedback(
+                                                        event.target.checked,
+                                                    )
+                                                }
                                             />
                                             Event
                                         </label>
@@ -272,10 +390,13 @@ export default function EventKitSurvey() {
 
                                 {includeEventFeedback && (
                                     <div>
-                                        <p className="text-xs font-semibold text-slate-700">Event highlights</p>
+                                        <p className="text-xs font-semibold text-slate-700">
+                                            Event highlights
+                                        </p>
                                         <div className="mt-2 space-y-2">
                                             {eventCategories.map((category) => {
-                                                const rating = eventRatings[category] ?? 0;
+                                                const rating =
+                                                    eventRatings[category] ?? 0;
                                                 return (
                                                     <div
                                                         key={category}
@@ -285,17 +406,28 @@ export default function EventKitSurvey() {
                                                             {category}
                                                         </p>
                                                         <div className="mt-2 flex items-center gap-1.5">
-                                                            {[1, 2, 3, 4, 5].map((star) => {
-                                                                const isActive = star <= rating;
+                                                            {[
+                                                                1, 2, 3, 4, 5,
+                                                            ].map((star) => {
+                                                                const isActive =
+                                                                    star <=
+                                                                    rating;
                                                                 return (
                                                                     <button
-                                                                        key={star}
+                                                                        key={
+                                                                            star
+                                                                        }
                                                                         type="button"
                                                                         onClick={() =>
-                                                                            setEventRatings((current) => ({
-                                                                                ...current,
-                                                                                [category]: star,
-                                                                            }))
+                                                                            setEventRatings(
+                                                                                (
+                                                                                    current,
+                                                                                ) => ({
+                                                                                    ...current,
+                                                                                    [category]:
+                                                                                        star,
+                                                                                }),
+                                                                            )
                                                                         }
                                                                         className={cn(
                                                                             'inline-flex h-8 w-8 items-center justify-center rounded-full border transition',
@@ -308,14 +440,18 @@ export default function EventKitSurvey() {
                                                                         <Star
                                                                             className={cn(
                                                                                 'h-4 w-4',
-                                                                                isActive ? 'fill-amber-400 text-amber-400' : '',
+                                                                                isActive
+                                                                                    ? 'fill-amber-400 text-amber-400'
+                                                                                    : '',
                                                                             )}
                                                                         />
                                                                     </button>
                                                                 );
                                                             })}
                                                             <span className="text-[10px] font-medium text-slate-500">
-                                                                {rating ? `${rating}/5` : 'Tap a star'}
+                                                                {rating
+                                                                    ? `${rating}/5`
+                                                                    : 'Tap a star'}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -327,15 +463,22 @@ export default function EventKitSurvey() {
 
                                 {includeUserExperience && (
                                     <div>
-                                        <p className="text-xs font-semibold text-slate-700">Ease of navigation</p>
+                                        <p className="text-xs font-semibold text-slate-700">
+                                            Ease of navigation
+                                        </p>
                                         <div className="mt-2 flex items-center gap-2">
                                             {[1, 2, 3, 4, 5].map((star) => {
-                                                const isActive = star <= feedbackRating;
+                                                const isActive =
+                                                    star <= feedbackRating;
                                                 return (
                                                     <button
                                                         key={star}
                                                         type="button"
-                                                        onClick={() => setFeedbackRating(star)}
+                                                        onClick={() =>
+                                                            setFeedbackRating(
+                                                                star,
+                                                            )
+                                                        }
                                                         className={cn(
                                                             'inline-flex h-8 w-8 items-center justify-center rounded-full border transition',
                                                             isActive
@@ -347,14 +490,18 @@ export default function EventKitSurvey() {
                                                         <Star
                                                             className={cn(
                                                                 'h-4 w-4',
-                                                                isActive ? 'fill-amber-400 text-amber-400' : '',
+                                                                isActive
+                                                                    ? 'fill-amber-400 text-amber-400'
+                                                                    : '',
                                                             )}
                                                         />
                                                     </button>
                                                 );
                                             })}
                                             <span className="text-[10px] font-medium text-slate-500">
-                                                {feedbackRating ? `${feedbackRating}/5` : 'Tap a star'}
+                                                {feedbackRating
+                                                    ? `${feedbackRating}/5`
+                                                    : 'Tap a star'}
                                             </span>
                                         </div>
                                     </div>
@@ -366,11 +513,19 @@ export default function EventKitSurvey() {
                                         rows={3}
                                         placeholder="Tell us what would make the experience even better..."
                                         value={recommendations}
-                                        onChange={(event) => setRecommendations(event.target.value)}
+                                        onChange={(event) =>
+                                            setRecommendations(
+                                                event.target.value,
+                                            )
+                                        }
                                         className="mt-2 min-h-[96px]"
                                     />
                                 </label>
-                                {errors?.survey ? <p className="text-xs text-rose-500">{errors.survey}</p> : null}
+                                {errors?.survey ? (
+                                    <p className="text-xs text-rose-500">
+                                        {errors.survey}
+                                    </p>
+                                ) : null}
                             </div>
                         </Card>
 
@@ -385,8 +540,11 @@ export default function EventKitSurvey() {
                                             Why we ask
                                         </h2>
                                         <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">
-                                            Your responses help us confirm attendance and improve future programmes. Once submitted,
-                                            you can access the event kit and certificates.
+                                            Your responses help us confirm
+                                            attendance and improve future
+                                            programmes. Once submitted, you can
+                                            access the event kit and
+                                            certificates.
                                         </p>
                                     </div>
                                 </div>
