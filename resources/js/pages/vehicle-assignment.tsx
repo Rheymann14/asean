@@ -85,7 +85,7 @@ function SearchableDropdown({
             </PopoverTrigger>
             <PopoverContent
                 align="start"
-                className="w-[--radix-popover-trigger-width] max-w-[min(22rem,calc(100vw-2rem))] p-0"
+                className="w-[min(var(--radix-popover-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] p-0"
             >
                 <Command>
                     <CommandInput placeholder={searchPlaceholder} />
@@ -100,10 +100,10 @@ function SearchableDropdown({
                                         onValueChange(item.value);
                                         setOpen(false);
                                     }}
-                                    className="gap-2"
+                                    className="min-w-0 gap-2"
                                 >
                                     <Check className={cn('h-4 w-4', value === item.value ? 'opacity-100' : 'opacity-0')} />
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                         <div className="truncate">{item.label}</div>
                                         {item.description ? (
                                             <div className="truncate text-xs text-slate-500">{item.description}</div>

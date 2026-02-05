@@ -4,23 +4,16 @@ import { Head } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarDays, Check, ChevronsUpDown, MapPin, Table, Armchair } from 'lucide-react';
+import { Bus, CalendarDays, Check, ChevronsUpDown, MapPin, Phone, User2 } from 'lucide-react';
 
-type TableAssignment = {
-    table_number: string;
-    capacity: number;
-    seat_number?: number | null;
-    assigned_at?: string | null;
+type VehicleAssignment = {
+    vehicle_name?: string | null;
+    plate_number?: string | null;
+    ched_lo_name?: string | null;
+    ched_lo_number?: string | null;
 };
 
 type EventRow = {
@@ -29,19 +22,17 @@ type EventRow = {
     starts_at?: string | null;
     ends_at?: string | null;
     location?: string | null;
-    table?: TableAssignment | null;
+    vehicle_assignment?: VehicleAssignment | null;
 };
 
-type PageProps = {
-    events?: EventRow[];
-};
+type PageProps = { events?: EventRow[] };
+
+type EventPhase = 'ongoing' | 'upcoming' | 'closed';
 
 const breadcrumbs = [
     { title: 'Dashboard', href: '/participant-dashboard' },
-    { title: 'Table Assignment', href: '/table-assignment' },
+    { title: 'Van Assignment', href: '/vehicle-assignment' },
 ];
-
-type EventPhase = 'ongoing' | 'upcoming' | 'closed';
 
 function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
     if (!startsAt) return 'Schedule to be announced';
@@ -93,65 +84,43 @@ function getEventPhase(startsAt: string | null | undefined, endsAt: string | nul
 }
 
 function phaseLabel(phase: EventPhase) {
-    switch (phase) {
-        case 'ongoing':
-            return 'Ongoing';
-        case 'upcoming':
-            return 'Upcoming';
-        case 'closed':
-        default:
-            return 'Closed';
-    }
+    if (phase === 'ongoing') return 'Ongoing';
+    if (phase === 'upcoming') return 'Upcoming';
+
+    return 'Closed';
 }
 
 function phaseBadgeClass(phase: EventPhase) {
-    switch (phase) {
-        case 'ongoing':
-            return '!border-emerald-200 !bg-emerald-50 !text-emerald-700 dark:!border-emerald-500/30 dark:!bg-emerald-500/10 dark:!text-emerald-200';
-        case 'upcoming':
-            return '!border-sky-200 !bg-sky-50 !text-sky-700 dark:!border-sky-500/30 dark:!bg-sky-500/10 dark:!text-sky-200';
-        case 'closed':
-        default:
-            return '!border-rose-200 !bg-rose-50 !text-rose-700 dark:!border-rose-500/30 dark:!bg-rose-500/10 dark:!text-rose-200';
+    if (phase === 'ongoing') {
+        return '!border-emerald-200 !bg-emerald-50 !text-emerald-700 dark:!border-emerald-500/30 dark:!bg-emerald-500/10 dark:!text-emerald-200';
     }
+    if (phase === 'upcoming') {
+        return '!border-sky-200 !bg-sky-50 !text-sky-700 dark:!border-sky-500/30 dark:!bg-sky-500/10 dark:!text-sky-200';
+    }
+
+    return '!border-rose-200 !bg-rose-50 !text-rose-700 dark:!border-rose-500/30 dark:!bg-rose-500/10 dark:!text-rose-200';
 }
 
 function phaseTitleClass(phase: EventPhase) {
-    switch (phase) {
-        case 'ongoing':
-            return 'text-emerald-900 dark:text-emerald-200';
-        case 'upcoming':
-            return 'text-sky-900 dark:text-sky-200';
-        case 'closed':
-        default:
-            return 'text-rose-900 dark:text-rose-200';
-    }
+    if (phase === 'ongoing') return 'text-emerald-900 dark:text-emerald-200';
+    if (phase === 'upcoming') return 'text-sky-900 dark:text-sky-200';
+
+    return 'text-rose-900 dark:text-rose-200';
 }
 
 function phaseDotClass(phase: EventPhase) {
-    switch (phase) {
-        case 'ongoing':
-            return 'bg-emerald-500 dark:bg-emerald-400';
-        case 'upcoming':
-            return 'bg-sky-500 dark:bg-sky-400';
-        case 'closed':
-        default:
-            return 'bg-rose-500 dark:bg-rose-400';
-    }
+    if (phase === 'ongoing') return 'bg-emerald-500 dark:bg-emerald-400';
+    if (phase === 'upcoming') return 'bg-sky-500 dark:bg-sky-400';
+
+    return 'bg-rose-500 dark:bg-rose-400';
 }
 
 function phaseCardAccentClass(phase: EventPhase) {
-    switch (phase) {
-        case 'ongoing':
-            return 'border-l-4 border-l-emerald-500/70 dark:border-l-emerald-400/60';
-        case 'upcoming':
-            return 'border-l-4 border-l-sky-500/70 dark:border-l-sky-400/60';
-        case 'closed':
-        default:
-            return 'border-l-4 border-l-rose-500/70 dark:border-l-rose-400/60';
-    }
-}
+    if (phase === 'ongoing') return 'border-l-4 border-l-emerald-500/70 dark:border-l-emerald-400/60';
+    if (phase === 'upcoming') return 'border-l-4 border-l-sky-500/70 dark:border-l-sky-400/60';
 
+    return 'border-l-4 border-l-rose-500/70 dark:border-l-rose-400/60';
+}
 
 function Section({
     phase,
@@ -170,10 +139,7 @@ function Section({
                 <div className="flex items-center gap-2">
                     <span className={cn('h-2.5 w-2.5 rounded-full', phaseDotClass(phase))} />
                     <h2 className={cn('text-lg font-semibold', phaseTitleClass(phase))}>{title}</h2>
-                    <Badge
-                        variant="outline"
-                        className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(phase))}
-                    >
+                    <Badge variant="outline" className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(phase))}>
                         {phaseLabel(phase)}
                     </Badge>
                 </div>
@@ -182,37 +148,27 @@ function Section({
 
             {events.length === 0 ? (
                 <Card className="border-dashed">
-                    <div className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
-                        No events to show in this section yet.
-                    </div>
+                    <div className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">No events to show in this section yet.</div>
                 </Card>
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {events.map((event) => {
-                        const hasTable = Boolean(event.table);
+                        const assignment = event.vehicle_assignment;
 
                         return (
-                            <Card
-                                key={event.id}
-                                className={cn(
-                                    'border-slate-200/70 dark:border-slate-800',
-                                    phaseCardAccentClass(event.phase),
-                                )}
-                            >
-                                <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
+                            <Card key={event.id} className={cn('border-slate-200/70 dark:border-slate-800', phaseCardAccentClass(event.phase))}>
+                                <div className="flex flex-col gap-4 p-4">
                                     <div className="space-y-2">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                                                {event.title}
-                                            </h3>
+                                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{event.title}</h3>
                                             <Badge
                                                 variant="outline"
-                                                className={cn('shrink-0 text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                                className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
                                             >
                                                 {phaseLabel(event.phase)}
                                             </Badge>
                                         </div>
-                                        <div className="flex flex-col gap-2 text-sm text-slate-600 dark:text-slate-300 sm:flex-row sm:flex-wrap sm:items-center">
+                                        <div className="flex flex-col gap-2 text-sm text-slate-600 dark:text-slate-300">
                                             <span className="inline-flex items-center gap-2">
                                                 <CalendarDays className="h-4 w-4 text-slate-400" />
                                                 {formatEventWindow(event.starts_at, event.ends_at)}
@@ -226,40 +182,40 @@ function Section({
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex flex-col items-start gap-1 text-xs text-slate-500 dark:text-slate-400 sm:items-end">
-                                            <span className="uppercase tracking-wide">Table assignment</span>
-                                            {hasTable ? (
-
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={cn(
-                                                            'rounded-full px-3 py-1 text-sm font-semibold',
-                                                            '!border-amber-400 !bg-white !text-amber-900 shadow-sm ring-2 ring-amber-200/70',
-                                                            'dark:!border-amber-500/50 dark:!bg-slate-950 dark:!text-amber-200 dark:ring-amber-500/20',
-                                                        )}
-                                                    >
-                                                         {event.table?.table_number}
-                                                    </Badge>
-                                                    {event.table?.seat_number ? (
-                                                        <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-                                                            <Armchair className="mr-1 h-3.5 w-3.5" />
-                                                            Seat #{event.table.seat_number}
-                                                        </Badge>
-                                                    ) : null}
-                                                </div>
-
-
-                                            ) : (
-                                                <Badge
-                                                    variant="outline"
-                                                    className="shrink-0 border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300"
-                                                >
-                                                    Pending
-                                                </Badge>
-                                            )}
+                                    <div className="space-y-2 rounded-lg border border-slate-200/70 bg-slate-50/60 p-3 text-sm dark:border-slate-700 dark:bg-slate-900/40">
+                                        <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                            Vehicle assignment
                                         </div>
+
+                                        {assignment ? (
+                                            <div className="space-y-2 text-slate-700 dark:text-slate-200">
+                                                <p>
+                                                    <span className="font-medium">Vehicle:</span> {assignment.vehicle_name || '—'}
+                                                </p>
+                                                <p>
+                                                    <span className="font-medium">Plate number:</span> {assignment.plate_number || '—'}
+                                                </p>
+                                                <p className="inline-flex items-center gap-2">
+                                                    <User2 className="h-4 w-4 text-slate-400" />
+                                                    <span>
+                                                        <span className="font-medium">CHED LO:</span> {assignment.ched_lo_name || '—'}
+                                                    </span>
+                                                </p>
+                                                <p className="inline-flex items-center gap-2">
+                                                    <Phone className="h-4 w-4 text-slate-400" />
+                                                    <span>
+                                                        <span className="font-medium">CHED LO number:</span> {assignment.ched_lo_number || '—'}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <Badge
+                                                variant="outline"
+                                                className="border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300"
+                                            >
+                                                Pending
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
                             </Card>
@@ -271,7 +227,7 @@ function Section({
     );
 }
 
-export default function ParticipantTableAssignment({ events = [] }: PageProps) {
+export default function ParticipantVehicleAssignment({ events = [] }: PageProps) {
     const [nowTs] = React.useState(() => new Date().getTime());
     const [filterId, setFilterId] = React.useState('all');
     const [open, setOpen] = React.useState(false);
@@ -287,8 +243,10 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
 
     const filteredEvents = React.useMemo(() => {
         if (filterId === 'all') return eventsWithPhase;
+
         const id = Number(filterId);
         if (Number.isNaN(id)) return eventsWithPhase;
+
         return eventsWithPhase.filter((event) => event.id === id);
     }, [eventsWithPhase, filterId]);
 
@@ -303,35 +261,32 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
 
     const selectedEvent = React.useMemo(() => {
         if (filterId === 'all') return null;
+
         const id = Number(filterId);
         if (Number.isNaN(id)) return null;
+
         return eventsWithPhase.find((event) => event.id === id) ?? null;
     }, [eventsWithPhase, filterId]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Table Assignment" />
+            <Head title="Van Assignment" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
-                        <Table className="h-5 w-5 text-[#00359c]" />
-                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                            Table assignments
-                        </h1>
+                        <Bus className="h-5 w-5 text-[#00359c]" />
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Van assignments</h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
-                        Review your assigned table per event.
+                        Review your assigned vehicle and CHED LO details per event.
                     </p>
                 </div>
 
                 <Card className="border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="space-y-1">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                Filter event
-                            </p>
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Filter event</p>
 
-                            {/* ✅ Show status color in the filter summary */}
                             <div className="flex flex-wrap items-center gap-2">
                                 <span
                                     className={cn(
@@ -353,7 +308,7 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                 ) : (
                                     <Badge
                                         variant="outline"
-                                        className="shrink-0 border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300"
+                                        className="border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300"
                                     >
                                         All
                                     </Badge>
@@ -363,13 +318,7 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
 
                         <Popover open={open} onOpenChange={setOpen}>
                             <PopoverTrigger asChild>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={open}
-                                    className="w-full justify-between md:w-80"
-                                >
+                                <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between md:w-80">
                                     <span className="flex min-w-0 items-center gap-2">
                                         <span
                                             className={cn(
@@ -377,19 +326,13 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                                 selectedEvent ? phaseDotClass(selectedEvent.phase) : 'bg-slate-300 dark:bg-slate-600',
                                             )}
                                         />
-                                        <span className={cn('truncate', !selectedEvent && 'text-muted-foreground')}>
-                                            {selectedEvent ? selectedEvent.title : 'All events'}
-                                        </span>
+                                        <span className="truncate">{selectedEvent ? selectedEvent.title : 'All events'}</span>
                                     </span>
-
-                                    <span className="flex items-center gap-2">
+                                    <span className="ml-2 inline-flex items-center gap-2">
                                         {selectedEvent ? (
                                             <Badge
                                                 variant="outline"
-                                                className={cn(
-                                                    'hidden text-[10px] uppercase tracking-wide sm:inline-flex',
-                                                    phaseBadgeClass(selectedEvent.phase),
-                                                )}
+                                                className={cn('hidden text-[10px] uppercase tracking-wide sm:inline-flex', phaseBadgeClass(selectedEvent.phase))}
                                             >
                                                 {phaseLabel(selectedEvent.phase)}
                                             </Badge>
@@ -399,7 +342,10 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                 </Button>
                             </PopoverTrigger>
 
-                            <PopoverContent align="start" className="w-[min(var(--radix-popover-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] p-0">
+                            <PopoverContent
+                                align="start"
+                                className="w-[min(var(--radix-popover-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] p-0"
+                            >
                                 <Command>
                                     <CommandInput placeholder="Search event..." />
                                     <CommandList>
@@ -462,7 +408,7 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                 {eventsWithPhase.length === 0 ? (
                     <Card className="border-dashed">
                         <div className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
-                            No table assignments yet. Join an event to see your seating details.
+                            No vehicle assignments yet. Join an event to see your transport details.
                         </div>
                     </Card>
                 ) : (
@@ -470,13 +416,13 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                         <Section
                             phase="ongoing"
                             title="Ongoing events"
-                            description="Events currently happening with your assigned table."
+                            description="Events currently happening with your assigned vehicle details."
                             events={grouped.ongoing}
                         />
                         <Section
                             phase="upcoming"
                             title="Upcoming events"
-                            description="Table assignments for upcoming events."
+                            description="Van assignments for upcoming events."
                             events={grouped.upcoming}
                         />
                         <Section
