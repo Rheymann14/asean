@@ -18,15 +18,11 @@ class VehicleAssignmentController extends Controller
     {
         $user = $request->user();
 
-        if ($this->isParticipantRole((string) $user?->userType?->name, (string) $user?->userType?->slug)) {
-            return $this->participantAssignmentIndex($request);
-        }
-
         if ($this->isChedAdmin($user)) {
             return $this->assignmentIndex($request);
         }
 
-        abort(403);
+        return $this->participantAssignmentIndex($request);
     }
 
     public function managementIndex(Request $request)
@@ -334,14 +330,6 @@ class VehicleAssignmentController extends Controller
             || $compact->startsWith('CHEDLO')
             || $normalized->startsWith('CHED LIAISON')
             || $compact->startsWith('CHEDLIAISON');
-    }
-
-    private function isParticipantRole(string $name, string $slug): bool
-    {
-        $nameNormalized = Str::of($name)->lower()->replace(['_', '-'], ' ')->replaceMatches('/\s+/', ' ')->trim()->toString();
-        $slugNormalized = Str::of($slug)->lower()->replace(['_', '-'], ' ')->replaceMatches('/\s+/', ' ')->trim()->toString();
-
-        return $nameNormalized === 'participant' || $slugNormalized === 'participant';
     }
 
     private function isChedAdmin(?User $user): bool
