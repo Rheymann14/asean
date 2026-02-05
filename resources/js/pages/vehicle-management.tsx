@@ -17,7 +17,7 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import { Truck, Check, ChevronsUpDown } from 'lucide-react';
+import { Bus, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Management', href: '/vehicle-management' }];
@@ -166,7 +166,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                        <Truck className="h-5 w-5 text-[#00359c]" />
+                        <Bus className="h-5 w-5 text-[#00359c]" />
                         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Vehicle Management</h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -198,7 +198,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Add Vehicle</CardTitle>
-                        <CardDescription>Example: Van 1, Van 2</CardDescription>
+                        <CardDescription>Example: Van 1</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={submit} className="space-y-4">

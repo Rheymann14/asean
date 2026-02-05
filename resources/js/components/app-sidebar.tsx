@@ -24,7 +24,7 @@ import {
     CalendarDays,
     Table,
     Image,
-    Truck,
+    Bus,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -49,12 +49,12 @@ export function AppSidebar() {
         {
             title: 'Vehicle Management',
             href: '/vehicle-management',
-            icon: Truck,
+            icon: Bus,
         },
         {
             title: 'Vehicle Assignment',
             href: '/vehicle-assignment',
-            icon: Truck,
+            icon: Bus,
         },
     ];
 
