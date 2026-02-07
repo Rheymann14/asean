@@ -12,7 +12,10 @@
                     <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden;">
                         <tr>
                             <td style="padding: 20px 28px 8px;">
-                                <img src="{{ $bannerUrl }}" alt="ASEAN Philippines 2026 banner" style="display: block; width: 100%; max-width: 260px; height: auto;" />
+                                @php
+                                    $bannerSrc = $bannerInline ?: $bannerUrl;
+                                @endphp
+                                <img src="{{ $bannerSrc }}" alt="ASEAN Philippines 2026 banner" style="display: block; width: 100%; max-width: 260px; height: auto;" />
                             </td>
                         </tr>
                         <tr>
@@ -43,10 +46,16 @@
                                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                                                 <tr>
                                                     <td style="width: 40px; vertical-align: middle;">
-                                                        <img src="{{ $logoUrl }}" alt="ASEAN logo" style="width: 36px; height: 36px; display: block;" />
+                                                        @php
+                                                            $logoSrc = $logoInline ?: $logoUrl;
+                                                        @endphp
+                                                        <img src="{{ $logoSrc }}" alt="ASEAN logo" style="width: 36px; height: 36px; display: block;" />
                                                     </td>
                                                     <td style="width: 40px; vertical-align: middle;">
-                                                        <img src="{{ $bagongPilipinasUrl }}" alt="Bagong Pilipinas logo" style="width: 36px; height: 36px; display: block;" />
+                                                        @php
+                                                            $bagongPilipinasSrc = $bagongPilipinasInline ?: $bagongPilipinasUrl;
+                                                        @endphp
+                                                        <img src="{{ $bagongPilipinasSrc }}" alt="Bagong Pilipinas logo" style="width: 36px; height: 36px; display: block;" />
                                                     </td>
                                                     <td style="vertical-align: middle;">
                                                         <div style="font-size: 12px; font-weight: 700; color: #0f172a;">ASEAN Philippines 2026</div>
