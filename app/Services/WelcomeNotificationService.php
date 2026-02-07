@@ -13,10 +13,8 @@ class WelcomeNotificationService
 {
     public function dispatch(User $user): void
     {
-        dispatch(function () use ($user) {
-            $this->sendWelcomeEmail($user);
-            rescue(fn () => app(SemaphoreSms::class)->sendWelcome($user), report: true);
-        })->afterResponse();
+        $this->sendWelcomeEmail($user);
+        rescue(fn () => app(SemaphoreSms::class)->sendWelcome($user), report: true);
     }
 
     private function sendWelcomeEmail(User $user): void
