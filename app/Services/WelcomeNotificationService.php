@@ -49,8 +49,8 @@ class WelcomeNotificationService
 
         try {
             $mailable = new ParticipantWelcomeMail($user);
-            $html = $this->minifyHtml($mailable->render());
             $subject = $mailable->envelope()->subject ?? 'Welcome to ASEAN PH 2026 — Your Registration Details';
+            $html = $this->minifyHtml(view('emails.participant-welcome-brevo', $mailable->data())->render());
 
             $payload = [
                 'sender' => [

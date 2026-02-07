@@ -32,6 +32,14 @@ class ParticipantWelcomeMail extends Mailable
 
     public function content(): Content
     {
+        return new Content(
+            view: 'emails.participant-welcome',
+            with: $this->data(),
+        );
+    }
+
+    public function data(): array
+    {
         $qrUrl = $this->qrUrl();
 
         $events = $this->user->joinedProgrammes
@@ -51,23 +59,20 @@ class ParticipantWelcomeMail extends Mailable
         $logoPath = public_path('img/asean_logo.png');
         $bagongPilipinasPath = public_path('img/bagong_pilipinas.png');
 
-        return new Content(
-            view: 'emails.participant-welcome',
-            with: [
-                'appUrl' => $appUrl,
-                'bannerUrl' => $appUrl . '/img/asean_banner_logo.png',
-                'logoUrl' => $appUrl . '/img/asean_logo.png',
-                'bannerPath' => is_file($bannerPath) ? $bannerPath : null,
-                'logoPath' => is_file($logoPath) ? $logoPath : null,
-                'bagongPilipinasUrl' => $appUrl . '/img/bagong_pilipinas.png',
-                'bagongPilipinasPath' => is_file($bagongPilipinasPath) ? $bagongPilipinasPath : null,
-                'events' => $events,
-                'assignments' => $assignments,
-                'qrImage' => null,
-                'qrUrl' => $qrUrl,
-                'user' => $this->user,
-            ],
-        );
+        return [
+            'appUrl' => $appUrl,
+            'bannerUrl' => $appUrl . '/img/asean_banner_logo.png',
+            'logoUrl' => $appUrl . '/img/asean_logo.png',
+            'bannerPath' => is_file($bannerPath) ? $bannerPath : null,
+            'logoPath' => is_file($logoPath) ? $logoPath : null,
+            'bagongPilipinasUrl' => $appUrl . '/img/bagong_pilipinas.png',
+            'bagongPilipinasPath' => is_file($bagongPilipinasPath) ? $bagongPilipinasPath : null,
+            'events' => $events,
+            'assignments' => $assignments,
+            'qrImage' => null,
+            'qrUrl' => $qrUrl,
+            'user' => $this->user,
+        ];
     }
 
 
