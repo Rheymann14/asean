@@ -8,6 +8,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 
 class ParticipantWelcomeMail extends Mailable
 {
@@ -54,18 +55,19 @@ class ParticipantWelcomeMail extends Mailable
 
         $assignments = $this->user->tableAssignments->keyBy('programme_id');
 
-        $appUrl = rtrim((string) config('app.url', 'https://asean.chedro12.com'), '/');
+        $appUrl = $this->normalizeUrl(rtrim((string) config('app.url', 'https://asean.chedro12.com'), '/'));
+        $assetUrl = $this->normalizeUrl(rtrim((string) (config('app.asset_url') ?: $appUrl), '/'));
         $bannerPath = public_path('img/asean_banner_logo.png');
         $logoPath = public_path('img/asean_logo.png');
         $bagongPilipinasPath = public_path('img/bagong_pilipinas.png');
 
         return [
             'appUrl' => $appUrl,
-            'bannerUrl' => $appUrl . '/img/asean_banner_logo.png',
-            'logoUrl' => $appUrl . '/img/asean_logo.png',
+            'bannerUrl' => $assetUrl . '/img/asean_banner_logo.png',
+            'logoUrl' => $assetUrl . '/img/asean_logo.png',
             'bannerPath' => is_file($bannerPath) ? $bannerPath : null,
             'logoPath' => is_file($logoPath) ? $logoPath : null,
-            'bagongPilipinasUrl' => $appUrl . '/img/bagong_pilipinas.png',
+            'bagongPilipinasUrl' => $assetUrl . '/img/bagong_pilipinas.png',
             'bagongPilipinasPath' => is_file($bagongPilipinasPath) ? $bagongPilipinasPath : null,
             'events' => $events,
             'assignments' => $assignments,
@@ -86,5 +88,14 @@ class ParticipantWelcomeMail extends Mailable
         $payload = urlencode((string) $this->user->qr_payload);
 
         return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data={$payload}";
+    }
+
+    private function normalizeUrl(string $url): string
+    {
+        if (Str::startsWith($url, ['http://', 'https://'])) {
+            return $url;
+        }
+
+        return 'https://' . $url;
     }
 }
