@@ -13,7 +13,7 @@
                         <tr>
                             <td style="padding: 24px 32px 12px;">
                                 @php
-                                    $bannerSrc = $bannerPath ? $message->embed($bannerPath) : $bannerUrl;
+                                    $bannerSrc = $bannerPath && isset($message) ? $message->embed($bannerPath) : $bannerUrl;
                                 @endphp
                                 <img src="{{ $bannerSrc }}" alt="ASEAN Philippines 2026 banner" style="display: block; width: 100%; max-width: 280px; height: auto;" />
                             </td>
@@ -41,7 +41,7 @@
                             <td style="padding: 0 32px 24px;">
                                 <h2 style="margin: 0 0 12px; font-size: 16px; color: #0f172a;">System-generated ID</h2>
                                 @php
-                                    $qrSrc = $qrImage ? $message->embedData($qrImage, 'participant-qr.png', 'image/png') : $qrUrl;
+                                    $qrSrc = $qrImage && isset($message) ? $message->embedData($qrImage, 'participant-qr.png', 'image/png') : $qrUrl;
                                 @endphp
                                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #dbeafe; border-radius: 18px; padding: 16px; background-color: #eff6ff;">
                                     <tr>
@@ -50,13 +50,13 @@
                                                 <tr>
                                                     <td style="width: 48px; vertical-align: middle;">
                                                         @php
-                                                            $logoSrc = $logoPath ? $message->embed($logoPath) : $logoUrl;
+                                                            $logoSrc = $logoPath && isset($message) ? $message->embed($logoPath) : $logoUrl;
                                                         @endphp
                                                         <img src="{{ $logoSrc }}" alt="ASEAN logo" style="width: 42px; height: 42px; display: block;" />
                                                     </td>
                                                     <td style="width: 48px; vertical-align: middle;">
                                                         @php
-                                                            $bagongPilipinasSrc = $bagongPilipinasPath ? $message->embed($bagongPilipinasPath) : $bagongPilipinasUrl;
+                                                            $bagongPilipinasSrc = $bagongPilipinasPath && isset($message) ? $message->embed($bagongPilipinasPath) : $bagongPilipinasUrl;
                                                         @endphp
                                                         <img src="{{ $bagongPilipinasSrc }}" alt="Bagong Pilipinas logo" style="width: 42px; height: 42px; display: block;" />
                                                     </td>
@@ -108,7 +108,6 @@
                                         <tr>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Event</th>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Date</th>
-                                            <!-- <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Table</th> -->
                                         </tr>
                                         @foreach ($events as $event)
                                             @php
@@ -120,9 +119,6 @@
                                                 <td style="padding: 10px 0; font-size: 13px; color: #475569;">
                                                     {{ $event['starts_at'] ?? 'TBA' }}
                                                 </td>
-                                                <!-- <td style="padding: 10px 0; font-size: 13px; color: #475569;">
-                                                    {{ $tableNumber ? 'Table ' . $tableNumber : 'Pending assignment' }}
-                                                </td> -->
                                             </tr>
                                         @endforeach
                                     </table>
