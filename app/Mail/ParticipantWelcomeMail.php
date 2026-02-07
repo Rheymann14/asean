@@ -46,7 +46,7 @@ class ParticipantWelcomeMail extends Mailable
 
         $assignments = $this->user->tableAssignments->keyBy('programme_id');
 
-        $appUrl = rtrim(config('app.url') ?: 'https://asean.chedro12.com', '/');
+        $appUrl ='https://asean.chedro12.com';
         $bannerPath = public_path('img/asean_banner_logo.png');
         $logoPath = public_path('img/asean_logo.png');
         $bagongPilipinasPath = public_path('img/bagong_pilipinas.png');
