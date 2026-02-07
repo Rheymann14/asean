@@ -43,4 +43,10 @@ return [
         'max_length' => env('SEMAPHORE_MAX_LENGTH', 459),
     ],
 
+    'brevo' => [
+        'api_key' => env('BREVO_API_KEY'),
+        'sender_email' => env('BREVO_SENDER_EMAIL', 'ph2026@asean.chedro12.com'),
+        'sender_name' => env('BREVO_SENDER_NAME', 'ASEAN PH 2026'),
+    ],
+
 ];
