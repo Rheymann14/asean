@@ -49,7 +49,7 @@ class WelcomeNotificationService
 
         try {
             $mailable = new ParticipantWelcomeMail($user);
-            $html = $mailable->render();
+            $html = $this->minifyHtml($mailable->render());
             $subject = $mailable->envelope()->subject ?? 'Welcome to ASEAN PH 2026 — Your Registration Details';
 
             $payload = [
@@ -97,5 +97,14 @@ class WelcomeNotificationService
 
             return false;
         }
+    }
+
+    private function minifyHtml(string $html): string
+    {
+        $html = preg_replace('/<!--.*?-->/s', '', $html) ?? $html;
+        $html = preg_replace('/>\\s+</', '><', $html) ?? $html;
+        $html = preg_replace('/\\s{2,}/', ' ', $html) ?? $html;
+
+        return trim($html);
     }
 }

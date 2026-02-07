@@ -108,7 +108,6 @@
                                         <tr>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Event</th>
                                             <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Date</th>
-                                            <!-- <th align="left" style="padding: 8px 0; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0;">Table</th> -->
                                         </tr>
                                         @foreach ($events as $event)
                                             @php
@@ -120,9 +119,6 @@
                                                 <td style="padding: 10px 0; font-size: 13px; color: #475569;">
                                                     {{ $event['starts_at'] ?? 'TBA' }}
                                                 </td>
-                                                <!-- <td style="padding: 10px 0; font-size: 13px; color: #475569;">
-                                                    {{ $tableNumber ? 'Table ' . $tableNumber : 'Pending assignment' }}
-                                                </td> -->
                                             </tr>
                                         @endforeach
                                     </table>
