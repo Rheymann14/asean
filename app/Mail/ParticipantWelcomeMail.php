@@ -55,18 +55,25 @@ class ParticipantWelcomeMail extends Mailable
         $assignments = $this->user->tableAssignments->keyBy('programme_id');
 
         $appUrl = rtrim((string) config('app.url', 'https://asean.chedro12.com'), '/');
+        $assetBaseUrl = rtrim((string) (config('app.asset_url') ?: $appUrl), '/');
         $bannerPath = public_path('img/asean_banner_logo.png');
         $logoPath = public_path('img/asean_logo.png');
         $bagongPilipinasPath = public_path('img/bagong_pilipinas.png');
+        $bannerInline = $this->inlineImage($bannerPath);
+        $logoInline = $this->inlineImage($logoPath);
+        $bagongPilipinasInline = $this->inlineImage($bagongPilipinasPath);
 
         return [
             'appUrl' => $appUrl,
-            'bannerUrl' => $appUrl . '/img/asean_banner_logo.png',
-            'logoUrl' => $appUrl . '/img/asean_logo.png',
+            'bannerUrl' => $assetBaseUrl . '/img/asean_banner_logo.png',
+            'logoUrl' => $assetBaseUrl . '/img/asean_logo.png',
             'bannerPath' => is_file($bannerPath) ? $bannerPath : null,
             'logoPath' => is_file($logoPath) ? $logoPath : null,
-            'bagongPilipinasUrl' => $appUrl . '/img/bagong_pilipinas.png',
+            'bagongPilipinasUrl' => $assetBaseUrl . '/img/bagong_pilipinas.png',
             'bagongPilipinasPath' => is_file($bagongPilipinasPath) ? $bagongPilipinasPath : null,
+            'bannerInline' => $bannerInline,
+            'logoInline' => $logoInline,
+            'bagongPilipinasInline' => $bagongPilipinasInline,
             'events' => $events,
             'assignments' => $assignments,
             'qrImage' => null,
@@ -86,5 +93,22 @@ class ParticipantWelcomeMail extends Mailable
         $payload = urlencode((string) $this->user->qr_payload);
 
         return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data={$payload}";
+    }
+
+    private function inlineImage(?string $path): ?string
+    {
+        if (! $path || ! is_file($path)) {
+            return null;
+        }
+
+        $contents = file_get_contents($path);
+
+        if ($contents === false) {
+            return null;
+        }
+
+        $mimeType = mime_content_type($path) ?: 'image/png';
+
+        return 'data:' . $mimeType . ';base64,' . base64_encode($contents);
     }
 }
