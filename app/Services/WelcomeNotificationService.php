@@ -4,10 +4,7 @@ namespace App\Services;
 
 use App\Mail\ParticipantWelcomeMail;
 use App\Models\User;
-use Brevo\Client\Api\TransactionalEmailsApi;
-use Brevo\Client\Configuration;
-use Brevo\Client\Model\SendSmtpEmail;
-use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -25,67 +22,82 @@ class WelcomeNotificationService
     private function sendWelcomeEmail(User $user): void
     {
         try {
-            Mail::to($user->email)->send(new ParticipantWelcomeMail($user));
+            if ($this->sendViaBrevoApi($user)) {
+                return;
+            }
         } catch (Throwable $exception) {
             report($exception);
-            $this->sendViaBrevoApi($user, $exception);
-        }
-    }
-
-    private function sendViaBrevoApi(User $user, Throwable $sourceException): void
-    {
-        $apiKey = env('BREVO_API_KEY');
-
-        if (! $apiKey) {
-            Log::warning('Welcome email fallback skipped: BREVO_API_KEY missing.', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'error' => $sourceException->getMessage(),
-            ]);
-
-            return;
         }
 
         try {
-            $config = Configuration::getDefaultConfiguration()->setApiKey('api-key', $apiKey);
-            $api = new TransactionalEmailsApi(new Client(), $config);
+            Mail::to($user->email)->send(new ParticipantWelcomeMail($user));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
 
-            $fromAddress = (string) config('mail.from.address', 'ph2026@asean.chedro12.com');
-            $fromName = (string) config('mail.from.name', 'ASEAN PH 2026');
-            $appUrl = (string) rtrim((string) config('app.url', 'https://asean.ched.gov.ph'), '/');
+    private function sendViaBrevoApi(User $user): bool
+    {
+        $apiKey = config('services.brevo.api_key');
 
-            $html = sprintf(
-                '<p>Hi %s,</p><p>Welcome to ASEAN PH 2026. Your registration is confirmed.</p><p>You may log in at <a href="%s">%s</a> using your email: <strong>%s</strong>.</p><p>This is a no-reply email.</p>',
-                e($user->name),
-                e($appUrl),
-                e($appUrl),
-                e($user->email)
-            );
+        if (! $apiKey) {
+            Log::warning('Welcome email skipped: BREVO_API_KEY missing.', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ]);
 
-            $email = new SendSmtpEmail([
+            return false;
+        }
+
+        try {
+            $mailable = new ParticipantWelcomeMail($user);
+            $html = $mailable->render();
+            $subject = $mailable->envelope()->subject ?? 'Welcome to ASEAN PH 2026 — Your Registration Details';
+
+            $payload = [
                 'sender' => [
-                    'name' => $fromName,
-                    'email' => $fromAddress,
+                    'name' => config('services.brevo.sender_name', config('mail.from.name', 'ASEAN PH 2026')),
+                    'email' => config('services.brevo.sender_email', config('mail.from.address', 'ph2026@asean.chedro12.com')),
                 ],
                 'to' => [[
                     'email' => $user->email,
                     'name' => $user->name,
                 ]],
-                'subject' => 'Welcome to ASEAN PH 2026 — Your Registration Details',
+                'subject' => $subject,
                 'htmlContent' => $html,
-                'textContent' => "Welcome to ASEAN PH 2026. Your registration is confirmed. Login at {$appUrl} using {$user->email}.",
-            ]);
+                'textContent' => trim(preg_replace('/\s+/', ' ', strip_tags($html))),
+            ];
 
-            $api->sendTransacEmail($email);
+            $response = Http::timeout(20)
+                ->withHeaders([
+                    'api-key' => $apiKey,
+                    'accept' => 'application/json',
+                    'content-type' => 'application/json',
+                ])
+                ->post('https://api.brevo.com/v3/smtp/email', $payload);
+
+            if ($response->failed()) {
+                Log::error('Welcome email via Brevo API failed.', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return false;
+            }
+
+            return true;
         } catch (Throwable $fallbackException) {
             report($fallbackException);
 
-            Log::error('Welcome email fallback via Brevo API failed.', [
+            Log::error('Welcome email via Brevo API failed.', [
                 'user_id' => $user->id,
                 'email' => $user->email,
-                'smtp_error' => $sourceException->getMessage(),
                 'fallback_error' => $fallbackException->getMessage(),
             ]);
+
+            return false;
         }
     }
 }
