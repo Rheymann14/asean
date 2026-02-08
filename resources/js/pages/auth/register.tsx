@@ -100,7 +100,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
             const name = type.name.trim().toLowerCase();
             const slug = (type.slug ?? '').trim().toLowerCase();
 
-            return !(name === 'ched' && (slug === 'ched' || slug === ''));
+            return !name.startsWith('ched') && !slug.startsWith('ched');
         });
     }, [registrantTypes]);
 
