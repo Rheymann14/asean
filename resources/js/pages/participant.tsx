@@ -2173,10 +2173,7 @@ export default function ParticipantPage(props: PageProps) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {filteredUserTypes.map((u) => {
-                                                const isAdmin = isAdminUserType(u);
-
-                                                return (
+                                            {filteredUserTypes.map((u) => (
                                                     <TableRow key={u.id}>
                                                         <TableCell className="font-medium text-slate-900 dark:text-slate-100">{u.name}</TableCell>
                                                         <TableCell className="text-slate-600 dark:text-slate-300">
@@ -2195,9 +2192,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                 <DropdownMenuContent align="end" className="w-44">
                                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                                     <DropdownMenuItem
-                                                                        disabled={isAdmin}
                                                                         onClick={() => {
-                                                                            if (isAdmin) return;
                                                                             openEditUserType(u);
                                                                         }}
                                                                     >
@@ -2205,9 +2200,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                         Edit
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem
-                                                                        disabled={isAdmin}
                                                                         onClick={() => {
-                                                                            if (isAdmin) return;
                                                                             toggleUserTypeActive(u);
                                                                         }}
                                                                     >
@@ -2217,9 +2210,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                     <DropdownMenuSeparator />
                                                                     <DropdownMenuItem
                                                                         className="text-red-600 focus:text-red-600"
-                                                                        disabled={isAdmin}
                                                                         onClick={() => {
-                                                                            if (isAdmin) return;
                                                                             requestDelete('userType', u.id, u.name);
                                                                         }}
                                                                     >
@@ -2230,8 +2221,7 @@ export default function ParticipantPage(props: PageProps) {
                                                             </DropdownMenu>
                                                         </TableCell>
                                                     </TableRow>
-                                                );
-                                            })}
+                                            ))}
                                         </TableBody>
                                     </Table>
                                 </div>
