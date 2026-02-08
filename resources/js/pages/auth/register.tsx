@@ -88,21 +88,28 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const [country, setCountry] = useRemember<string>('', 'register.country');
     const [registrantType, setRegistrantType] = useRemember<string>('', 'register.registrant_type');
     const [programmeIds, setProgrammeIds] = useRemember<string[]>([], 'register.programme_ids');
+    const [otherRegistrantType, setOtherRegistrantType] = useRemember<string>('', 'register.other_user_type');
 
     const selectedCountry = React.useMemo(
         () => countries.find((c) => String(c.id) === country) ?? null,
         [countries, country]
     );
 
-    const filteredRegistrantTypes = React.useMemo(
-        () => registrantTypes.filter((type) => type.name !== 'CHED' && type.slug !== 'ched'),
-        [registrantTypes]
-    );
+    const filteredRegistrantTypes = React.useMemo(() => {
+        return registrantTypes.filter((type) => {
+            const name = type.name.trim().toLowerCase();
+            const slug = (type.slug ?? '').trim().toLowerCase();
+
+            return !(name === 'ched' && (slug === 'ched' || slug === ''));
+        });
+    }, [registrantTypes]);
 
     const selectedType = React.useMemo(
         () => filteredRegistrantTypes.find((t) => String(t.id) === registrantType) ?? null,
         [registrantType, filteredRegistrantTypes]
     );
+    const isOtherRegistrantType =
+        (selectedType?.slug ?? '').toLowerCase() === 'other' || (selectedType?.name ?? '').toLowerCase() === 'other';
 
     const selectedProgrammes = React.useMemo(
         () => programmes.filter((programme) => programmeIds.includes(String(programme.id))),
@@ -133,7 +140,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
         setConsentContact(false);
         setConsentMedia(false);
         setFoodRestrictions([]);
-    }, [setCountry, setProgrammeIds, setRegistrantType]);
+        setOtherRegistrantType('');
+    }, [setCountry, setProgrammeIds, setRegistrantType, setOtherRegistrantType]);
 
     React.useEffect(() => {
         if (status === 'registered') {
@@ -141,6 +149,12 @@ export default function Register({ countries, registrantTypes, programmes, statu
             resetFormState();
         }
     }, [resetFormState, status]);
+
+    React.useEffect(() => {
+        if (!isOtherRegistrantType && otherRegistrantType) {
+            setOtherRegistrantType('');
+        }
+    }, [isOtherRegistrantType, otherRegistrantType, setOtherRegistrantType]);
 
     const inputClass =
         'h-11 rounded-xl border-slate-200 bg-white shadow-[inset_0_1px_2px_rgba(2,6,23,0.06)] ' +
@@ -423,6 +437,22 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                         <InputError message={err.user_type_id ?? err.registrant_type} />
                                     </div>
+
+                                    {isOtherRegistrantType ? (
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="other_user_type">Please specify</Label>
+                                            <Input
+                                                id="other_user_type"
+                                                name="other_user_type"
+                                                value={otherRegistrantType}
+                                                onChange={(event) => setOtherRegistrantType(event.target.value)}
+                                                required
+                                                placeholder="Enter your role"
+                                                className={inputClass}
+                                            />
+                                            <InputError message={err.other_user_type} />
+                                        </div>
+                                    ) : null}
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="programme_ids">Select events to join</Label>

@@ -104,6 +104,7 @@ type ParticipantRow = {
     contact_number?: string | null;
     country_id: number | null;
     user_type_id: number | null;
+    other_user_type?: string | null;
     is_active: boolean;
     consent_contact_sharing?: boolean;
     consent_photo_video?: boolean;
@@ -905,6 +906,7 @@ export default function ParticipantPage(props: PageProps) {
         contact_number: string;
         country_id: string; // Select uses string
         user_type_id: string; // Select uses string
+        other_user_type: string;
         is_active: boolean;
         password: string;
         has_food_restrictions: boolean;
@@ -915,6 +917,7 @@ export default function ParticipantPage(props: PageProps) {
         contact_number: '',
         country_id: '',
         user_type_id: '',
+        other_user_type: '',
         is_active: true,
         password: 'aseanph2026',
         has_food_restrictions: false,
@@ -1096,6 +1099,9 @@ export default function ParticipantPage(props: PageProps) {
     const selectedFormUserType = participantForm.data.user_type_id
         ? userTypeById.get(Number(participantForm.data.user_type_id))
         : null;
+    const isOtherParticipantType =
+        (selectedFormUserType?.slug ?? '').toLowerCase() === 'other' ||
+        (selectedFormUserType?.name ?? '').toLowerCase() === 'other';
 
     React.useEffect(() => {
         let active = true;
@@ -1136,6 +1142,12 @@ export default function ParticipantPage(props: PageProps) {
         };
     }, [filteredParticipants]);
 
+    React.useEffect(() => {
+        if (!isOtherParticipantType && participantForm.data.other_user_type) {
+            participantForm.setData('other_user_type', '');
+        }
+    }, [isOtherParticipantType, participantForm]);
+
     // ---------------------------------------
     // Actions (CRUD)
     // ---------------------------------------
@@ -1154,6 +1166,7 @@ export default function ParticipantPage(props: PageProps) {
             contact_number: p.contact_number ?? '',
             country_id: p.country_id ? String(p.country_id) : '',
             user_type_id: p.user_type_id ? String(p.user_type_id) : '',
+            other_user_type: p.other_user_type ?? '',
             is_active: !!p.is_active,
             has_food_restrictions: !!p.has_food_restrictions,
             food_restrictions: p.food_restrictions ?? [],
@@ -1171,6 +1184,7 @@ export default function ParticipantPage(props: PageProps) {
             contact_number: data.contact_number.trim() || null,
             country_id: data.country_id ? Number(data.country_id) : null,
             user_type_id: data.user_type_id ? Number(data.user_type_id) : null,
+            other_user_type: data.other_user_type.trim() || null,
             is_active: data.is_active,
             food_restrictions: data.food_restrictions,
             has_food_restrictions: data.food_restrictions.length > 0,
@@ -2545,7 +2559,6 @@ export default function ParticipantPage(props: PageProps) {
                                                     <CommandList>
                                                         <CommandGroup>
                                                             {userTypes
-                                                                .filter((u) => u.is_active)
                                                                 .map((u) => (
                                                                     <CommandItem
                                                                         key={u.id}
@@ -2575,6 +2588,17 @@ export default function ParticipantPage(props: PageProps) {
                                             <div className="text-xs text-red-600">{participantForm.errors.user_type_id}</div>
                                         ) : null}
                                     </div>
+
+                                    {isOtherParticipantType ? (
+                                        <div className="space-y-1.5">
+                                            <div className="text-sm font-medium">Other user type</div>
+                                            <Input
+                                                value={participantForm.data.other_user_type}
+                                                onChange={(event) => participantForm.setData('other_user_type', event.target.value)}
+                                                placeholder="Specify user type"
+                                            />
+                                        </div>
+                                    ) : null}
 
                                     {showFoodRestrictionsField ? (
                                         <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">

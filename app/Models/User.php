@@ -37,6 +37,7 @@ class User extends Authenticatable
         'password',
         'country_id',
         'user_type_id',
+        'other_user_type',
         'is_active',
         'consent_contact_sharing',
         'consent_photo_video',
