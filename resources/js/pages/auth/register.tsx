@@ -30,6 +30,7 @@ import {
     CommandList,
 } from '@/components/ui/command';
 import { CalendarRange, Check, CheckCircle2, ChevronsUpDown, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
 type CountryOption = {
     id: number;
@@ -124,6 +125,7 @@ const COUNTRY_PHONE_CODE_MAP: Record<string, string> = {
 
 export default function Register({ countries, registrantTypes, programmes, status }: RegisterProps) {
     const [formKey, setFormKey] = React.useState(0);
+    const formRef = React.useRef<HTMLFormElement | null>(null);
 
     const [countryOpen, setCountryOpen] = React.useState(false);
     const [typeOpen, setTypeOpen] = React.useState(false);
@@ -231,7 +233,45 @@ export default function Register({ countries, registrantTypes, programmes, statu
         },
     ] as const;
 
+    const validateActiveStep = () => {
+        const form = formRef.current;
+        if (!form) {
+            return true;
+        }
+
+        const activeFieldset = form.querySelector('fieldset:not([disabled])') as HTMLFieldSetElement | null;
+        if (!activeFieldset) {
+            return true;
+        }
+
+        const isValid = activeFieldset.checkValidity();
+        if (!isValid) {
+            activeFieldset.reportValidity();
+            toast.error('Please complete the required fields before continuing.');
+        }
+
+        return isValid;
+    };
+
+    const validateForm = () => {
+        const form = formRef.current;
+        if (!form) {
+            return true;
+        }
+
+        const isValid = form.checkValidity();
+        if (!isValid) {
+            form.reportValidity();
+            toast.error('Please complete the required fields before submitting.');
+        }
+
+        return isValid;
+    };
+
     const goNext = () => {
+        if (!validateActiveStep()) {
+            return;
+        }
         setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
     };
 
@@ -373,6 +413,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
             <Form
                 key={formKey}
+                ref={formRef}
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
@@ -1361,6 +1402,11 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 tabIndex={9}
                                                 disabled={!canContinue || processing}
                                                 data-test="register-user-button"
+                                                onClick={(event) => {
+                                                    if (!validateForm()) {
+                                                        event.preventDefault();
+                                                    }
+                                                }}
                                             >
                                                 {processing ? (
                                                     <>
