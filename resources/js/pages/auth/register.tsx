@@ -117,6 +117,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
     const [successOpen, setSuccessOpen] = React.useState(false);
+    const [currentStep, setCurrentStep] = React.useState(0);
     const [consentContact, setConsentContact] = React.useState(false);
     const [consentMedia, setConsentMedia] = React.useState(false);
     const [foodRestrictions, setFoodRestrictions] = useRemember<string[]>([], 'register.food_restrictions');
@@ -182,6 +183,37 @@ export default function Register({ countries, registrantTypes, programmes, statu
         return `${selectedProgrammes.length} events selected`;
     }, [selectedProgrammes]);
 
+    const steps = [
+        {
+            title: 'Personal details',
+            description: 'Honorific and name details.',
+        },
+        {
+            title: 'Contact & role',
+            description: 'Organization, contact, and registrant type.',
+        },
+        {
+            title: 'Account',
+            description: 'Set your password.',
+        },
+        {
+            title: 'Preferences',
+            description: 'Dietary, accessibility, and emergency contact.',
+        },
+        {
+            title: 'Consents',
+            description: 'Review required consents and submit.',
+        },
+    ] as const;
+
+    const goNext = () => {
+        setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+    };
+
+    const goPrev = () => {
+        setCurrentStep((prev) => Math.max(prev - 1, 0));
+    };
+
     const resetFormState = React.useCallback(() => {
         // Force remount to clear uncontrolled inputs
         setFormKey((k) => k + 1);
@@ -208,6 +240,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
         setHonorificTitle('');
         setSexAssignedAtBirth('');
         setContactCountryCode('');
+        setCurrentStep(0);
     }, [
         setCountry,
         setProgrammeIds,
@@ -227,6 +260,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
         setHonorificTitle,
         setSexAssignedAtBirth,
         setContactCountryCode,
+        setCurrentStep,
     ]);
 
     React.useEffect(() => {
@@ -340,6 +374,47 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
 
                                 <div className="grid gap-5">
+                                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    Step {currentStep + 1} of {steps.length}
+                                                </p>
+                                                <h2 className="text-lg font-semibold text-slate-800">{steps[currentStep].title}</h2>
+                                                <p className="text-sm text-slate-500">{steps[currentStep].description}</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {steps.map((step, index) => (
+                                                    <button
+                                                        key={step.title}
+                                                        type="button"
+                                                        onClick={() => setCurrentStep(index)}
+                                                        className={cn(
+                                                            'rounded-full px-3 py-1 text-xs font-medium transition',
+                                                            index === currentStep
+                                                                ? 'bg-[#0033A0] text-white'
+                                                                : 'border border-slate-200 text-slate-500 hover:border-[#0033A0] hover:text-[#0033A0]'
+                                                        )}
+                                                    >
+                                                        {index + 1}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" name="consent_contact_sharing" value={consentContact ? '1' : '0'} />
+                                    <input type="hidden" name="consent_photo_video" value={consentMedia ? '1' : '0'} />
+                                    <input type="hidden" name="has_food_restrictions" value={foodRestrictions.length > 0 ? '1' : '0'} />
+                                    <input type="hidden" name="ip_affiliation" value={ipAffiliation === 'yes' ? '1' : '0'} />
+                                    {foodRestrictions.map((restriction) => (
+                                        <input key={restriction} type="hidden" name="food_restrictions[]" value={restriction} />
+                                    ))}
+                                    {accessibilityNeeds.map((need) => (
+                                        <input key={need} type="hidden" name="accessibility_needs[]" value={need} />
+                                    ))}
+
+                                    <div className={cn('grid gap-5', currentStep === 0 ? '' : 'hidden')}>
                                     <div className="grid gap-2">
                                         <Label htmlFor="country_id">Country of Origin <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <input type="hidden" name="country_id" value={country} />
@@ -463,57 +538,59 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 placeholder="Please specify"
                                                 className={inputClass}
                                             />
-                                            <InputError message={err.honorific_other} />
-                                        </div>
+                                        <InputError message={err.honorific_other} />
+                                    </div>
                                     ) : null}
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="given_name">
-                                            Given Name / First Name <span className="text-[11px] font-semibold text-red-600"> *</span>
-                                        </Label>
-                                        <Input
-                                            id="given_name"
-                                            type="text"
-                                            required
-                                            autoFocus
-                                            tabIndex={honorificTitle === 'other' ? 4 : 3}
-                                            autoComplete="given-name"
-                                            name="given_name"
-                                            placeholder="e.g. JUAN"
-                                            className={inputClass}
-                                        />
-                                        <InputError message={err.given_name} />
-                                    </div>
+                                    <div className="grid gap-4 sm:grid-cols-3">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="given_name">
+                                                Given Name / First Name <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                            </Label>
+                                            <Input
+                                                id="given_name"
+                                                type="text"
+                                                required
+                                                autoFocus
+                                                tabIndex={honorificTitle === 'other' ? 4 : 3}
+                                                autoComplete="given-name"
+                                                name="given_name"
+                                                placeholder="e.g. JUAN"
+                                                className={inputClass}
+                                            />
+                                            <InputError message={err.given_name} />
+                                        </div>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="middle_name">Middle Name</Label>
-                                        <Input
-                                            id="middle_name"
-                                            type="text"
-                                            tabIndex={honorificTitle === 'other' ? 5 : 4}
-                                            autoComplete="additional-name"
-                                            name="middle_name"
-                                            placeholder="e.g. SANTOS"
-                                            className={inputClass}
-                                        />
-                                        <InputError message={err.middle_name} />
-                                    </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="middle_name">Middle Name</Label>
+                                            <Input
+                                                id="middle_name"
+                                                type="text"
+                                                tabIndex={honorificTitle === 'other' ? 5 : 4}
+                                                autoComplete="additional-name"
+                                                name="middle_name"
+                                                placeholder="e.g. SANTOS"
+                                                className={inputClass}
+                                            />
+                                            <InputError message={err.middle_name} />
+                                        </div>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="family_name">
-                                            Family Name / Surname <span className="text-[11px] font-semibold text-red-600"> *</span>
-                                        </Label>
-                                        <Input
-                                            id="family_name"
-                                            type="text"
-                                            required
-                                            tabIndex={honorificTitle === 'other' ? 6 : 5}
-                                            autoComplete="family-name"
-                                            name="family_name"
-                                            placeholder="e.g. DELA CRUZ"
-                                            className={inputClass}
-                                        />
-                                        <InputError message={err.family_name} />
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="family_name">
+                                                Family Name / Surname <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                            </Label>
+                                            <Input
+                                                id="family_name"
+                                                type="text"
+                                                required
+                                                tabIndex={honorificTitle === 'other' ? 6 : 5}
+                                                autoComplete="family-name"
+                                                name="family_name"
+                                                placeholder="e.g. DELA CRUZ"
+                                                className={inputClass}
+                                            />
+                                            <InputError message={err.family_name} />
+                                        </div>
                                     </div>
 
                                     <div className="grid gap-2">
@@ -551,7 +628,9 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         </select>
                                         <InputError message={err.sex_assigned_at_birth} />
                                     </div>
+                                    </div>
 
+                                    <div className={cn('grid gap-5', currentStep === 1 ? '' : 'hidden')}>
                                     <div className="grid gap-2">
                                         <Label htmlFor="email">Email address  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <Input
@@ -859,8 +938,9 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </div>
                                         )}
                                     </div>
+                                    </div>
 
-                                    <div className="grid gap-5 sm:grid-cols-2">
+                                    <div className={cn('grid gap-5 sm:grid-cols-2', currentStep === 2 ? '' : 'hidden')}>
                                         <div className="grid gap-2">
                                             <Label htmlFor="password">Password  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                             <div className="relative">
@@ -927,11 +1007,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                   
                         
 
-                                    <div className="grid gap-3 text-left">
-                                        <input type="hidden" name="consent_contact_sharing" value={consentContact ? '1' : '0'} />
-                                        <input type="hidden" name="consent_photo_video" value={consentMedia ? '1' : '0'} />
-                                        <input type="hidden" name="has_food_restrictions" value={foodRestrictions.length > 0 ? '1' : '0'} />
-                                        <input type="hidden" name="ip_affiliation" value={ipAffiliation === 'yes' ? '1' : '0'} />
+                                    <div className={cn('grid gap-3 text-left', currentStep === 3 ? '' : 'hidden')}>
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
@@ -967,10 +1043,6 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     );
                                                 })}
                                             </div>
-
-                                            {foodRestrictions.map((restriction) => (
-                                                <input key={restriction} type="hidden" name="food_restrictions[]" value={restriction} />
-                                            ))}
 
                                             {foodRestrictions.includes('allergies') ? (
                                                 <div className="mt-3 grid gap-2">
@@ -1091,10 +1163,6 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 })}
                                             </div>
 
-                                            {accessibilityNeeds.map((need) => (
-                                                <input key={need} type="hidden" name="accessibility_needs[]" value={need} />
-                                            ))}
-
                                             {accessibilityNeeds.includes('other') ? (
                                                 <div className="mt-3 grid gap-2">
                                                     <Label htmlFor="accessibility_other">Other accommodations</Label>
@@ -1165,7 +1233,9 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
 
+                                    <div className={cn('grid gap-3 text-left', currentStep === 4 ? '' : 'hidden')}>
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
@@ -1227,25 +1297,47 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </p>
                                         )}
                                     </div>
+                                    </div>
 
                             
 
-                                    <Button
-                                        type="submit"
-                                        className="mt-1 h-11 w-full gap-2 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60"
-                                        tabIndex={9}
-                                        disabled={!canContinue || processing}
-                                        data-test="register-user-button"
-                                    >
-                                        {processing ? (
-                                            <>
-                                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                                                Registering…
-                                            </>
+                                    <div className="flex flex-wrap gap-3">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-11 rounded-xl px-5"
+                                            onClick={goPrev}
+                                            disabled={currentStep === 0}
+                                        >
+                                            Back
+                                        </Button>
+                                        {currentStep < steps.length - 1 ? (
+                                            <Button
+                                                type="button"
+                                                className="h-11 flex-1 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86]"
+                                                onClick={goNext}
+                                            >
+                                                Next
+                                            </Button>
                                         ) : (
-                                            'Register'
+                                            <Button
+                                                type="submit"
+                                                className="h-11 flex-1 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60"
+                                                tabIndex={9}
+                                                disabled={!canContinue || processing}
+                                                data-test="register-user-button"
+                                            >
+                                                {processing ? (
+                                                    <>
+                                                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                                        Registering…
+                                                    </>
+                                                ) : (
+                                                    'Register'
+                                                )}
+                                            </Button>
                                         )}
-                                    </Button>
+                                    </div>
                                     {processing && (
                                         <p className="text-center text-sm text-slate-500" role="status" aria-live="polite">
                                             Creating your account, generating your QR badge, and sending your confirmation email. Please wait…
