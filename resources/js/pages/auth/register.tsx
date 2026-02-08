@@ -367,7 +367,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
             return true;
         }
 
-        const activeFieldset = form.querySelector('fieldset:not([disabled])') as HTMLFieldSetElement | null;
+        const activeFieldset = form.querySelector('fieldset[data-active="true"]') as HTMLFieldSetElement | null;
         if (!activeFieldset) {
             return true;
         }
@@ -646,7 +646,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     ))}
 
                                     <fieldset
-                                        disabled={currentStep !== 0}
+                                        data-active={currentStep === 0}
+                                        aria-hidden={currentStep !== 0}
                                         className={cn('grid gap-5', currentStep === 0 ? '' : 'hidden')}
                                     >
                                         <div className="grid gap-2">
@@ -864,7 +865,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     </fieldset>
 
                                     <fieldset
-                                        disabled={currentStep !== 1}
+                                        data-active={currentStep === 1}
+                                        aria-hidden={currentStep !== 1}
                                         className={cn('grid gap-5', currentStep === 1 ? '' : 'hidden')}
                                     >
                                         <div className="grid gap-2">
@@ -1177,7 +1179,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     </fieldset>
 
                                     <fieldset
-                                        disabled={currentStep !== 2}
+                                        data-active={currentStep === 2}
+                                        aria-hidden={currentStep !== 2}
                                         className={cn('grid gap-5 sm:grid-cols-2', currentStep === 2 ? '' : 'hidden')}
                                     >
                                         <div className="grid gap-2">
@@ -1247,7 +1250,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
 
                                     <fieldset
-                                        disabled={currentStep !== 3}
+                                        data-active={currentStep === 3}
+                                        aria-hidden={currentStep !== 3}
                                         className={cn('grid gap-3 text-left', currentStep === 3 ? '' : 'hidden')}
                                     >
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
@@ -1482,7 +1486,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
 
                                     <fieldset
-                                        disabled={currentStep !== 4}
+                                        data-active={currentStep === 4}
+                                        aria-hidden={currentStep !== 4}
                                         className={cn('grid gap-3 text-left', currentStep === 4 ? '' : 'hidden')}
                                     >
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
