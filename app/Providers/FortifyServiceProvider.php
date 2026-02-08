@@ -89,7 +89,7 @@ class FortifyServiceProvider extends ServiceProvider
                             ->replace(['_', '-'], ' ')
                             ->trim();
 
-                        if ($roleValue === 'CHED') {
+                        if ($roleValue === 'ADMIN') {
                             return redirect('/dashboard');
                         }
 
