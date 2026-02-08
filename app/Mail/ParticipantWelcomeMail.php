@@ -13,8 +13,10 @@ class ParticipantWelcomeMail extends Mailable
 {
     use SerializesModels;
 
-    public function __construct(public User $user)
-    {
+    public function __construct(
+        public User $user,
+        public bool $useBrevoView = false, // ✅ toggle which blade to use
+    ) {
         $this->user->loadMissing([
             'country',
             'joinedProgrammes',
@@ -33,7 +35,9 @@ class ParticipantWelcomeMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.participant-welcome',
+            view: $this->useBrevoView
+                ? 'emails.participant-welcome-brevo'
+                : 'emails.participant-welcome',
             with: $this->data(),
         );
     }
@@ -54,19 +58,30 @@ class ParticipantWelcomeMail extends Mailable
 
         $assignments = $this->user->tableAssignments->keyBy('programme_id');
 
-        $appUrl = rtrim((string) config('app.url', 'https://asean.chedro12.com'), '/');
+        // ✅ Prefer CDN base for email images (Brevo/Gmail safe)
+        // Example: https://asean.chedro12.com OR https://cdn.chedro12.com
+        $cdnBase = rtrim((string) env('MAIL_ASSET_URL', config('app.url', 'https://asean.chedro12.com')), '/');
+
+        // ✅ Image public paths (for SMTP embeds only)
         $bannerPath = public_path('img/asean_banner_logo.png');
         $logoPath = public_path('img/asean_logo.png');
         $bagongPilipinasPath = public_path('img/bagong_pilipinas.png');
 
         return [
-            'appUrl' => $appUrl,
-            'bannerUrl' => $appUrl . '/img/asean_banner_logo.png',
-            'logoUrl' => $appUrl . '/img/asean_logo.png',
+            // links
+            'appUrl' => rtrim((string) config('app.url', 'https://asean.chedro12.com'), '/'),
+
+            // ✅ always absolute, Gmail-safe
+            'bannerUrl' => $cdnBase . '/img/asean_banner_logo.png',
+            'logoUrl' => $cdnBase . '/img/asean_logo.png',
+            'bagongPilipinasUrl' => $cdnBase . '/img/bagong_pilipinas.png',
+
+            // ✅ for embed usage in normal SMTP blade only
             'bannerPath' => is_file($bannerPath) ? $bannerPath : null,
             'logoPath' => is_file($logoPath) ? $logoPath : null,
-            'bagongPilipinasUrl' => $appUrl . '/img/bagong_pilipinas.png',
             'bagongPilipinasPath' => is_file($bagongPilipinasPath) ? $bagongPilipinasPath : null,
+
+            // data
             'events' => $events,
             'assignments' => $assignments,
             'qrImage' => null,
@@ -74,7 +89,6 @@ class ParticipantWelcomeMail extends Mailable
             'user' => $this->user,
         ];
     }
-
 
     public function attachments(): array
     {
