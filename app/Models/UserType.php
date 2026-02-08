@@ -13,10 +13,12 @@ class UserType extends Model
         'name',
         'slug',
         'is_active',
+        'sequence_order',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'sequence_order' => 'integer',
     ];
 
     public function users()
