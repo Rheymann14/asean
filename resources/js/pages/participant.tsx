@@ -77,6 +77,7 @@ type UserType = {
     name: string; // e.g. Prime Minister
     slug?: string;
     is_active: boolean;
+    sequence_order?: number | null;
 };
 
 type ProgrammeRow = {
@@ -939,9 +940,11 @@ export default function ParticipantPage(props: PageProps) {
     const userTypeForm = useForm<{
         name: string;
         is_active: boolean;
+        sequence_order: string;
     }>({
         name: '',
         is_active: true,
+        sequence_order: '',
     });
 
     // ---------------------------------------
@@ -1046,10 +1049,21 @@ export default function ParticipantPage(props: PageProps) {
         return countries.filter((c) => (!q ? true : c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)));
     }, [countries, countryQuery]);
 
+    const orderedUserTypes = React.useMemo(() => {
+        return [...userTypes].sort((a, b) => {
+            const orderA = a.sequence_order ?? 0;
+            const orderB = b.sequence_order ?? 0;
+
+            if (orderA !== orderB) return orderA - orderB;
+
+            return a.name.localeCompare(b.name);
+        });
+    }, [userTypes]);
+
     const filteredUserTypes = React.useMemo(() => {
         const q = userTypeQuery.trim().toLowerCase();
-        return userTypes.filter((u) => (!q ? true : u.name.toLowerCase().includes(q) || (u.slug ?? '').toLowerCase().includes(q)));
-    }, [userTypes, userTypeQuery]);
+        return orderedUserTypes.filter((u) => (!q ? true : u.name.toLowerCase().includes(q) || (u.slug ?? '').toLowerCase().includes(q)));
+    }, [orderedUserTypes, userTypeQuery]);
 
     const participantById = React.useMemo(() => new Map(resolvedParticipants.map((p) => [p.id, p])), [resolvedParticipants]);
 
@@ -1424,6 +1438,7 @@ export default function ParticipantPage(props: PageProps) {
         userTypeForm.transform((data) => ({
             name: data.name.trim(),
             is_active: data.is_active,
+            sequence_order: data.sequence_order.trim() === '' ? null : Number(data.sequence_order),
         }));
 
         if (editingUserType) {
@@ -1461,9 +1476,16 @@ export default function ParticipantPage(props: PageProps) {
     }
 
     function openAddUserType() {
+        const maxOrder = userTypes.reduce((acc, type) => Math.max(acc, type.sequence_order ?? 0), 0);
+        const nextOrder = maxOrder + 1;
         setEditingUserType(null);
         userTypeForm.reset();
         userTypeForm.clearErrors();
+        userTypeForm.setData({
+            name: '',
+            is_active: true,
+            sequence_order: String(nextOrder),
+        });
         setUserTypeDialogOpen(true);
     }
 
@@ -1472,6 +1494,7 @@ export default function ParticipantPage(props: PageProps) {
         userTypeForm.setData({
             name: u.name ?? '',
             is_active: !!u.is_active,
+            sequence_order: u.sequence_order === null || u.sequence_order === undefined ? '' : String(u.sequence_order),
         });
         userTypeForm.clearErrors();
         setUserTypeDialogOpen(true);
@@ -1692,7 +1715,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                     )}
                                                                 />
                                                             </CommandItem>
-                                                            {userTypes.map((u) => (
+                                                            {orderedUserTypes.map((u) => (
                                                                 <CommandItem
                                                                     key={u.id}
                                                                     value={`${u.name} ${u.slug ?? ''}`.trim()}
@@ -2144,6 +2167,7 @@ export default function ParticipantPage(props: PageProps) {
                                         <TableHeader>
                                             <TableRow className="bg-slate-50 dark:bg-slate-900/40">
                                                 <TableHead>User Type</TableHead>
+                                                <TableHead className="w-[90px]">Order</TableHead>
                                                 <TableHead className="w-[160px]">Status</TableHead>
                                                 <TableHead className="w-[80px] text-right">Action</TableHead>
                                             </TableRow>
@@ -2155,6 +2179,9 @@ export default function ParticipantPage(props: PageProps) {
                                                 return (
                                                     <TableRow key={u.id}>
                                                         <TableCell className="font-medium text-slate-900 dark:text-slate-100">{u.name}</TableCell>
+                                                        <TableCell className="text-slate-600 dark:text-slate-300">
+                                                            {u.sequence_order ?? '—'}
+                                                        </TableCell>
                                                         <TableCell>
                                                             <StatusBadge active={u.is_active} />
                                                         </TableCell>
@@ -2558,7 +2585,7 @@ export default function ParticipantPage(props: PageProps) {
                                                     <CommandEmpty>No user type found.</CommandEmpty>
                                                     <CommandList>
                                                         <CommandGroup>
-                                                            {userTypes
+                                                            {orderedUserTypes
                                                                 .map((u) => (
                                                                     <CommandItem
                                                                         key={u.id}
@@ -2806,6 +2833,24 @@ export default function ParticipantPage(props: PageProps) {
                                     placeholder="e.g. Staff"
                                 />
                                 {userTypeForm.errors.name ? <div className="text-xs text-red-600">{userTypeForm.errors.name}</div> : null}
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <div className="text-sm font-medium">Sequence order</div>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    value={userTypeForm.data.sequence_order}
+                                    onChange={(e) => userTypeForm.setData('sequence_order', e.target.value)}
+                                    placeholder="e.g. 1"
+                                />
+                                {userTypeForm.errors.sequence_order ? (
+                                    <div className="text-xs text-red-600">{userTypeForm.errors.sequence_order}</div>
+                                ) : (
+                                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                                        Lower numbers appear first in registrant and user type dropdowns.
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 dark:border-slate-800">
