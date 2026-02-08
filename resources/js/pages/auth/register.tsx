@@ -1296,6 +1296,10 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </p>
                                         )}
                                     </div>
+                                    </div>
+
+                            
+
                                     <div className="flex flex-wrap gap-3">
                                         <Button
                                             type="button"
@@ -1345,7 +1349,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         </TextLink>
                                     </div>
                                 </div>
-                            </div>
+                          
 
                             <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
                          
