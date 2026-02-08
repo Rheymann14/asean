@@ -124,7 +124,7 @@ export function AppSidebar() {
               },
           ];
 
-    const footerNavItems: NavItem[] = isChed
+    const footerNavItems: NavItem[] = isAdmin
         ? [
               {
                   title: 'QR Code Scanner',
@@ -134,7 +134,7 @@ export function AppSidebar() {
           ]
         : [];
 
-    const homeHref = isChed ? dashboard() : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
+    const homeHref = isAdmin ? dashboard() : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
 
     return (
         <Sidebar collapsible="icon" variant="inset">
