@@ -108,6 +108,20 @@ const PHONE_CODE_OPTIONS = [
     { value: '+670', label: 'Timor-Leste (+670)' },
 ] as const;
 
+const COUNTRY_PHONE_CODE_MAP: Record<string, string> = {
+    BN: '+673',
+    KH: '+855',
+    ID: '+62',
+    LA: '+856',
+    MY: '+60',
+    MM: '+95',
+    PH: '+63',
+    SG: '+65',
+    TH: '+66',
+    VN: '+84',
+    TL: '+670',
+};
+
 export default function Register({ countries, registrantTypes, programmes, status }: RegisterProps) {
     const [formKey, setFormKey] = React.useState(0);
 
@@ -149,6 +163,17 @@ export default function Register({ countries, registrantTypes, programmes, statu
         () => countries.find((c) => String(c.id) === country) ?? null,
         [countries, country]
     );
+
+    React.useEffect(() => {
+        if (!selectedCountry?.code) {
+            return;
+        }
+
+        const nextCode = COUNTRY_PHONE_CODE_MAP[selectedCountry.code.toUpperCase()];
+        if (nextCode && nextCode !== contactCountryCode) {
+            setContactCountryCode(nextCode);
+        }
+    }, [contactCountryCode, selectedCountry, setContactCountryCode]);
 
     const filteredRegistrantTypes = React.useMemo(() => {
         return registrantTypes.filter((type) => {
@@ -414,7 +439,10 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         <input key={need} type="hidden" name="accessibility_needs[]" value={need} />
                                     ))}
 
-                                    <div className={cn('grid gap-5', currentStep === 0 ? '' : 'hidden')}>
+                                    <fieldset
+                                        disabled={currentStep !== 0}
+                                        className={cn('grid gap-5', currentStep === 0 ? '' : 'hidden')}
+                                    >
                                         <div className="grid gap-2">
                                             <Label htmlFor="country_id">
                                                 Country of Origin <span className="text-[11px] font-semibold text-red-600"> *</span>
@@ -627,9 +655,12 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </select>
                                             <InputError message={err.sex_assigned_at_birth} />
                                         </div>
-                                    </div>
+                                    </fieldset>
 
-                                    <div className={cn('grid gap-5', currentStep === 1 ? '' : 'hidden')}>
+                                    <fieldset
+                                        disabled={currentStep !== 1}
+                                        className={cn('grid gap-5', currentStep === 1 ? '' : 'hidden')}
+                                    >
                                     <div className="grid gap-2">
                                         <Label htmlFor="email">Email address  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <Input
@@ -937,9 +968,12 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </div>
                                         )}
                                     </div>
-                                    </div>
+                                    </fieldset>
 
-                                    <div className={cn('grid gap-5 sm:grid-cols-2', currentStep === 2 ? '' : 'hidden')}>
+                                    <fieldset
+                                        disabled={currentStep !== 2}
+                                        className={cn('grid gap-5 sm:grid-cols-2', currentStep === 2 ? '' : 'hidden')}
+                                    >
                                         <div className="grid gap-2">
                                             <Label htmlFor="password">Password  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                             <div className="relative">
@@ -1001,12 +1035,15 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </div>
                                             <InputError message={err.password_confirmation} />
                                         </div>
-                                    </div>
+                                    </fieldset>
                                   
                                   
                         
 
-                                    <div className={cn('grid gap-3 text-left', currentStep === 3 ? '' : 'hidden')}>
+                                    <fieldset
+                                        disabled={currentStep !== 3}
+                                        className={cn('grid gap-3 text-left', currentStep === 3 ? '' : 'hidden')}
+                                    >
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
@@ -1232,9 +1269,12 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </fieldset>
 
-                                    <div className={cn('grid gap-3 text-left', currentStep === 4 ? '' : 'hidden')}>
+                                    <fieldset
+                                        disabled={currentStep !== 4}
+                                        className={cn('grid gap-3 text-left', currentStep === 4 ? '' : 'hidden')}
+                                    >
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
@@ -1295,12 +1335,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 Please tick both required consent boxes to continue.
                                             </p>
                                         )}
-                                    </div>
-                                    </div>
-
-                            
-
-                                    <div className="flex flex-wrap gap-3">
+                                    </fieldset>
+                                    <div className="mt-4 flex flex-wrap gap-3">
                                         <Button
                                             type="button"
                                             variant="outline"
@@ -1313,7 +1349,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         {currentStep < steps.length - 1 ? (
                                             <Button
                                                 type="button"
-                                                className="h-11 flex-1 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86]"
+                                                className="h-11 w-full rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] sm:w-auto"
                                                 onClick={goNext}
                                             >
                                                 Next
@@ -1321,7 +1357,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         ) : (
                                             <Button
                                                 type="submit"
-                                                className="h-11 flex-1 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60"
+                                                className="h-11 w-full rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                                                 tabIndex={9}
                                                 disabled={!canContinue || processing}
                                                 data-test="register-user-button"
