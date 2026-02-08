@@ -1553,7 +1553,10 @@ export default function ParticipantPage(props: PageProps) {
                                         <CardDescription></CardDescription>
                                     </div>
 
-                                    <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap lg:w-auto lg:justify-end">
+                                    <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-200/70 bg-slate-50/70 p-2 sm:flex-row sm:flex-wrap lg:w-auto lg:justify-end dark:border-slate-800 dark:bg-slate-900/40">
+                                        <div className="flex items-center px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                            Filters
+                                        </div>
                                         <div className="relative w-full sm:w-[240px]">
                                             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                                             <Input
