@@ -338,16 +338,27 @@ export default function Register({ countries, registrantTypes, programmes, statu
         }
 
         const fieldsets = Array.from(form.querySelectorAll('fieldset')) as HTMLFieldSetElement[];
+        const disabledStates = fieldsets.map((fieldset) => fieldset.disabled);
+        fieldsets.forEach((fieldset) => {
+            fieldset.disabled = false;
+        });
+
+        let invalidStep: number | null = null;
         for (let index = 0; index < fieldsets.length; index += 1) {
             const fieldset = fieldsets[index];
             if (fieldset.checkValidity()) {
                 continue;
             }
 
-            return index;
+            invalidStep = index;
+            break;
         }
 
-        return null;
+        fieldsets.forEach((fieldset, index) => {
+            fieldset.disabled = disabledStates[index];
+        });
+
+        return invalidStep;
     };
 
     const validateActiveStep = () => {
@@ -379,9 +390,12 @@ export default function Register({ countries, registrantTypes, programmes, statu
         const invalidStep = findFirstInvalidStep();
         if (invalidStep !== null) {
             setCurrentStep(invalidStep);
-            const fieldsets = Array.from(form.querySelectorAll('fieldset')) as HTMLFieldSetElement[];
-            const target = fieldsets[invalidStep];
-            target?.reportValidity();
+            requestAnimationFrame(() => {
+                const targetForm = getFormElement();
+                const fieldsets = Array.from(targetForm?.querySelectorAll('fieldset') ?? []) as HTMLFieldSetElement[];
+                const target = fieldsets[invalidStep];
+                target?.reportValidity();
+            });
             toast.error('Please complete the required fields before submitting.');
             return false;
         }
@@ -504,6 +518,20 @@ export default function Register({ countries, registrantTypes, programmes, statu
         });
     };
 
+    const errorSteps = React.useMemo(() => {
+        const keys = Object.keys(serverErrors).filter((key) => serverErrors[key]);
+        if (!keys.length) return new Set<number>();
+
+        const stepsWithErrors = new Set<number>();
+        for (const group of FIELD_STEP_MAP) {
+            if (keys.some((key) => group.fields.includes(key))) {
+                stepsWithErrors.add(group.step);
+            }
+        }
+
+        return stepsWithErrors;
+    }, [FIELD_STEP_MAP, serverErrors]);
+
     return (
         <RegisterLayout>
             <Head title="Register" />
@@ -572,21 +600,31 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 <p className="text-sm text-slate-500">{steps[currentStep].description}</p>
                                             </div>
                                             <div className="flex flex-wrap gap-2">
-                                                {steps.map((step, index) => (
-                                                    <button
-                                                        key={step.title}
-                                                        type="button"
-                                                        onClick={() => setCurrentStep(index)}
-                                                        className={cn(
-                                                            'rounded-full px-3 py-1 text-xs font-medium transition',
-                                                            index === currentStep
-                                                                ? 'bg-[#0033A0] text-white'
-                                                                : 'border border-slate-200 text-slate-500 hover:border-[#0033A0] hover:text-[#0033A0]'
-                                                        )}
-                                                    >
-                                                        {index + 1}
-                                                    </button>
-                                                ))}
+                                                {steps.map((step, index) => {
+                                                    const isActive = index === currentStep;
+                                                    const isError = errorSteps.has(index);
+                                                    const isComplete = index < currentStep && !isError;
+
+                                                    return (
+                                                        <button
+                                                            key={step.title}
+                                                            type="button"
+                                                            onClick={() => setCurrentStep(index)}
+                                                            className={cn(
+                                                                'rounded-full px-3 py-1 text-xs font-medium transition',
+                                                                isActive
+                                                                    ? 'bg-[#0033A0] text-white'
+                                                                    : isError
+                                                                      ? 'border border-red-200 bg-red-50 text-red-600 hover:border-red-300'
+                                                                      : isComplete
+                                                                        ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300'
+                                                                        : 'border border-slate-200 text-slate-500 hover:border-[#0033A0] hover:text-[#0033A0]'
+                                                            )}
+                                                        >
+                                                            {index + 1}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     </div>
