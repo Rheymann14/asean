@@ -572,7 +572,20 @@ export default function Register({ countries, registrantTypes, programmes, statu
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"
+                noValidate
                 data-test="register-form"
+                onSubmitCapture={(event) => {
+                    if (!canContinue) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        toast.error('Please tick both required consent boxes.');
+                        return;
+                    }
+                    if (!validateForm()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                }}
                 onSuccess={() => {
                     resetFormState();
                     setSuccessOpen(true);
