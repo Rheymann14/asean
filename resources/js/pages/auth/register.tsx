@@ -233,8 +233,17 @@ export default function Register({ countries, registrantTypes, programmes, statu
         },
     ] as const;
 
+    const getFormElement = () => {
+        const fallback = document.getElementById('register-form') as HTMLFormElement | null;
+        if (fallback) {
+            return fallback;
+        }
+
+        return document.querySelector('form[data-test="register-form"]') as HTMLFormElement | null;
+    };
+
     const findFirstInvalidStep = () => {
-        const form = formRef.current;
+        const form = getFormElement();
         if (!form) {
             return null;
         }
@@ -253,7 +262,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
     };
 
     const validateActiveStep = () => {
-        const form = formRef.current;
+        const form = getFormElement();
         if (!form) {
             return true;
         }
@@ -273,7 +282,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
     };
 
     const validateForm = () => {
-        const form = formRef.current;
+        const form = getFormElement();
         if (!form) {
             return true;
         }
@@ -435,12 +444,14 @@ export default function Register({ countries, registrantTypes, programmes, statu
             </div>
 
             <Form
+                id="register-form"
                 key={formKey}
                 ref={formRef}
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"
+                data-test="register-form"
                 onSuccess={() => {
                     resetFormState();
                     setSuccessOpen(true);
@@ -1279,6 +1290,118 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             ) : null}
                                         </div>
 
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                        Accessibility Needs
+                                                    </p>
+                                                    <p className="mt-1 text-sm leading-snug text-slate-600">
+                                                        Select all applicable needs.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => {
+                                                    const checked = accessibilityNeeds.includes(option.value);
+
+                                                    return (
+                                                        <label key={option.value} className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                            <Checkbox
+                                                                checked={checked}
+                                                                onCheckedChange={(value) => {
+                                                                    setAccessibilityNeeds((prev) => {
+                                                                        if (value) {
+                                                                            return prev.includes(option.value) ? prev : [...prev, option.value];
+                                                                        }
+
+                                                                        return prev.filter((item) => item !== option.value);
+                                                                    });
+                                                                }}
+                                                            />
+                                                            <span>{option.label}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {accessibilityNeeds.includes('other') ? (
+                                                <div className="mt-3 grid gap-2">
+                                                    <Label htmlFor="accessibility_other">Other accommodations</Label>
+                                                    <Input
+                                                        id="accessibility_other"
+                                                        name="accessibility_other"
+                                                        value={accessibilityOther}
+                                                        onChange={(event) => setAccessibilityOther(event.target.value)}
+                                                        placeholder="Please specify"
+                                                        className={inputClass}
+                                                    />
+                                                    <InputError message={err.accessibility_other} />
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                    Emergency Contact Information
+                                                </p>
+                                            </div>
+                                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergency_contact_name">Name</Label>
+                                                    <Input
+                                                        id="emergency_contact_name"
+                                                        name="emergency_contact_name"
+                                                        value={emergencyContactName}
+                                                        onChange={(event) => setEmergencyContactName(event.target.value)}
+                                                        placeholder="Full name"
+                                                        className={inputClass}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergency_contact_relationship">Relationship</Label>
+                                                    <Input
+                                                        id="emergency_contact_relationship"
+                                                        name="emergency_contact_relationship"
+                                                        value={emergencyContactRelationship}
+                                                        onChange={(event) => setEmergencyContactRelationship(event.target.value)}
+                                                        placeholder="Relationship"
+                                                        className={inputClass}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergency_contact_phone">Phone Number</Label>
+                                                    <Input
+                                                        id="emergency_contact_phone"
+                                                        name="emergency_contact_phone"
+                                                        value={emergencyContactPhone}
+                                                        onChange={(event) => setEmergencyContactPhone(event.target.value)}
+                                                        placeholder="Contact number"
+                                                        className={inputClass}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergency_contact_email">Email Address</Label>
+                                                    <Input
+                                                        id="emergency_contact_email"
+                                                        type="email"
+                                                        name="emergency_contact_email"
+                                                        value={emergencyContactEmail}
+                                                        onChange={(event) => setEmergencyContactEmail(event.target.value)}
+                                                        placeholder="Email"
+                                                        className={inputClass}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+
+                                    <fieldset
+                                        disabled={currentStep !== 4}
+                                        className={cn('grid gap-3 text-left', currentStep === 4 ? '' : 'hidden')}
+                                    >
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
