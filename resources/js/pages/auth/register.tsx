@@ -30,6 +30,7 @@ import {
     CommandList,
 } from '@/components/ui/command';
 import { CalendarRange, Check, CheckCircle2, ChevronsUpDown, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
 type CountryOption = {
     id: number;
@@ -68,10 +69,63 @@ const FOOD_RESTRICTION_OPTIONS = [
     { value: 'lactose_intolerant', label: 'Lactose intolerant' },
     { value: 'nut_allergy', label: 'Nut allergy' },
     { value: 'seafood_allergy', label: 'Seafood allergy' },
+    { value: 'allergies', label: 'Allergies' },
+    { value: 'other', label: 'Other' },
 ] as const;
+
+const ACCESSIBILITY_NEEDS_OPTIONS = [
+    { value: 'wheelchair_access', label: 'Wheelchair access' },
+    { value: 'sign_language_interpreter', label: 'Sign language interpreter' },
+    { value: 'assistive_technology_support', label: 'Assistive technology support' },
+    { value: 'other', label: 'Other accommodations' },
+] as const;
+
+const HONORIFIC_OPTIONS = [
+    { value: 'mr', label: 'Mr.' },
+    { value: 'mrs', label: 'Mrs.' },
+    { value: 'ms', label: 'Ms.' },
+    { value: 'miss', label: 'Miss' },
+    { value: 'dr', label: 'Dr.' },
+    { value: 'prof', label: 'Prof.' },
+    { value: 'other', label: 'Other' },
+] as const;
+
+const SEX_ASSIGNED_OPTIONS = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+] as const;
+
+const PHONE_CODE_OPTIONS = [
+    { value: '+673', label: 'Brunei (+673)' },
+    { value: '+855', label: 'Cambodia (+855)' },
+    { value: '+62', label: 'Indonesia (+62)' },
+    { value: '+856', label: 'Laos (+856)' },
+    { value: '+60', label: 'Malaysia (+60)' },
+    { value: '+95', label: 'Myanmar (+95)' },
+    { value: '+63', label: 'Philippines (+63)' },
+    { value: '+65', label: 'Singapore (+65)' },
+    { value: '+66', label: 'Thailand (+66)' },
+    { value: '+84', label: 'Vietnam (+84)' },
+    { value: '+670', label: 'Timor-Leste (+670)' },
+] as const;
+
+const COUNTRY_PHONE_CODE_MAP: Record<string, string> = {
+    BN: '+673',
+    KH: '+855',
+    ID: '+62',
+    LA: '+856',
+    MY: '+60',
+    MM: '+95',
+    PH: '+63',
+    SG: '+65',
+    TH: '+66',
+    VN: '+84',
+    TL: '+670',
+};
 
 export default function Register({ countries, registrantTypes, programmes, status }: RegisterProps) {
     const [formKey, setFormKey] = React.useState(0);
+    const formRef = React.useRef<HTMLFormElement | null>(null);
 
     const [countryOpen, setCountryOpen] = React.useState(false);
     const [typeOpen, setTypeOpen] = React.useState(false);
@@ -79,13 +133,30 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
     const [successOpen, setSuccessOpen] = React.useState(false);
+    const [currentStep, setCurrentStep] = React.useState(0);
     const [consentContact, setConsentContact] = React.useState(false);
     const [consentMedia, setConsentMedia] = React.useState(false);
-    const [foodRestrictions, setFoodRestrictions] = React.useState<string[]>([]);
+    const [foodRestrictions, setFoodRestrictions] = useRemember<string[]>([], 'register.food_restrictions');
+    const [accessibilityNeeds, setAccessibilityNeeds] = useRemember<string[]>([], 'register.accessibility_needs');
+    const [dietaryAllergies, setDietaryAllergies] = useRemember<string>('', 'register.dietary_allergies');
+    const [dietaryOther, setDietaryOther] = useRemember<string>('', 'register.dietary_other');
+    const [accessibilityOther, setAccessibilityOther] = useRemember<string>('', 'register.accessibility_other');
+    const [ipAffiliation, setIpAffiliation] = useRemember<string>('', 'register.ip_affiliation');
+    const [ipGroupName, setIpGroupName] = useRemember<string>('', 'register.ip_group_name');
+    const [emergencyContactName, setEmergencyContactName] = useRemember<string>('', 'register.emergency_contact_name');
+    const [emergencyContactRelationship, setEmergencyContactRelationship] = useRemember<string>(
+        '',
+        'register.emergency_contact_relationship'
+    );
+    const [emergencyContactPhone, setEmergencyContactPhone] = useRemember<string>('', 'register.emergency_contact_phone');
+    const [emergencyContactEmail, setEmergencyContactEmail] = useRemember<string>('', 'register.emergency_contact_email');
 
     const canContinue = consentContact && consentMedia;
 
     const [country, setCountry] = useRemember<string>('', 'register.country');
+    const [honorificTitle, setHonorificTitle] = useRemember<string>('', 'register.honorific_title');
+    const [sexAssignedAtBirth, setSexAssignedAtBirth] = useRemember<string>('', 'register.sex_assigned_at_birth');
+    const [contactCountryCode, setContactCountryCode] = useRemember<string>('', 'register.contact_country_code');
     const [registrantType, setRegistrantType] = useRemember<string>('', 'register.registrant_type');
     const [programmeIds, setProgrammeIds] = useRemember<string[]>([], 'register.programme_ids');
     const [otherRegistrantType, setOtherRegistrantType] = useRemember<string>('', 'register.other_user_type');
@@ -94,6 +165,17 @@ export default function Register({ countries, registrantTypes, programmes, statu
         () => countries.find((c) => String(c.id) === country) ?? null,
         [countries, country]
     );
+
+    React.useEffect(() => {
+        if (!selectedCountry?.code) {
+            return;
+        }
+
+        const nextCode = COUNTRY_PHONE_CODE_MAP[selectedCountry.code.toUpperCase()];
+        if (nextCode && nextCode !== contactCountryCode) {
+            setContactCountryCode(nextCode);
+        }
+    }, [contactCountryCode, selectedCountry, setContactCountryCode]);
 
     const filteredRegistrantTypes = React.useMemo(() => {
         return registrantTypes.filter((type) => {
@@ -128,6 +210,75 @@ export default function Register({ countries, registrantTypes, programmes, statu
         return `${selectedProgrammes.length} events selected`;
     }, [selectedProgrammes]);
 
+    const steps = [
+        {
+            title: 'Personal details',
+            description: 'Honorific and name details.',
+        },
+        {
+            title: 'Contact & role',
+            description: 'Organization, contact, and registrant type.',
+        },
+        {
+            title: 'Account',
+            description: 'Set your password.',
+        },
+        {
+            title: 'Preferences',
+            description: 'Dietary, accessibility, and emergency contact.',
+        },
+        {
+            title: 'Consents',
+            description: 'Review required consents and submit.',
+        },
+    ] as const;
+
+    const validateActiveStep = () => {
+        const form = formRef.current;
+        if (!form) {
+            return true;
+        }
+
+        const activeFieldset = form.querySelector('fieldset:not([disabled])') as HTMLFieldSetElement | null;
+        if (!activeFieldset) {
+            return true;
+        }
+
+        const isValid = activeFieldset.checkValidity();
+        if (!isValid) {
+            activeFieldset.reportValidity();
+            toast.error('Please complete the required fields before continuing.');
+        }
+
+        return isValid;
+    };
+
+    const validateForm = () => {
+        const form = formRef.current;
+        if (!form) {
+            return true;
+        }
+
+        const isValid = form.checkValidity();
+        if (!isValid) {
+            form.reportValidity();
+            toast.error('Please complete the required fields before submitting.');
+        }
+
+        return isValid;
+    };
+
+    const goNext = () => {
+        if (!validateActiveStep()) {
+            return;
+        }
+        setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+    };
+
+    const goPrev = () => {
+        setCurrentStep((prev) => Math.max(prev - 1, 0));
+    };
+
     const resetFormState = React.useCallback(() => {
         // Force remount to clear uncontrolled inputs
         setFormKey((k) => k + 1);
@@ -140,8 +291,42 @@ export default function Register({ countries, registrantTypes, programmes, statu
         setConsentContact(false);
         setConsentMedia(false);
         setFoodRestrictions([]);
+        setAccessibilityNeeds([]);
+        setDietaryAllergies('');
+        setDietaryOther('');
+        setAccessibilityOther('');
+        setIpAffiliation('');
+        setIpGroupName('');
+        setEmergencyContactName('');
+        setEmergencyContactRelationship('');
+        setEmergencyContactPhone('');
+        setEmergencyContactEmail('');
         setOtherRegistrantType('');
-    }, [setCountry, setProgrammeIds, setRegistrantType, setOtherRegistrantType]);
+        setHonorificTitle('');
+        setSexAssignedAtBirth('');
+        setContactCountryCode('');
+        setCurrentStep(0);
+    }, [
+        setCountry,
+        setProgrammeIds,
+        setRegistrantType,
+        setOtherRegistrantType,
+        setAccessibilityNeeds,
+        setDietaryAllergies,
+        setDietaryOther,
+        setAccessibilityOther,
+        setFoodRestrictions,
+        setIpAffiliation,
+        setIpGroupName,
+        setEmergencyContactName,
+        setEmergencyContactRelationship,
+        setEmergencyContactPhone,
+        setEmergencyContactEmail,
+        setHonorificTitle,
+        setSexAssignedAtBirth,
+        setContactCountryCode,
+        setCurrentStep,
+    ]);
 
     React.useEffect(() => {
         if (status === 'registered') {
@@ -155,6 +340,27 @@ export default function Register({ countries, registrantTypes, programmes, statu
             setOtherRegistrantType('');
         }
     }, [isOtherRegistrantType, otherRegistrantType, setOtherRegistrantType]);
+
+    React.useEffect(() => {
+        if (!foodRestrictions.includes('allergies') && dietaryAllergies) {
+            setDietaryAllergies('');
+        }
+        if (!foodRestrictions.includes('other') && dietaryOther) {
+            setDietaryOther('');
+        }
+    }, [dietaryAllergies, dietaryOther, foodRestrictions, setDietaryAllergies, setDietaryOther]);
+
+    React.useEffect(() => {
+        if (!accessibilityNeeds.includes('other') && accessibilityOther) {
+            setAccessibilityOther('');
+        }
+    }, [accessibilityNeeds, accessibilityOther, setAccessibilityOther]);
+
+    React.useEffect(() => {
+        if (ipAffiliation !== 'yes' && ipGroupName) {
+            setIpGroupName('');
+        }
+    }, [ipAffiliation, ipGroupName, setIpGroupName]);
 
     const inputClass =
         'h-11 rounded-xl border-slate-200 bg-white shadow-[inset_0_1px_2px_rgba(2,6,23,0.06)] ' +
@@ -207,6 +413,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
             <Form
                 key={formKey}
+                ref={formRef}
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
@@ -233,117 +440,275 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
 
                                 <div className="grid gap-5">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="country_id">Country of Origin <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
-                                        <input type="hidden" name="country_id" value={country} />
-
-                                        <Popover open={countryOpen} onOpenChange={setCountryOpen}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    aria-expanded={countryOpen}
-                                                    className={comboboxTriggerClass}
-                                                    tabIndex={1}
-                                                >
-                                                    <span className="flex min-w-0 items-center gap-2">
-                                                        {selectedCountry ? (
-                                                            <>
-                                                                {selectedCountry.flag_url ? (
-                                                                    <img
-                                                                        src={selectedCountry.flag_url}
-                                                                        alt=""
-                                                                        className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
-                                                                        loading="lazy"
-                                                                        draggable={false}
-                                                                    />
-                                                                ) : (
-                                                                    <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                                                                        {selectedCountry.code}
-                                                                    </span>
-                                                                )}
-                                                                <span className="truncate">{selectedCountry.name}</span>
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-muted-foreground">Select country…</span>
+                                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    Step {currentStep + 1} of {steps.length}
+                                                </p>
+                                                <h2 className="text-lg font-semibold text-slate-800">{steps[currentStep].title}</h2>
+                                                <p className="text-sm text-slate-500">{steps[currentStep].description}</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {steps.map((step, index) => (
+                                                    <button
+                                                        key={step.title}
+                                                        type="button"
+                                                        onClick={() => setCurrentStep(index)}
+                                                        className={cn(
+                                                            'rounded-full px-3 py-1 text-xs font-medium transition',
+                                                            index === currentStep
+                                                                ? 'bg-[#0033A0] text-white'
+                                                                : 'border border-slate-200 text-slate-500 hover:border-[#0033A0] hover:text-[#0033A0]'
                                                         )}
-                                                    </span>
-                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
+                                                    >
+                                                        {index + 1}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                            <PopoverContent
-                                                className="w-[--radix-popover-trigger-width] p-0"
-                                                align="start"
-                                            >
-                                                <Command>
-                                                    <CommandInput placeholder="Search country…" />
-                                                    <CommandEmpty>No country found.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {countries.map((item) => (
-                                                            <CommandItem
-                                                                key={item.id}
-                                                                value={item.name}
-                                                                onSelect={() => {
-                                                                    setCountry(String(item.id));
-                                                                    setCountryOpen(false);
-                                                                }}
-                                                                className="gap-2"
-                                                            >
-                                                                {item.flag_url ? (
-                                                                    <img
-                                                                        src={item.flag_url}
-                                                                        alt=""
-                                                                        className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
-                                                                        loading="lazy"
-                                                                        draggable={false}
-                                                                    />
-                                                                ) : (
-                                                                    <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                                                                        {item.code}
-                                                                    </span>
-                                                                )}
-                                                                <span className="truncate">{item.name}</span>
-                                                                <Check
-                                                                    className={cn(
-                                                                        'ml-auto h-4 w-4',
-                                                                        country === String(item.id) ? 'opacity-100' : 'opacity-0'
+                                    <input type="hidden" name="consent_contact_sharing" value={consentContact ? '1' : '0'} />
+                                    <input type="hidden" name="consent_photo_video" value={consentMedia ? '1' : '0'} />
+                                    <input type="hidden" name="has_food_restrictions" value={foodRestrictions.length > 0 ? '1' : '0'} />
+                                    <input type="hidden" name="ip_affiliation" value={ipAffiliation === 'yes' ? '1' : '0'} />
+                                    {foodRestrictions.map((restriction) => (
+                                        <input key={restriction} type="hidden" name="food_restrictions[]" value={restriction} />
+                                    ))}
+                                    {accessibilityNeeds.map((need) => (
+                                        <input key={need} type="hidden" name="accessibility_needs[]" value={need} />
+                                    ))}
+
+                                    <fieldset
+                                        disabled={currentStep !== 0}
+                                        className={cn('grid gap-5', currentStep === 0 ? '' : 'hidden')}
+                                    >
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="country_id">
+                                                Country of Origin <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                            </Label>
+                                            <input type="hidden" name="country_id" value={country} />
+
+                                            <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={countryOpen}
+                                                        className={comboboxTriggerClass}
+                                                        tabIndex={1}
+                                                    >
+                                                        <span className="flex min-w-0 items-center gap-2">
+                                                            {selectedCountry ? (
+                                                                <>
+                                                                    {selectedCountry.flag_url ? (
+                                                                        <img
+                                                                            src={selectedCountry.flag_url}
+                                                                            alt=""
+                                                                            className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
+                                                                            loading="lazy"
+                                                                            draggable={false}
+                                                                        />
+                                                                    ) : (
+                                                                        <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                                                                            {selectedCountry.code}
+                                                                        </span>
                                                                     )}
-                                                                />
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
+                                                                    <span className="truncate">{selectedCountry.name}</span>
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-muted-foreground">Select country…</span>
+                                                            )}
+                                                        </span>
+                                                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
 
-                                        <InputError message={err.country_id ?? err.country} />
-                                    </div>
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search country…" />
+                                                        <CommandEmpty>No country found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {countries.map((item) => (
+                                                                <CommandItem
+                                                                    key={item.id}
+                                                                    value={item.name}
+                                                                    onSelect={() => {
+                                                                        setCountry(String(item.id));
+                                                                        setCountryOpen(false);
+                                                                    }}
+                                                                    className="gap-2"
+                                                                >
+                                                                    {item.flag_url ? (
+                                                                        <img
+                                                                            src={item.flag_url}
+                                                                            alt=""
+                                                                            className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
+                                                                            loading="lazy"
+                                                                            draggable={false}
+                                                                        />
+                                                                    ) : (
+                                                                        <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                                                                            {item.code}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="truncate">{item.name}</span>
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'ml-auto h-4 w-4',
+                                                                            country === String(item.id) ? 'opacity-100' : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="name">Full Name (First Name, Middle Initial, Surname) <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
-                                        <Input
-                                            id="name"
-                                            type="text"
-                                            required
-                                            autoFocus
-                                            tabIndex={2}
-                                            autoComplete="name"
-                                            name="name"
-                                            placeholder="e.g JUAN DELA CRUZ"
-                                            className={inputClass}
-                                        />
-                                        <InputError message={err.name} />
-                                    </div>
+                                            <InputError message={err.country_id ?? err.country} />
+                                        </div>
 
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="honorific_title">
+                                                Honorific / Title <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                            </Label>
+                                            <select
+                                                id="honorific_title"
+                                                name="honorific_title"
+                                                required
+                                                tabIndex={2}
+                                                value={honorificTitle}
+                                                onChange={(event) => setHonorificTitle(event.target.value)}
+                                                className={inputClass}
+                                            >
+                                                <option value="">Select honorific…</option>
+                                                {HONORIFIC_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <InputError message={err.honorific_title} />
+                                        </div>
+
+                                        {honorificTitle === 'other' ? (
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="honorific_other">Other honorific</Label>
+                                                <Input
+                                                    id="honorific_other"
+                                                    type="text"
+                                                    name="honorific_other"
+                                                    required
+                                                    tabIndex={3}
+                                                    placeholder="Please specify"
+                                                    className={inputClass}
+                                                />
+                                                <InputError message={err.honorific_other} />
+                                            </div>
+                                        ) : null}
+
+                                        <div className="grid gap-4 sm:grid-cols-3">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="given_name">
+                                                    Given Name / First Name <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                                </Label>
+                                                <Input
+                                                    id="given_name"
+                                                    type="text"
+                                                    required
+                                                    autoFocus
+                                                    tabIndex={honorificTitle === 'other' ? 4 : 3}
+                                                    autoComplete="given-name"
+                                                    name="given_name"
+                                                    placeholder="e.g. JUAN"
+                                                    className={inputClass}
+                                                />
+                                                <InputError message={err.given_name} />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="middle_name">Middle Name</Label>
+                                                <Input
+                                                    id="middle_name"
+                                                    type="text"
+                                                    tabIndex={honorificTitle === 'other' ? 5 : 4}
+                                                    autoComplete="additional-name"
+                                                    name="middle_name"
+                                                    placeholder="e.g. SANTOS"
+                                                    className={inputClass}
+                                                />
+                                                <InputError message={err.middle_name} />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="family_name">
+                                                    Family Name / Surname <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                                </Label>
+                                                <Input
+                                                    id="family_name"
+                                                    type="text"
+                                                    required
+                                                    tabIndex={honorificTitle === 'other' ? 6 : 5}
+                                                    autoComplete="family-name"
+                                                    name="family_name"
+                                                    placeholder="e.g. DELA CRUZ"
+                                                    className={inputClass}
+                                                />
+                                                <InputError message={err.family_name} />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="suffix">Suffix</Label>
+                                            <Input
+                                                id="suffix"
+                                                type="text"
+                                                tabIndex={honorificTitle === 'other' ? 7 : 6}
+                                                name="suffix"
+                                                placeholder="e.g. Jr., III"
+                                                className={inputClass}
+                                            />
+                                            <InputError message={err.suffix} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="sex_assigned_at_birth">
+                                                Sex assigned at birth <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                            </Label>
+                                            <select
+                                                id="sex_assigned_at_birth"
+                                                name="sex_assigned_at_birth"
+                                                required
+                                                tabIndex={honorificTitle === 'other' ? 8 : 7}
+                                                value={sexAssignedAtBirth}
+                                                onChange={(event) => setSexAssignedAtBirth(event.target.value)}
+                                                className={inputClass}
+                                            >
+                                                <option value="">Select…</option>
+                                                {SEX_ASSIGNED_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <InputError message={err.sex_assigned_at_birth} />
+                                        </div>
+                                    </fieldset>
+
+                                    <fieldset
+                                        disabled={currentStep !== 1}
+                                        className={cn('grid gap-5', currentStep === 1 ? '' : 'hidden')}
+                                    >
                                     <div className="grid gap-2">
                                         <Label htmlFor="email">Email address  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                         <Input
                                             id="email"
                                             type="email"
                                             required
-                                            tabIndex={3}
+                                            tabIndex={honorificTitle === 'other' ? 9 : 8}
                                             autoComplete="email"
                                             name="email"
                                             placeholder="email@example.com"
@@ -353,26 +718,77 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="contact_number">Contact number  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
-                                        <Input
-                                            id="contact_number"
-                                            type="tel"
-                                            required
-                                            tabIndex={4}
-                                            autoComplete="tel"
-                                            name="contact_number"
-                                            inputMode="numeric"
+                                        <Label htmlFor="contact_number">
+                                            Contact number  <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </Label>
+                                        <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
+                                            <select
+                                                id="contact_country_code"
+                                                name="contact_country_code"
+                                                required
+                                                tabIndex={honorificTitle === 'other' ? 10 : 9}
+                                                value={contactCountryCode}
+                                                onChange={(event) => setContactCountryCode(event.target.value)}
+                                                className={inputClass}
+                                            >
+                                                <option value="">Country code…</option>
+                                                {PHONE_CODE_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <Input
+                                                id="contact_number"
+                                                type="tel"
+                                                required
+                                                tabIndex={honorificTitle === 'other' ? 11 : 10}
+                                                autoComplete="tel"
+                                                name="contact_number"
+                                                inputMode="numeric"
+                                                placeholder="e.g. 9123456789"
+                                                className={inputClass}
+                                                onInput={(event) => {
+                                                    event.currentTarget.value = event.currentTarget.value.replace(
+                                                        /[^0-9]/g,
+                                                        ''
+                                                    );
+                                                }}
+                                            />
+                                        </div>
+                                        <InputError message={err.contact_country_code ?? err.contact_number} />
+                                    </div>
 
-                                            placeholder="e.g. 09123456789"
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="organization_name">
+                                            Agency / Organization / Institution <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </Label>
+                                        <Input
+                                            id="organization_name"
+                                            type="text"
+                                            required
+                                            tabIndex={honorificTitle === 'other' ? 12 : 11}
+                                            name="organization_name"
+                                            placeholder="Name of organization"
                                             className={inputClass}
-                                            onInput={(event) => {
-                                                event.currentTarget.value = event.currentTarget.value.replace(
-                                                    /[^0-9]/g,
-                                                    ''
-                                                );
-                                            }}
                                         />
-                                        <InputError message={err.contact_number} />
+                                        <InputError message={err.organization_name} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="position_title">
+                                            Position / Designation <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </Label>
+                                        <Input
+                                            id="position_title"
+                                            type="text"
+                                            required
+                                            tabIndex={honorificTitle === 'other' ? 13 : 12}
+                                            name="position_title"
+                                            placeholder="Job title / role"
+                                            className={inputClass}
+                                        />
+                                        <InputError message={err.position_title} />
                                     </div>
 
                                     <div className="grid gap-2">
@@ -387,7 +803,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     role="combobox"
                                                     aria-expanded={typeOpen}
                                                     className={comboboxTriggerClass}
-                                                    tabIndex={5}
+                                                    tabIndex={honorificTitle === 'other' ? 14 : 13}
                                                 >
                                                     <span className="truncate">
                                                         {selectedType ? (
@@ -593,8 +1009,12 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </div>
                                         )}
                                     </div>
+                                    </fieldset>
 
-                                    <div className="grid gap-5 sm:grid-cols-2">
+                                    <fieldset
+                                        disabled={currentStep !== 2}
+                                        className={cn('grid gap-5 sm:grid-cols-2', currentStep === 2 ? '' : 'hidden')}
+                                    >
                                         <div className="grid gap-2">
                                             <Label htmlFor="password">Password  <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
                                             <div className="relative">
@@ -656,20 +1076,20 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </div>
                                             <InputError message={err.password_confirmation} />
                                         </div>
-                                    </div>
+                                    </fieldset>
                                   
                                   
                         
 
-                                    <div className="grid gap-3 text-left">
-                                        <input type="hidden" name="consent_contact_sharing" value={consentContact ? '1' : '0'} />
-                                        <input type="hidden" name="consent_photo_video" value={consentMedia ? '1' : '0'} />
-                                        <input type="hidden" name="has_food_restrictions" value={foodRestrictions.length > 0 ? '1' : '0'} />
+                                    <fieldset
+                                        disabled={currentStep !== 3}
+                                        className={cn('grid gap-3 text-left', currentStep === 3 ? '' : 'hidden')}
+                                    >
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
                                                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                                                        Food restrictions
+                                                        Dietary Preferences
                                                     </p>
                                                     <p className="mt-1 text-sm leading-snug text-slate-600">
                                                         Select all that apply.
@@ -701,11 +1121,201 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 })}
                                             </div>
 
-                                            {foodRestrictions.map((restriction) => (
-                                                <input key={restriction} type="hidden" name="food_restrictions[]" value={restriction} />
-                                            ))}
+                                            {foodRestrictions.includes('allergies') ? (
+                                                <div className="mt-3 grid gap-2">
+                                                    <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
+                                                    <Input
+                                                        id="dietary_allergies"
+                                                        name="dietary_allergies"
+                                                        value={dietaryAllergies}
+                                                        onChange={(event) => setDietaryAllergies(event.target.value)}
+                                                        placeholder="e.g. Nuts, seafood"
+                                                        className={inputClass}
+                                                    />
+                                                    <InputError message={err.dietary_allergies} />
+                                                </div>
+                                            ) : null}
+
+                                            {foodRestrictions.includes('other') ? (
+                                                <div className="mt-3 grid gap-2">
+                                                    <Label htmlFor="dietary_other">Other dietary needs</Label>
+                                                    <Input
+                                                        id="dietary_other"
+                                                        name="dietary_other"
+                                                        value={dietaryOther}
+                                                        onChange={(event) => setDietaryOther(event.target.value)}
+                                                        placeholder="Please specify"
+                                                        className={inputClass}
+                                                    />
+                                                    <InputError message={err.dietary_other} />
+                                                </div>
+                                            ) : null}
                                         </div>
 
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                        Indigenous Peoples (IP) Affiliation
+                                                    </p>
+                                                    <p className="mt-1 text-sm leading-snug text-slate-600">
+                                                        Are you part of an Indigenous Peoples group?
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-700">
+                                                <label className="flex items-center gap-2">
+                                                    <input
+                                                        type="radio"
+                                                        name="ip_affiliation_choice"
+                                                        value="yes"
+                                                        checked={ipAffiliation === 'yes'}
+                                                        onChange={() => setIpAffiliation('yes')}
+                                                        required
+                                                    />
+                                                    Yes
+                                                </label>
+                                                <label className="flex items-center gap-2">
+                                                    <input
+                                                        type="radio"
+                                                        name="ip_affiliation_choice"
+                                                        value="no"
+                                                        checked={ipAffiliation === 'no'}
+                                                        onChange={() => setIpAffiliation('no')}
+                                                    />
+                                                    No
+                                                </label>
+                                            </div>
+
+                                            {ipAffiliation === 'yes' ? (
+                                                <div className="mt-3 grid gap-2">
+                                                    <Label htmlFor="ip_group_name">If yes, please specify</Label>
+                                                    <Input
+                                                        id="ip_group_name"
+                                                        name="ip_group_name"
+                                                        value={ipGroupName}
+                                                        onChange={(event) => setIpGroupName(event.target.value)}
+                                                        placeholder="Name of IP group"
+                                                        className={inputClass}
+                                                    />
+                                                    <InputError message={err.ip_group_name} />
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                        Accessibility Needs
+                                                    </p>
+                                                    <p className="mt-1 text-sm leading-snug text-slate-600">
+                                                        Select all applicable needs.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => {
+                                                    const checked = accessibilityNeeds.includes(option.value);
+
+                                                    return (
+                                                        <label key={option.value} className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                            <Checkbox
+                                                                checked={checked}
+                                                                onCheckedChange={(value) => {
+                                                                    setAccessibilityNeeds((prev) => {
+                                                                        if (value) {
+                                                                            return prev.includes(option.value) ? prev : [...prev, option.value];
+                                                                        }
+
+                                                                        return prev.filter((item) => item !== option.value);
+                                                                    });
+                                                                }}
+                                                            />
+                                                            <span>{option.label}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {accessibilityNeeds.includes('other') ? (
+                                                <div className="mt-3 grid gap-2">
+                                                    <Label htmlFor="accessibility_other">Other accommodations</Label>
+                                                    <Input
+                                                        id="accessibility_other"
+                                                        name="accessibility_other"
+                                                        value={accessibilityOther}
+                                                        onChange={(event) => setAccessibilityOther(event.target.value)}
+                                                        placeholder="Please specify"
+                                                        className={inputClass}
+                                                    />
+                                                    <InputError message={err.accessibility_other} />
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                                                    Emergency Contact Information
+                                                </p>
+                                            </div>
+                                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergency_contact_name">Name</Label>
+                                                    <Input
+                                                        id="emergency_contact_name"
+                                                        name="emergency_contact_name"
+                                                        value={emergencyContactName}
+                                                        onChange={(event) => setEmergencyContactName(event.target.value)}
+                                                        placeholder="Full name"
+                                                        className={inputClass}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergency_contact_relationship">Relationship</Label>
+                                                    <Input
+                                                        id="emergency_contact_relationship"
+                                                        name="emergency_contact_relationship"
+                                                        value={emergencyContactRelationship}
+                                                        onChange={(event) => setEmergencyContactRelationship(event.target.value)}
+                                                        placeholder="Relationship"
+                                                        className={inputClass}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergency_contact_phone">Phone Number</Label>
+                                                    <Input
+                                                        id="emergency_contact_phone"
+                                                        name="emergency_contact_phone"
+                                                        value={emergencyContactPhone}
+                                                        onChange={(event) => setEmergencyContactPhone(event.target.value)}
+                                                        placeholder="Contact number"
+                                                        className={inputClass}
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="emergency_contact_email">Email Address</Label>
+                                                    <Input
+                                                        id="emergency_contact_email"
+                                                        type="email"
+                                                        name="emergency_contact_email"
+                                                        value={emergencyContactEmail}
+                                                        onChange={(event) => setEmergencyContactEmail(event.target.value)}
+                                                        placeholder="Email"
+                                                        className={inputClass}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+
+                                    <fieldset
+                                        disabled={currentStep !== 4}
+                                        className={cn('grid gap-3 text-left', currentStep === 4 ? '' : 'hidden')}
+                                    >
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
@@ -766,26 +1376,49 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 Please tick both required consent boxes to continue.
                                             </p>
                                         )}
-                                    </div>
-
-                            
-
-                                    <Button
-                                        type="submit"
-                                        className="mt-1 h-11 w-full gap-2 rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60"
-                                        tabIndex={9}
-                                        disabled={!canContinue || processing}
-                                        data-test="register-user-button"
-                                    >
-                                        {processing ? (
-                                            <>
-                                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                                                Registering…
-                                            </>
+                                    </fieldset>
+                                    <div className="mt-4 flex flex-wrap gap-3">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-11 rounded-xl px-5"
+                                            onClick={goPrev}
+                                            disabled={currentStep === 0}
+                                        >
+                                            Back
+                                        </Button>
+                                        {currentStep < steps.length - 1 ? (
+                                            <Button
+                                                type="button"
+                                                className="h-11 w-full rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] sm:w-auto"
+                                                onClick={goNext}
+                                            >
+                                                Next
+                                            </Button>
                                         ) : (
-                                            'Register'
+                                            <Button
+                                                type="submit"
+                                                className="h-11 w-full rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                                tabIndex={9}
+                                                disabled={!canContinue || processing}
+                                                data-test="register-user-button"
+                                                onClick={(event) => {
+                                                    if (!validateForm()) {
+                                                        event.preventDefault();
+                                                    }
+                                                }}
+                                            >
+                                                {processing ? (
+                                                    <>
+                                                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                                        Registering…
+                                                    </>
+                                                ) : (
+                                                    'Register'
+                                                )}
+                                            </Button>
                                         )}
-                                    </Button>
+                                    </div>
                                     {processing && (
                                         <p className="text-center text-sm text-slate-500" role="status" aria-live="polite">
                                             Creating your account, generating your QR badge, and sending your confirmation email. Please wait…

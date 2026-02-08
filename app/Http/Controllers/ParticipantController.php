@@ -25,6 +25,15 @@ class ParticipantController extends Controller
         'lactose_intolerant',
         'nut_allergy',
         'seafood_allergy',
+        'allergies',
+        'other',
+    ];
+
+    private const ACCESSIBILITY_NEEDS_OPTIONS = [
+        'wheelchair_access',
+        'sign_language_interpreter',
+        'assistive_technology_support',
+        'other',
     ];
 
     public function index()
@@ -63,14 +72,34 @@ class ParticipantController extends Controller
                     'qr_payload' => $user->qr_payload,
                     'email' => $user->email,
                     'contact_number' => $user->contact_number,
+                    'contact_country_code' => $user->contact_country_code,
                     'country_id' => $user->country_id,
                     'user_type_id' => $user->user_type_id,
                     'other_user_type' => $user->other_user_type,
+                    'honorific_title' => $user->honorific_title,
+                    'honorific_other' => $user->honorific_other,
+                    'given_name' => $user->given_name,
+                    'middle_name' => $user->middle_name,
+                    'family_name' => $user->family_name,
+                    'suffix' => $user->suffix,
+                    'sex_assigned_at_birth' => $user->sex_assigned_at_birth,
+                    'organization_name' => $user->organization_name,
+                    'position_title' => $user->position_title,
+                    'ip_affiliation' => $user->ip_affiliation,
+                    'ip_group_name' => $user->ip_group_name,
                     'is_active' => $user->is_active,
                     'consent_contact_sharing' => $user->consent_contact_sharing,
                     'consent_photo_video' => $user->consent_photo_video,
                     'has_food_restrictions' => $user->has_food_restrictions,
                     'food_restrictions' => $user->food_restrictions ?? [],
+                    'dietary_allergies' => $user->dietary_allergies,
+                    'dietary_other' => $user->dietary_other,
+                    'accessibility_needs' => $user->accessibility_needs ?? [],
+                    'accessibility_other' => $user->accessibility_other,
+                    'emergency_contact_name' => $user->emergency_contact_name,
+                    'emergency_contact_relationship' => $user->emergency_contact_relationship,
+                    'emergency_contact_phone' => $user->emergency_contact_phone,
+                    'emergency_contact_email' => $user->emergency_contact_email,
                     'created_at' => $user->created_at?->toISOString(),
                     'joined_programme_ids' => $user->joinedProgrammes
                         ? $user->joinedProgrammes->pluck('id')->values()->all()
@@ -147,14 +176,35 @@ class ParticipantController extends Controller
             'full_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'contact_number' => ['nullable', 'string', 'max:30'],
+            'contact_country_code' => ['nullable', 'string', 'max:10'],
             'country_id' => ['nullable', 'exists:countries,id'],
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'other_user_type' => ['nullable', 'string', 'max:255'],
+            'honorific_title' => ['nullable', 'string', 'max:50'],
+            'honorific_other' => ['nullable', 'string', 'max:255'],
+            'given_name' => ['nullable', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'family_name' => ['nullable', 'string', 'max:255'],
+            'suffix' => ['nullable', 'string', 'max:50'],
+            'sex_assigned_at_birth' => ['nullable', 'string', Rule::in(['male', 'female'])],
+            'organization_name' => ['nullable', 'string', 'max:255'],
+            'position_title' => ['nullable', 'string', 'max:255'],
+            'ip_affiliation' => ['nullable', 'boolean'],
+            'ip_group_name' => ['nullable', 'string', 'max:255'],
             'is_active' => ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
             'has_food_restrictions' => ['nullable', 'boolean'],
             'food_restrictions' => ['nullable', 'array'],
             'food_restrictions.*' => ['string', Rule::in(self::FOOD_RESTRICTION_OPTIONS)],
+            'dietary_allergies' => ['nullable', 'string', 'max:255'],
+            'dietary_other' => ['nullable', 'string', 'max:255'],
+            'accessibility_needs' => ['nullable', 'array'],
+            'accessibility_needs.*' => ['string', Rule::in(self::ACCESSIBILITY_NEEDS_OPTIONS)],
+            'accessibility_other' => ['nullable', 'string', 'max:255'],
+            'emergency_contact_name' => ['nullable', 'string', 'max:255'],
+            'emergency_contact_relationship' => ['nullable', 'string', 'max:255'],
+            'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
+            'emergency_contact_email' => ['nullable', 'email', 'max:255'],
         ]);
 
         $userTypeId = $validated['user_type_id'] ?? null;
@@ -162,20 +212,51 @@ class ParticipantController extends Controller
             ? trim((string) ($validated['other_user_type'] ?? '')) ?: null
             : null;
         $foodRestrictions = array_values(array_unique($validated['food_restrictions'] ?? []));
+        $accessibilityNeeds = array_values(array_unique($validated['accessibility_needs'] ?? []));
+        $fullName = $this->buildFullName(
+            $validated['given_name'] ?? '',
+            $validated['middle_name'] ?? null,
+            $validated['family_name'] ?? '',
+            $validated['suffix'] ?? null,
+        );
 
         $user = User::create([
-            'name' => $validated['full_name'],
+            'name' => $fullName ?: $validated['full_name'],
             'email' => $validated['email'],
             'contact_number' => $validated['contact_number'] ?? null,
+            'contact_country_code' => $validated['contact_country_code'] ?? null,
             'password' => $validated['password'] ?? 'aseanph2026',
             'country_id' => $validated['country_id'] ?? null,
             'user_type_id' => $validated['user_type_id'] ?? null,
             'other_user_type' => $otherUserType,
+            'honorific_title' => $validated['honorific_title'] ?? null,
+            'honorific_other' => $validated['honorific_other'] ?? null,
+            'given_name' => $validated['given_name'] ?? null,
+            'middle_name' => $validated['middle_name'] ?? null,
+            'family_name' => $validated['family_name'] ?? null,
+            'suffix' => $validated['suffix'] ?? null,
+            'sex_assigned_at_birth' => $validated['sex_assigned_at_birth'] ?? null,
+            'organization_name' => $validated['organization_name'] ?? null,
+            'position_title' => $validated['position_title'] ?? null,
+            'ip_affiliation' => (bool) ($validated['ip_affiliation'] ?? false),
+            'ip_group_name' => (bool) ($validated['ip_affiliation'] ?? false)
+                ? ($validated['ip_group_name'] ?? null)
+                : null,
             'is_active' => $validated['is_active'] ?? true,
             'has_food_restrictions' => $this->canHaveFoodRestrictions($userTypeId)
                 ? ! empty($foodRestrictions)
                 : false,
             'food_restrictions' => $this->canHaveFoodRestrictions($userTypeId) ? $foodRestrictions : [],
+            'dietary_allergies' => $validated['dietary_allergies'] ?? null,
+            'dietary_other' => $validated['dietary_other'] ?? null,
+            'accessibility_needs' => $accessibilityNeeds,
+            'accessibility_other' => in_array('other', $accessibilityNeeds, true)
+                ? ($validated['accessibility_other'] ?? null)
+                : null,
+            'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
+            'emergency_contact_relationship' => $validated['emergency_contact_relationship'] ?? null,
+            'emergency_contact_phone' => $validated['emergency_contact_phone'] ?? null,
+            'emergency_contact_email' => $validated['emergency_contact_email'] ?? null,
         ])->refresh();
 
         app(WelcomeNotificationService::class)->dispatch($user);
@@ -189,14 +270,35 @@ class ParticipantController extends Controller
             'full_name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $participant->id],
             'contact_number' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'contact_country_code' => ['sometimes', 'nullable', 'string', 'max:10'],
             'country_id' => ['nullable', 'exists:countries,id'],
             'user_type_id' => ['nullable', 'exists:user_types,id'],
             'other_user_type' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'honorific_title' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'honorific_other' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'given_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'middle_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'family_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'suffix' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'sex_assigned_at_birth' => ['sometimes', 'nullable', 'string', Rule::in(['male', 'female'])],
+            'organization_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'position_title' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'ip_affiliation' => ['sometimes', 'nullable', 'boolean'],
+            'ip_group_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
             'has_food_restrictions' => ['sometimes', 'boolean'],
             'food_restrictions' => ['sometimes', 'array'],
             'food_restrictions.*' => ['string', Rule::in(self::FOOD_RESTRICTION_OPTIONS)],
+            'dietary_allergies' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'dietary_other' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'accessibility_needs' => ['sometimes', 'array'],
+            'accessibility_needs.*' => ['string', Rule::in(self::ACCESSIBILITY_NEEDS_OPTIONS)],
+            'accessibility_other' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'emergency_contact_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'emergency_contact_relationship' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'emergency_contact_phone' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'emergency_contact_email' => ['sometimes', 'nullable', 'email', 'max:255'],
         ]);
 
         $wasActive = (bool) $participant->is_active;
@@ -204,6 +306,24 @@ class ParticipantController extends Controller
 
         if (array_key_exists('full_name', $validated)) {
             $updates['name'] = $validated['full_name'];
+        }
+
+        if (
+            array_key_exists('given_name', $validated) ||
+            array_key_exists('middle_name', $validated) ||
+            array_key_exists('family_name', $validated) ||
+            array_key_exists('suffix', $validated)
+        ) {
+            $fullName = $this->buildFullName(
+                $validated['given_name'] ?? (string) $participant->given_name,
+                $validated['middle_name'] ?? $participant->middle_name,
+                $validated['family_name'] ?? (string) $participant->family_name,
+                $validated['suffix'] ?? $participant->suffix,
+            );
+
+            if ($fullName !== '') {
+                $updates['name'] = $fullName;
+            }
         }
 
         if (array_key_exists('email', $validated)) {
@@ -214,12 +334,53 @@ class ParticipantController extends Controller
             $updates['contact_number'] = $validated['contact_number'];
         }
 
+        if (array_key_exists('contact_country_code', $validated)) {
+            $updates['contact_country_code'] = $validated['contact_country_code'];
+        }
+
         if (array_key_exists('country_id', $validated)) {
             $updates['country_id'] = $validated['country_id'];
         }
 
         if (array_key_exists('user_type_id', $validated)) {
             $updates['user_type_id'] = $validated['user_type_id'];
+        }
+
+        foreach ([
+            'honorific_title',
+            'honorific_other',
+            'given_name',
+            'middle_name',
+            'family_name',
+            'suffix',
+            'sex_assigned_at_birth',
+            'organization_name',
+            'position_title',
+            'ip_affiliation',
+            'ip_group_name',
+            'dietary_allergies',
+            'dietary_other',
+            'accessibility_other',
+            'emergency_contact_name',
+            'emergency_contact_relationship',
+            'emergency_contact_phone',
+            'emergency_contact_email',
+        ] as $field) {
+            if (array_key_exists($field, $validated)) {
+                $updates[$field] = $validated[$field];
+            }
+        }
+
+        if (array_key_exists('accessibility_needs', $validated)) {
+            $accessibilityNeeds = array_values(array_unique($validated['accessibility_needs'] ?? []));
+            $updates['accessibility_needs'] = $accessibilityNeeds;
+            if (! in_array('other', $accessibilityNeeds, true)) {
+                $updates['accessibility_other'] = null;
+            }
+        }
+
+        if (array_key_exists('ip_affiliation', $validated) && ! $validated['ip_affiliation']) {
+            $updates['ip_group_name'] = null;
         }
 
         if (array_key_exists('is_active', $validated)) {
@@ -316,6 +477,20 @@ class ParticipantController extends Controller
         }
 
         return Str::lower((string) $userType->slug) === 'other' || Str::lower($userType->name) === 'other';
+    }
+
+    private function buildFullName(string $givenName, ?string $middleName, string $familyName, ?string $suffix): string
+    {
+        $parts = [
+            trim($givenName),
+            trim((string) $middleName),
+            trim($familyName),
+            trim((string) $suffix),
+        ];
+
+        return collect($parts)
+            ->filter(fn ($value) => $value !== '')
+            ->implode(' ');
     }
 
     public function revertAttendance(Request $request, User $participant, Programme $programme)
