@@ -1296,10 +1296,6 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             </p>
                                         )}
                                     </div>
-                                    </div>
-
-                            
-
                                     <div className="flex flex-wrap gap-3">
                                         <Button
                                             type="button"
