@@ -44,6 +44,8 @@ const FOOD_RESTRICTION_LABELS: Record<string, string> = {
     lactose_intolerant: 'Lactose intolerant',
     nut_allergy: 'Nut allergy',
     seafood_allergy: 'Seafood allergy',
+    allergies: 'Allergies',
+    other: 'Other',
 };
 
 function getFlagSrc(country?: Country | null) {
