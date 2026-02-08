@@ -37,11 +37,12 @@ class ParticipantController extends Controller
             'flag_url' => $country->flag_url,
         ]);
 
-        $userTypes = UserType::orderBy('name')->get()->map(fn (UserType $type) => [
+        $userTypes = UserType::orderBy('sequence_order')->orderBy('id')->get()->map(fn (UserType $type) => [
             'id' => $type->id,
             'name' => $type->name,
             'slug' => $type->slug,
             'is_active' => $type->is_active,
+            'sequence_order' => $type->sequence_order,
         ]);
 
         $attendanceByUser = ParticipantAttendance::query()
@@ -100,6 +101,7 @@ class ParticipantController extends Controller
                             'name' => $user->userType->name,
                             'slug' => $user->userType->slug,
                             'is_active' => $user->userType->is_active,
+                            'sequence_order' => $user->userType->sequence_order,
                         ]
                         : null,
                 ];

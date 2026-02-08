@@ -15,12 +15,18 @@ class UserTypeController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:user_types,name'],
             'is_active' => ['boolean'],
+            'sequence_order' => ['nullable', 'integer', 'min:0', Rule::unique('user_types', 'sequence_order')],
         ]);
+
+        $sequenceOrder = array_key_exists('sequence_order', $validated)
+            ? $validated['sequence_order']
+            : (UserType::max('sequence_order') ?? 0) + 1;
 
         $payload = [
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']),
             'is_active' => $validated['is_active'] ?? true,
+            'sequence_order' => $sequenceOrder ?? 0,
         ];
 
         Validator::make($payload, [
@@ -37,6 +43,7 @@ class UserTypeController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255', 'unique:user_types,name,' . $userType->id],
             'is_active' => ['sometimes', 'boolean'],
+            'sequence_order' => ['sometimes', 'nullable', 'integer', 'min:0', Rule::unique('user_types', 'sequence_order')->ignore($userType->id)],
         ]);
 
         $payload = [];
@@ -52,6 +59,10 @@ class UserTypeController extends Controller
 
         if (array_key_exists('is_active', $validated)) {
             $payload['is_active'] = $validated['is_active'];
+        }
+
+        if (array_key_exists('sequence_order', $validated)) {
+            $payload['sequence_order'] = $validated['sequence_order'] ?? 0;
         }
 
         if ($payload !== []) {
