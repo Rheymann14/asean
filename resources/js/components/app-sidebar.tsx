@@ -33,7 +33,7 @@ export function AppSidebar() {
     const userType = auth.user?.user_type ?? auth.user?.userType;
     const roleName = (userType?.name ?? '').toUpperCase();
     const roleSlug = (userType?.slug ?? '').toUpperCase();
-    const isChed = roleName === 'CHED' || roleSlug === 'CHED';
+    const isAdmin = roleName === 'ADMIN' || roleSlug === 'ADMIN';
     const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
     const managementNavItems: NavItem[] = [
         {
@@ -58,7 +58,7 @@ export function AppSidebar() {
         },
     ];
 
-    const mainNavItems: NavItem[] = isChed
+    const mainNavItems: NavItem[] = isAdmin
         ? [
               {
                   title: 'Dashboard',
@@ -124,7 +124,7 @@ export function AppSidebar() {
               },
           ];
 
-    const footerNavItems: NavItem[] = isChed
+    const footerNavItems: NavItem[] = isAdmin
         ? [
               {
                   title: 'QR Code Scanner',
@@ -134,7 +134,7 @@ export function AppSidebar() {
           ]
         : [];
 
-    const homeHref = isChed ? dashboard() : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
+    const homeHref = isAdmin ? dashboard() : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
 
     return (
         <Sidebar collapsible="icon" variant="inset">

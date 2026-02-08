@@ -40,7 +40,20 @@ class ParticipantSeeder extends Seeder
             );
         }
 
-        $userTypes = ['Prime Minister', 'Staff', 'CHED', 'CHED LO'];
+        $userTypes = [
+            'Admin',
+            'CHED',
+            'CHED LO',
+            'Embassy Official/Representative',
+            'Government Official',
+            'Academic / Researcher',
+            'NGO Representative',
+            'Private Sector Delegate',
+            'Media / Press',
+            'Student / Youth Delegate',
+            'Event Staff / Volunteer',
+            'Other',
+        ];
 
         foreach ($userTypes as $type) {
             UserType::updateOrCreate(
