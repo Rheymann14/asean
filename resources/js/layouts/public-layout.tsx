@@ -65,9 +65,9 @@ export default function PublicLayout({
     const userType = auth.user?.user_type ?? auth.user?.userType;
     const roleName = (userType?.name ?? '').toUpperCase();
     const roleSlug = (userType?.slug ?? '').toUpperCase();
-    const isChed = roleName === 'CHED' || roleSlug === 'CHED';
+    const isAdmin = roleName === 'ADMIN' || roleSlug === 'ADMIN';
     const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
-    const dashboardHref = isChed ? '/dashboard' : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
+    const dashboardHref = isAdmin ? '/dashboard' : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
 
     const toHref = (href: string) => {
         if (href.startsWith('#') && !isHome) return `/${href}`;
