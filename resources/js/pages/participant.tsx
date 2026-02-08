@@ -1056,7 +1056,7 @@ export default function ParticipantPage(props: PageProps) {
 
             if (orderA !== orderB) return orderA - orderB;
 
-            return a.name.localeCompare(b.name);
+            return a.id - b.id;
         });
     }, [userTypes]);
 

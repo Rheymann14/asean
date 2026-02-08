@@ -159,7 +159,7 @@ class FortifyServiceProvider extends ServiceProvider
                 ->where('slug', '!=', 'ched')
                 ->where('name', '!=', 'CHED')
                 ->orderBy('sequence_order')
-                ->orderBy('name')
+                ->orderBy('id')
                 ->get()
                 ->map(fn (UserType $type) => [
                     'id' => $type->id,

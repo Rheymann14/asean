@@ -15,7 +15,7 @@ class UserTypeController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:user_types,name'],
             'is_active' => ['boolean'],
-            'sequence_order' => ['nullable', 'integer', 'min:0'],
+            'sequence_order' => ['nullable', 'integer', 'min:0', Rule::unique('user_types', 'sequence_order')],
         ]);
 
         $sequenceOrder = array_key_exists('sequence_order', $validated)
@@ -43,7 +43,7 @@ class UserTypeController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255', 'unique:user_types,name,' . $userType->id],
             'is_active' => ['sometimes', 'boolean'],
-            'sequence_order' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'sequence_order' => ['sometimes', 'nullable', 'integer', 'min:0', Rule::unique('user_types', 'sequence_order')->ignore($userType->id)],
         ]);
 
         $payload = [];

@@ -37,7 +37,7 @@ class ParticipantController extends Controller
             'flag_url' => $country->flag_url,
         ]);
 
-        $userTypes = UserType::orderBy('sequence_order')->orderBy('name')->get()->map(fn (UserType $type) => [
+        $userTypes = UserType::orderBy('sequence_order')->orderBy('id')->get()->map(fn (UserType $type) => [
             'id' => $type->id,
             'name' => $type->name,
             'slug' => $type->slug,
