@@ -95,10 +95,14 @@ export default function Register({ countries, registrantTypes, programmes, statu
         [countries, country]
     );
 
-    const filteredRegistrantTypes = React.useMemo(
-        () => registrantTypes.filter((type) => type.name !== 'CHED' && type.slug !== 'ched'),
-        [registrantTypes]
-    );
+    const filteredRegistrantTypes = React.useMemo(() => {
+        return registrantTypes.filter((type) => {
+            const name = type.name.trim().toLowerCase();
+            const slug = (type.slug ?? '').trim().toLowerCase();
+
+            return !(name === 'ched' && (slug === 'ched' || slug === ''));
+        });
+    }, [registrantTypes]);
 
     const selectedType = React.useMemo(
         () => filteredRegistrantTypes.find((t) => String(t.id) === registrantType) ?? null,
