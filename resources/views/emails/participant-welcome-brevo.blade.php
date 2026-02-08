@@ -12,16 +12,13 @@
                     <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden;">
                         <tr>
                             <td style="padding: 20px 28px 8px;">
-                               <img src="{{ $bannerUrl }}" alt="ASEAN Philippines 2026 banner"
-     loading="lazy"
-     style="display:block;width:100%;max-width:260px;height:auto;border:0;outline:none;text-decoration:none;" />
-
+                                <img src="{{ $bannerUrl }}" alt="ASEAN Philippines 2026 banner" style="display: block; width: 100%; max-width: 260px; height: auto;" />
                             </td>
                         </tr>
                         <tr>
                             <td style="padding: 0 28px 18px;">
                                 <h1 style="margin: 0 0 10px; font-size: 20px; line-height: 1.3; color: #0f172a;">
-                                    Your ASEAN PH 2026 registration Higher Education Sector is confirmed 🎉
+                                    Your ASEAN PH 2026 registration Higher Education Sector is confirmed ðŸŽ‰
                                 </h1>
                                 <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
                                     Hi {{ $user->name }}, thank you for registering! Please keep this message for your records and for smooth entry on event day.
@@ -88,7 +85,7 @@
                         <tr>
                             <td style="padding: 0 28px 24px;">
                                 <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e293b; font-weight: 600;">
-                                    Welcome to ASEAN PH 2026 — thank you for registering!
+                                    Welcome to ASEAN PH 2026 â€” thank you for registering!
                                 </p>
                             </td>
                         </tr>

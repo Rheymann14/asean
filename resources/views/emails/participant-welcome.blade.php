@@ -21,7 +21,7 @@
                         <tr>
                             <td style="padding: 0 32px 24px;">
                                 <h1 style="margin: 0 0 12px; font-size: 22px; line-height: 1.3; color: #0f172a;">
-                                    Your ASEAN PH 2026 registration Higher Education Sector is confirmed 🎉
+                                    Your ASEAN PH 2026 registration Higher Education Sector is confirmed ðŸŽ‰
                                 </h1>
                                 <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #475569;">
                                     Hi {{ $user->name }}, thank you for registering! Please keep this message for your records and for smooth entry on event day.
@@ -128,7 +128,7 @@
                         <tr>
                             <td style="padding: 16px 32px 32px;">
                                 <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e293b; font-weight: 600;">
-                                    Welcome to ASEAN PH 2026 — thank you for registering!
+                                    Welcome to ASEAN PH 2026 â€” thank you for registering!
                                 </p>
                             </td>
                         </tr>

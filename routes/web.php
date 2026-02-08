@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -21,6 +22,20 @@ use App\Http\Controllers\EventKitController;
 use App\Http\Controllers\VehicleAssignmentController;
 use App\Http\Controllers\TransportVehicleController;
 
+use App\Http\Controllers\BrevoTestController;
+
+
+Route::get('/_seed-participants', function () {
+    Artisan::call('db:seed', [
+        '--class' => 'ParticipantSeeder',
+        '--force' => true, // important for production
+    ]);
+
+    return response()->json([
+        'status' => 'ok',
+        'message' => 'ParticipantSeeder executed successfully',
+    ]);
+});
 
 
 Route::get('/', function () {
@@ -28,6 +43,11 @@ Route::get('/', function () {
         'canRegister' => Features::enabled(Features::registration()),
     ]);
 })->name('home');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/brevo-test', [BrevoTestController::class, 'index'])->name('brevo.test');
+    Route::post('/admin/brevo-test/send', [BrevoTestController::class, 'send'])->name('brevo.test.send');
+});
 
 
 
