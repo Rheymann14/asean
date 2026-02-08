@@ -104,6 +104,7 @@ type ParticipantRow = {
     contact_number?: string | null;
     country_id: number | null;
     user_type_id: number | null;
+    other_user_type?: string | null;
     is_active: boolean;
     consent_contact_sharing?: boolean;
     consent_photo_video?: boolean;
@@ -1165,7 +1166,7 @@ export default function ParticipantPage(props: PageProps) {
             contact_number: p.contact_number ?? '',
             country_id: p.country_id ? String(p.country_id) : '',
             user_type_id: p.user_type_id ? String(p.user_type_id) : '',
-            other_user_type: '',
+            other_user_type: p.other_user_type ?? '',
             is_active: !!p.is_active,
             has_food_restrictions: !!p.has_food_restrictions,
             food_restrictions: p.food_restrictions ?? [],
