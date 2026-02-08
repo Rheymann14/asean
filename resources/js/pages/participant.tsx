@@ -1754,7 +1754,7 @@ export default function ParticipantPage(props: PageProps) {
                                                     <ChevronsUpDown className="h-4 w-4 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                            <PopoverContent className="w-72 max-w-[90vw] p-0" align="start">
                                                 <Command>
                                                     <CommandInput placeholder="Search event..." />
                                                     <CommandEmpty>No event found.</CommandEmpty>
@@ -1775,24 +1775,53 @@ export default function ParticipantPage(props: PageProps) {
                                                                     )}
                                                                 />
                                                             </CommandItem>
-                                                            {normalizedProgrammes.map((event) => (
-                                                                <CommandItem
-                                                                    key={event.id}
-                                                                    value={event.title}
-                                                                    onSelect={() => {
-                                                                        setParticipantEventFilter(String(event.id));
-                                                                        setParticipantEventOpen(false);
-                                                                    }}
-                                                                >
-                                                                    <span className="truncate">{event.title}</span>
-                                                                    <Check
-                                                                        className={cn(
-                                                                            'ml-auto h-4 w-4',
-                                                                            participantEventFilter === String(event.id) ? 'opacity-100' : 'opacity-0',
-                                                                        )}
-                                                                    />
-                                                                </CommandItem>
-                                                            ))}
+                                                            {normalizedProgrammes.map((event) => {
+                                                                const phaseLabel =
+                                                                    event.phase === 'ongoing'
+                                                                        ? 'Ongoing'
+                                                                        : event.phase === 'upcoming'
+                                                                          ? 'Upcoming'
+                                                                          : 'Closed';
+                                                                const phaseTone =
+                                                                    event.phase === 'ongoing'
+                                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200'
+                                                                        : event.phase === 'upcoming'
+                                                                          ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200'
+                                                                          : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200';
+                                                                const dateLabel = event.endsAt
+                                                                    ? `${formatDateSafe(event.startsAt)} - ${formatDateSafe(event.endsAt)}`
+                                                                    : formatDateSafe(event.startsAt);
+
+                                                                return (
+                                                                    <CommandItem
+                                                                        key={event.id}
+                                                                        value={event.title}
+                                                                        onSelect={() => {
+                                                                            setParticipantEventFilter(String(event.id));
+                                                                            setParticipantEventOpen(false);
+                                                                        }}
+                                                                        className="flex items-start gap-2"
+                                                                    >
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <div className="truncate font-medium text-slate-900 dark:text-slate-100">
+                                                                                {event.title}
+                                                                            </div>
+                                                                            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                                {dateLabel}
+                                                                            </div>
+                                                                        </div>
+                                                                        <Badge className={cn('rounded-full px-2 py-0.5 text-[10px]', phaseTone)}>
+                                                                            {phaseLabel}
+                                                                        </Badge>
+                                                                        <Check
+                                                                            className={cn(
+                                                                                'ml-auto h-4 w-4',
+                                                                                participantEventFilter === String(event.id) ? 'opacity-100' : 'opacity-0',
+                                                                            )}
+                                                                        />
+                                                                    </CommandItem>
+                                                                );
+                                                            })}
                                                         </CommandGroup>
                                                     </CommandList>
                                                 </Command>
