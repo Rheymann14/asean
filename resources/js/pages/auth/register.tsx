@@ -1431,7 +1431,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                         </TextLink>
                                     </div>
                                 </div>
-                            </div>
+                                </div>
+                          
 
                             <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
                          
