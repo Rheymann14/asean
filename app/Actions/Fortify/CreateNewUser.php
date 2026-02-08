@@ -3,8 +3,10 @@
 namespace App\Actions\Fortify;
 
 use App\Models\User;
+use App\Models\UserType;
 use App\Services\WelcomeNotificationService;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
@@ -42,6 +44,7 @@ class CreateNewUser implements CreatesNewUsers
             'contact_number' => ['required', 'string', 'max:30'],
             'country_id' => ['required', 'integer', 'exists:countries,id'],
             'user_type_id' => ['required', 'integer', 'exists:user_types,id'],
+            'other_user_type' => ['nullable', 'string', 'max:255'],
             'programme_ids' => ['nullable', 'array'],
             'programme_ids.*' => ['integer', 'exists:programmes,id'],
             'consent_contact_sharing' => ['required', 'accepted'],
@@ -53,6 +56,10 @@ class CreateNewUser implements CreatesNewUsers
         ])->validate();
 
         $foodRestrictions = array_values(array_unique($input['food_restrictions'] ?? []));
+        $userTypeId = isset($input['user_type_id']) ? (int) $input['user_type_id'] : null;
+        $otherUserType = $this->isOtherUserTypeId($userTypeId)
+            ? trim((string) ($input['other_user_type'] ?? '')) ?: null
+            : null;
 
         $user = User::create([
             'name' => $input['name'],
@@ -61,6 +68,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $input['password'],
             'country_id' => $input['country_id'],
             'user_type_id' => $input['user_type_id'],
+            'other_user_type' => $otherUserType,
             'consent_contact_sharing' => (bool) $input['consent_contact_sharing'],
             'consent_photo_video' => (bool) $input['consent_photo_video'],
             'has_food_restrictions' => ! empty($foodRestrictions),
@@ -75,5 +83,19 @@ class CreateNewUser implements CreatesNewUsers
         app(WelcomeNotificationService::class)->dispatch($user);
 
         return $user;
+    }
+
+    private function isOtherUserTypeId(?int $userTypeId): bool
+    {
+        if (! $userTypeId) {
+            return false;
+        }
+
+        $type = UserType::find($userTypeId);
+        if (! $type) {
+            return false;
+        }
+
+        return Str::lower((string) $type->slug) === 'other' || Str::lower($type->name) === 'other';
     }
 }

@@ -64,6 +64,7 @@ class ParticipantController extends Controller
                     'contact_number' => $user->contact_number,
                     'country_id' => $user->country_id,
                     'user_type_id' => $user->user_type_id,
+                    'other_user_type' => $user->other_user_type,
                     'is_active' => $user->is_active,
                     'consent_contact_sharing' => $user->consent_contact_sharing,
                     'consent_photo_video' => $user->consent_photo_video,
@@ -146,6 +147,7 @@ class ParticipantController extends Controller
             'contact_number' => ['nullable', 'string', 'max:30'],
             'country_id' => ['nullable', 'exists:countries,id'],
             'user_type_id' => ['nullable', 'exists:user_types,id'],
+            'other_user_type' => ['nullable', 'string', 'max:255'],
             'is_active' => ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
             'has_food_restrictions' => ['nullable', 'boolean'],
@@ -154,6 +156,9 @@ class ParticipantController extends Controller
         ]);
 
         $userTypeId = $validated['user_type_id'] ?? null;
+        $otherUserType = $this->isOtherUserTypeId($userTypeId)
+            ? trim((string) ($validated['other_user_type'] ?? '')) ?: null
+            : null;
         $foodRestrictions = array_values(array_unique($validated['food_restrictions'] ?? []));
 
         $user = User::create([
@@ -163,6 +168,7 @@ class ParticipantController extends Controller
             'password' => $validated['password'] ?? 'aseanph2026',
             'country_id' => $validated['country_id'] ?? null,
             'user_type_id' => $validated['user_type_id'] ?? null,
+            'other_user_type' => $otherUserType,
             'is_active' => $validated['is_active'] ?? true,
             'has_food_restrictions' => $this->canHaveFoodRestrictions($userTypeId)
                 ? ! empty($foodRestrictions)
@@ -183,6 +189,7 @@ class ParticipantController extends Controller
             'contact_number' => ['sometimes', 'nullable', 'string', 'max:30'],
             'country_id' => ['nullable', 'exists:countries,id'],
             'user_type_id' => ['nullable', 'exists:user_types,id'],
+            'other_user_type' => ['sometimes', 'nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
             'has_food_restrictions' => ['sometimes', 'boolean'],
@@ -220,6 +227,12 @@ class ParticipantController extends Controller
         $nextUserTypeId = array_key_exists('user_type_id', $validated)
             ? $validated['user_type_id']
             : $participant->user_type_id;
+
+        if (array_key_exists('other_user_type', $validated) || array_key_exists('user_type_id', $validated)) {
+            $updates['other_user_type'] = $this->isOtherUserTypeId($nextUserTypeId)
+                ? trim((string) ($validated['other_user_type'] ?? '')) ?: null
+                : null;
+        }
 
         if (array_key_exists('food_restrictions', $validated)) {
             $foodRestrictions = array_values(array_unique($validated['food_restrictions'] ?? []));
@@ -287,6 +300,20 @@ class ParticipantController extends Controller
             ->trim();
 
         return $value !== 'ched' && ! $value->startsWith('ched ');
+    }
+
+    private function isOtherUserTypeId(?int $userTypeId): bool
+    {
+        if (! $userTypeId) {
+            return false;
+        }
+
+        $userType = UserType::query()->find($userTypeId);
+        if (! $userType) {
+            return false;
+        }
+
+        return Str::lower((string) $userType->slug) === 'other' || Str::lower($userType->name) === 'other';
     }
 
     public function revertAttendance(Request $request, User $participant, Programme $programme)
