@@ -1983,12 +1983,10 @@ export default function ParticipantPage(props: PageProps) {
                                                                             <Pencil className="mr-2 h-4 w-4" />
                                                                             Edit
                                                                         </DropdownMenuItem>
-                                                                        {!isChed ? (
-                                                                            <DropdownMenuItem onClick={() => openProgrammeManager(p)}>
-                                                                                <CalendarDays className="mr-2 h-4 w-4" />
-                                                                                Joined events
-                                                                            </DropdownMenuItem>
-                                                                        ) : null}
+                                                                        <DropdownMenuItem onClick={() => openProgrammeManager(p)}>
+                                                                            <CalendarDays className="mr-2 h-4 w-4" />
+                                                                            Joined events
+                                                                        </DropdownMenuItem>
                                                                         <DropdownMenuItem onClick={() => toggleParticipantActive(p)}>
                                                                             <BadgeCheck className="mr-2 h-4 w-4" />
                                                                             {p.is_active ? 'Set Inactive' : 'Set Active'}

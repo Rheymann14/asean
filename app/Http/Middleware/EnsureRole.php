@@ -23,11 +23,12 @@ class EnsureRole
         $user->loadMissing('userType');
         $roleName = Str::upper((string) ($user->userType->name ?? ''));
         $roleSlug = Str::upper((string) ($user->userType->slug ?? ''));
+        $isAdmin = in_array('ADMIN', [$roleName, $roleSlug], true);
         $isChed = in_array('CHED', [$roleName, $roleSlug], true);
         $isChedLo = in_array('CHED LO', [$roleName], true) || in_array('CHED-LO', [$roleSlug], true);
-        $isChedAdmin = $isChed || $isChedLo;
+        $isChedAdmin = $isAdmin || $isChedLo;
 
-        if ($role === 'ched' && ! $isChed) {
+        if ($role === 'ched' && ! $isAdmin) {
             abort(403);
         }
 

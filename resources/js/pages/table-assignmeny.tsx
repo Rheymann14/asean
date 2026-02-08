@@ -256,7 +256,7 @@ export default function TableAssignmenyPage(props: PageProps) {
     const roleName = (userType?.name ?? '').toUpperCase();
     const roleSlug = (userType?.slug ?? '').toUpperCase();
     const roleValue = `${roleSlug || roleName}`.replace(/[_-]+/g, ' ').trim();
-    const isChedAdmin = roleValue === 'CHED' || roleValue.startsWith('CHED ');
+    const isChedAdmin = roleValue === 'ADMIN' || roleValue.startsWith('CHED ');
     const chedView = props.view === 'assignment' ? 'assignment' : 'create';
     const tables = props.tables ?? [];
     const participants = props.participants ?? [];

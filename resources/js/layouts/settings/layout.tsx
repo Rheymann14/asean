@@ -44,11 +44,11 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
     const userType = auth?.user?.user_type ?? auth?.user?.userType ?? null;
     const roleValue = (userType?.slug ?? userType?.name ?? '').toUpperCase();
-    const isChed = roleValue === 'CHED';
+    const isAdmin = roleValue === 'ADMIN';
 
     const sidebarNavItems: NavItem[] = [
         ...baseNavItems,
-        ...(isChed
+        ...(isAdmin
             ? [
                   {
                       title: 'Activity Log',
