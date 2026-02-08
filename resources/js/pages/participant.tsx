@@ -103,14 +103,34 @@ type ParticipantRow = {
     full_name: string;
     email: string;
     contact_number?: string | null;
+    contact_country_code?: string | null;
     country_id: number | null;
     user_type_id: number | null;
     other_user_type?: string | null;
+    honorific_title?: string | null;
+    honorific_other?: string | null;
+    given_name?: string | null;
+    middle_name?: string | null;
+    family_name?: string | null;
+    suffix?: string | null;
+    sex_assigned_at_birth?: string | null;
+    organization_name?: string | null;
+    position_title?: string | null;
+    ip_affiliation?: boolean;
+    ip_group_name?: string | null;
     is_active: boolean;
     consent_contact_sharing?: boolean;
     consent_photo_video?: boolean;
     has_food_restrictions?: boolean;
     food_restrictions?: string[];
+    dietary_allergies?: string | null;
+    dietary_other?: string | null;
+    accessibility_needs?: string[];
+    accessibility_other?: string | null;
+    emergency_contact_name?: string | null;
+    emergency_contact_relationship?: string | null;
+    emergency_contact_phone?: string | null;
+    emergency_contact_email?: string | null;
     created_at?: string | null;
     joined_programme_ids?: number[];
     checked_in_programme_ids?: number[];
@@ -182,6 +202,15 @@ const FOOD_RESTRICTION_OPTIONS = [
     { value: 'lactose_intolerant', label: 'Lactose intolerant' },
     { value: 'nut_allergy', label: 'Nut allergy' },
     { value: 'seafood_allergy', label: 'Seafood allergy' },
+    { value: 'allergies', label: 'Allergies' },
+    { value: 'other', label: 'Other' },
+] as const;
+
+const ACCESSIBILITY_NEEDS_OPTIONS = [
+    { value: 'wheelchair_access', label: 'Wheelchair access' },
+    { value: 'sign_language_interpreter', label: 'Sign language interpreter' },
+    { value: 'assistive_technology_support', label: 'Assistive technology support' },
+    { value: 'other', label: 'Other accommodations' },
 ] as const;
 
 function formatDateSafe(value?: string | null) {
@@ -905,24 +934,64 @@ export default function ParticipantPage(props: PageProps) {
         full_name: string;
         email: string;
         contact_number: string;
+        contact_country_code: string;
         country_id: string; // Select uses string
         user_type_id: string; // Select uses string
         other_user_type: string;
+        honorific_title: string;
+        honorific_other: string;
+        given_name: string;
+        middle_name: string;
+        family_name: string;
+        suffix: string;
+        sex_assigned_at_birth: string;
+        organization_name: string;
+        position_title: string;
+        ip_affiliation: boolean;
+        ip_group_name: string;
         is_active: boolean;
         password: string;
         has_food_restrictions: boolean;
         food_restrictions: string[];
+        dietary_allergies: string;
+        dietary_other: string;
+        accessibility_needs: string[];
+        accessibility_other: string;
+        emergency_contact_name: string;
+        emergency_contact_relationship: string;
+        emergency_contact_phone: string;
+        emergency_contact_email: string;
     }>({
         full_name: '',
         email: '',
         contact_number: '',
+        contact_country_code: '',
         country_id: '',
         user_type_id: '',
         other_user_type: '',
+        honorific_title: '',
+        honorific_other: '',
+        given_name: '',
+        middle_name: '',
+        family_name: '',
+        suffix: '',
+        sex_assigned_at_birth: '',
+        organization_name: '',
+        position_title: '',
+        ip_affiliation: false,
+        ip_group_name: '',
         is_active: true,
         password: 'aseanph2026',
         has_food_restrictions: false,
         food_restrictions: [],
+        dietary_allergies: '',
+        dietary_other: '',
+        accessibility_needs: [],
+        accessibility_other: '',
+        emergency_contact_name: '',
+        emergency_contact_relationship: '',
+        emergency_contact_phone: '',
+        emergency_contact_email: '',
     });
 
     const countryForm = useForm<{
@@ -1178,12 +1247,32 @@ export default function ParticipantPage(props: PageProps) {
             full_name: p.full_name ?? '',
             email: p.email ?? '',
             contact_number: p.contact_number ?? '',
+            contact_country_code: p.contact_country_code ?? '',
             country_id: p.country_id ? String(p.country_id) : '',
             user_type_id: p.user_type_id ? String(p.user_type_id) : '',
             other_user_type: p.other_user_type ?? '',
+            honorific_title: p.honorific_title ?? '',
+            honorific_other: p.honorific_other ?? '',
+            given_name: p.given_name ?? '',
+            middle_name: p.middle_name ?? '',
+            family_name: p.family_name ?? '',
+            suffix: p.suffix ?? '',
+            sex_assigned_at_birth: p.sex_assigned_at_birth ?? '',
+            organization_name: p.organization_name ?? '',
+            position_title: p.position_title ?? '',
+            ip_affiliation: !!p.ip_affiliation,
+            ip_group_name: p.ip_group_name ?? '',
             is_active: !!p.is_active,
             has_food_restrictions: !!p.has_food_restrictions,
             food_restrictions: p.food_restrictions ?? [],
+            dietary_allergies: p.dietary_allergies ?? '',
+            dietary_other: p.dietary_other ?? '',
+            accessibility_needs: p.accessibility_needs ?? [],
+            accessibility_other: p.accessibility_other ?? '',
+            emergency_contact_name: p.emergency_contact_name ?? '',
+            emergency_contact_relationship: p.emergency_contact_relationship ?? '',
+            emergency_contact_phone: p.emergency_contact_phone ?? '',
+            emergency_contact_email: p.emergency_contact_email ?? '',
         });
         participantForm.clearErrors();
         setParticipantDialogOpen(true);
@@ -1196,12 +1285,32 @@ export default function ParticipantPage(props: PageProps) {
             full_name: data.full_name.trim(),
             email: data.email.trim(),
             contact_number: data.contact_number.trim() || null,
+            contact_country_code: data.contact_country_code.trim() || null,
             country_id: data.country_id ? Number(data.country_id) : null,
             user_type_id: data.user_type_id ? Number(data.user_type_id) : null,
             other_user_type: data.other_user_type.trim() || null,
+            honorific_title: data.honorific_title.trim() || null,
+            honorific_other: data.honorific_other.trim() || null,
+            given_name: data.given_name.trim() || null,
+            middle_name: data.middle_name.trim() || null,
+            family_name: data.family_name.trim() || null,
+            suffix: data.suffix.trim() || null,
+            sex_assigned_at_birth: data.sex_assigned_at_birth.trim() || null,
+            organization_name: data.organization_name.trim() || null,
+            position_title: data.position_title.trim() || null,
+            ip_affiliation: data.ip_affiliation,
+            ip_group_name: data.ip_affiliation ? data.ip_group_name.trim() || null : null,
             is_active: data.is_active,
             food_restrictions: data.food_restrictions,
             has_food_restrictions: data.food_restrictions.length > 0,
+            dietary_allergies: data.food_restrictions.includes('allergies') ? data.dietary_allergies.trim() || null : null,
+            dietary_other: data.food_restrictions.includes('other') ? data.dietary_other.trim() || null : null,
+            accessibility_needs: data.accessibility_needs,
+            accessibility_other: data.accessibility_needs.includes('other') ? data.accessibility_other.trim() || null : null,
+            emergency_contact_name: data.emergency_contact_name.trim() || null,
+            emergency_contact_relationship: data.emergency_contact_relationship.trim() || null,
+            emergency_contact_phone: data.emergency_contact_phone.trim() || null,
+            emergency_contact_email: data.emergency_contact_email.trim() || null,
             ...(editingParticipant ? {} : { password: data.password }),
         }));
 
@@ -2460,6 +2569,69 @@ export default function ParticipantPage(props: PageProps) {
                                         ) : null}
                                     </div>
 
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Honorific / Title</div>
+                                        <Input
+                                            value={participantForm.data.honorific_title}
+                                            onChange={(e) => participantForm.setData('honorific_title', e.target.value)}
+                                            placeholder="e.g. Mr., Ms., Dr."
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Honorific (Other)</div>
+                                        <Input
+                                            value={participantForm.data.honorific_other}
+                                            onChange={(e) => participantForm.setData('honorific_other', e.target.value)}
+                                            placeholder="Specify honorific"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Given name</div>
+                                        <Input
+                                            value={participantForm.data.given_name}
+                                            onChange={(e) => participantForm.setData('given_name', e.target.value)}
+                                            placeholder="First name"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Middle name</div>
+                                        <Input
+                                            value={participantForm.data.middle_name}
+                                            onChange={(e) => participantForm.setData('middle_name', e.target.value)}
+                                            placeholder="Middle name"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Family name / Surname</div>
+                                        <Input
+                                            value={participantForm.data.family_name}
+                                            onChange={(e) => participantForm.setData('family_name', e.target.value)}
+                                            placeholder="Surname"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Suffix</div>
+                                        <Input
+                                            value={participantForm.data.suffix}
+                                            onChange={(e) => participantForm.setData('suffix', e.target.value)}
+                                            placeholder="e.g. Jr., III"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <div className="text-sm font-medium">Sex assigned at birth</div>
+                                        <Input
+                                            value={participantForm.data.sex_assigned_at_birth}
+                                            onChange={(e) => participantForm.setData('sex_assigned_at_birth', e.target.value)}
+                                            placeholder="Male or Female"
+                                        />
+                                    </div>
+
                                     <div className="space-y-1.5 sm:col-span-2">
                                         <div className="text-sm font-medium">
                                             Email <span className="text-[11px] font-semibold text-red-600"> *</span>
@@ -2481,20 +2653,45 @@ export default function ParticipantPage(props: PageProps) {
 
                                     <div className="space-y-1.5 sm:col-span-2">
                                         <div className="text-sm font-medium">Contact number</div>
-                                        <Input
-                                            type="tel"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            value={participantForm.data.contact_number}
-                                            onChange={(e) => participantForm.setData('contact_number', e.target.value)}
-                                            onInput={(event) => {
-                                                event.currentTarget.value = event.currentTarget.value.replace(/[^0-9]/g, '');
-                                            }}
-                                            placeholder="e.g. 639123456789"
-                                        />
+                                        <div className="grid gap-2 sm:grid-cols-[160px_1fr]">
+                                            <Input
+                                                value={participantForm.data.contact_country_code}
+                                                onChange={(e) => participantForm.setData('contact_country_code', e.target.value)}
+                                                placeholder="e.g. +63"
+                                            />
+                                            <Input
+                                                type="tel"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                value={participantForm.data.contact_number}
+                                                onChange={(e) => participantForm.setData('contact_number', e.target.value)}
+                                                onInput={(event) => {
+                                                    event.currentTarget.value = event.currentTarget.value.replace(/[^0-9]/g, '');
+                                                }}
+                                                placeholder="e.g. 9123456789"
+                                            />
+                                        </div>
                                         {participantForm.errors.contact_number ? (
                                             <div className="text-xs text-red-600">{participantForm.errors.contact_number}</div>
                                         ) : null}
+                                    </div>
+
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Agency / Organization / Institution</div>
+                                        <Input
+                                            value={participantForm.data.organization_name}
+                                            onChange={(e) => participantForm.setData('organization_name', e.target.value)}
+                                            placeholder="Name of organization"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5 sm:col-span-2">
+                                        <div className="text-sm font-medium">Position / Designation</div>
+                                        <Input
+                                            value={participantForm.data.position_title}
+                                            onChange={(e) => participantForm.setData('position_title', e.target.value)}
+                                            placeholder="Job title / role"
+                                        />
                                     </div>
 
                                     <div className="space-y-1.5">
@@ -2660,8 +2857,136 @@ export default function ParticipantPage(props: PageProps) {
                                                     );
                                                 })}
                                             </div>
+                                            {participantForm.data.food_restrictions.includes('allergies') ? (
+                                                <div className="mt-3 space-y-1.5">
+                                                    <div className="text-sm font-medium">Allergies (please specify)</div>
+                                                    <Input
+                                                        value={participantForm.data.dietary_allergies}
+                                                        onChange={(e) => participantForm.setData('dietary_allergies', e.target.value)}
+                                                        placeholder="e.g. Nuts, seafood"
+                                                    />
+                                                </div>
+                                            ) : null}
+                                            {participantForm.data.food_restrictions.includes('other') ? (
+                                                <div className="mt-3 space-y-1.5">
+                                                    <div className="text-sm font-medium">Other dietary needs</div>
+                                                    <Input
+                                                        value={participantForm.data.dietary_other}
+                                                        onChange={(e) => participantForm.setData('dietary_other', e.target.value)}
+                                                        placeholder="Specify other dietary preferences"
+                                                    />
+                                                </div>
+                                            ) : null}
                                         </div>
                                     ) : null}
+
+                                    <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                        <div className="space-y-0.5">
+                                            <div className="text-sm font-medium">Accessibility needs</div>
+                                            <div className="text-xs text-slate-600 dark:text-slate-400">
+                                                Select all applicable accessibility accommodations.
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                            {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => {
+                                                const checked = participantForm.data.accessibility_needs.includes(option.value);
+
+                                                return (
+                                                    <label
+                                                        key={option.value}
+                                                        className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm dark:border-slate-700"
+                                                    >
+                                                        <Checkbox
+                                                            checked={checked}
+                                                            onCheckedChange={(value) => {
+                                                                const current = participantForm.data.accessibility_needs;
+
+                                                                if (value) {
+                                                                    participantForm.setData(
+                                                                        'accessibility_needs',
+                                                                        current.includes(option.value)
+                                                                            ? current
+                                                                            : [...current, option.value],
+                                                                    );
+                                                                    return;
+                                                                }
+
+                                                                participantForm.setData(
+                                                                    'accessibility_needs',
+                                                                    current.filter((item) => item !== option.value),
+                                                                );
+                                                            }}
+                                                        />
+                                                        <span>{option.label}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                        {participantForm.data.accessibility_needs.includes('other') ? (
+                                            <div className="mt-3 space-y-1.5">
+                                                <div className="text-sm font-medium">Other accommodations</div>
+                                                <Input
+                                                    value={participantForm.data.accessibility_other}
+                                                    onChange={(e) => participantForm.setData('accessibility_other', e.target.value)}
+                                                    placeholder="Specify other accommodations"
+                                                />
+                                            </div>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="text-sm font-medium">Indigenous Peoples (IP) affiliation</div>
+                                                <div className="text-xs text-slate-600 dark:text-slate-400">
+                                                    Is the participant part of an Indigenous Peoples group?
+                                                </div>
+                                            </div>
+                                            <Switch
+                                                checked={participantForm.data.ip_affiliation}
+                                                onCheckedChange={(value) => participantForm.setData('ip_affiliation', !!value)}
+                                            />
+                                        </div>
+                                        {participantForm.data.ip_affiliation ? (
+                                            <div className="mt-3 space-y-1.5">
+                                                <div className="text-sm font-medium">IP group name</div>
+                                                <Input
+                                                    value={participantForm.data.ip_group_name}
+                                                    onChange={(e) => participantForm.setData('ip_group_name', e.target.value)}
+                                                    placeholder="Specify IP group"
+                                                />
+                                            </div>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
+                                        <div className="text-sm font-medium">Emergency contact information</div>
+                                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                            <Input
+                                                value={participantForm.data.emergency_contact_name}
+                                                onChange={(e) => participantForm.setData('emergency_contact_name', e.target.value)}
+                                                placeholder="Name"
+                                            />
+                                            <Input
+                                                value={participantForm.data.emergency_contact_relationship}
+                                                onChange={(e) =>
+                                                    participantForm.setData('emergency_contact_relationship', e.target.value)
+                                                }
+                                                placeholder="Relationship"
+                                            />
+                                            <Input
+                                                value={participantForm.data.emergency_contact_phone}
+                                                onChange={(e) => participantForm.setData('emergency_contact_phone', e.target.value)}
+                                                placeholder="Phone number"
+                                            />
+                                            <Input
+                                                type="email"
+                                                value={participantForm.data.emergency_contact_email}
+                                                onChange={(e) => participantForm.setData('emergency_contact_email', e.target.value)}
+                                                placeholder="Email address"
+                                            />
+                                        </div>
+                                    </div>
 
                                     <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
                                         <div className="space-y-0.5">
