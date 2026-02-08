@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -48,11 +50,13 @@ import {
     MoreHorizontal,
     Pencil,
     Trash2,
+    Check,
     CheckCircle2,
     XCircle,
     Users,
     Globe2,
     BadgeCheck,
+    ChevronsUpDown,
     ImageUp,
     QrCode as QrCodeIcon,
     Printer,
@@ -810,6 +814,11 @@ export default function ParticipantPage(props: PageProps) {
     const [participantCountryFilter, setParticipantCountryFilter] = React.useState<string>('all');
     const [participantTypeFilter, setParticipantTypeFilter] = React.useState<string>('all');
     const [participantStatusFilter, setParticipantStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
+    const [participantEventFilter, setParticipantEventFilter] = React.useState<string>('all');
+    const [participantCountryOpen, setParticipantCountryOpen] = React.useState(false);
+    const [participantTypeOpen, setParticipantTypeOpen] = React.useState(false);
+    const [participantStatusOpen, setParticipantStatusOpen] = React.useState(false);
+    const [participantEventOpen, setParticipantEventOpen] = React.useState(false);
 
     const [countryQuery, setCountryQuery] = React.useState('');
     const [userTypeQuery, setUserTypeQuery] = React.useState('');
@@ -819,10 +828,7 @@ export default function ParticipantPage(props: PageProps) {
     const qrCacheRef = React.useRef<Record<number, string>>({});
 
     async function ensureQrForParticipants(list: ParticipantRow[]) {
-        // only generate for non-CHED participants with qr_payload
-        const pending = list.filter(
-            (p) => !isChedParticipant(p) && !!p.qr_payload && !qrCacheRef.current[p.id],
-        );
+        const pending = list.filter((p) => !!p.qr_payload && !qrCacheRef.current[p.id]);
 
         if (pending.length === 0) return;
 
@@ -981,6 +987,10 @@ export default function ParticipantPage(props: PageProps) {
                 .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()),
         [programmes, nowTs],
     );
+    const programmeById = React.useMemo(
+        () => new Map(normalizedProgrammes.map((programme) => [String(programme.id), programme])),
+        [normalizedProgrammes],
+    );
 
     const filteredProgrammes = React.useMemo(() => {
         const q = programmeQuery.trim().toLowerCase();
@@ -994,21 +1004,6 @@ export default function ParticipantPage(props: PageProps) {
             );
         });
     }, [normalizedProgrammes, programmeQuery]);
-
-    React.useEffect(() => {
-        // If CHED records were selected before, auto-remove them
-        const chedIds = resolvedParticipants.filter(isChedParticipant).map((p) => p.id);
-        if (chedIds.length === 0) return;
-
-        setSelectedParticipantIds((prev) => {
-            let changed = false;
-            const next = new Set(prev);
-            for (const id of chedIds) {
-                if (next.delete(id)) changed = true;
-            }
-            return changed ? next : prev;
-        });
-    }, [resolvedParticipants]);
 
     const filteredParticipants = React.useMemo(() => {
         const q = participantQuery.trim().toLowerCase();
@@ -1028,9 +1023,20 @@ export default function ParticipantPage(props: PageProps) {
             const matchesStatus =
                 participantStatusFilter === 'all' || (participantStatusFilter === 'active' ? p.is_active : !p.is_active);
 
-            return matchesQuery && matchesCountry && matchesType && matchesStatus;
+            const matchesEvent =
+                participantEventFilter === 'all' ||
+                (p.joined_programme_ids ?? []).includes(Number(participantEventFilter));
+
+            return matchesQuery && matchesCountry && matchesType && matchesStatus && matchesEvent;
         });
-    }, [resolvedParticipants, participantQuery, participantCountryFilter, participantTypeFilter, participantStatusFilter]);
+    }, [
+        resolvedParticipants,
+        participantQuery,
+        participantCountryFilter,
+        participantTypeFilter,
+        participantStatusFilter,
+        participantEventFilter,
+    ]);
 
     const filteredCountries = React.useMemo(() => {
         const q = countryQuery.trim().toLowerCase();
@@ -1044,16 +1050,13 @@ export default function ParticipantPage(props: PageProps) {
 
     const participantById = React.useMemo(() => new Map(resolvedParticipants.map((p) => [p.id, p])), [resolvedParticipants]);
 
-    const selectableVisibleParticipants = React.useMemo(
-        () => filteredParticipants.filter((p) => !isChedParticipant(p)),
-        [filteredParticipants],
-    );
+    const selectableVisibleParticipants = React.useMemo(() => filteredParticipants, [filteredParticipants]);
 
     const selectedParticipantsPrintable = React.useMemo(() => {
         const out: ParticipantRow[] = [];
         selectedParticipantIds.forEach((id) => {
             const p = participantById.get(id);
-            if (p && !isChedParticipant(p)) out.push(p);
+            if (p) out.push(p);
         });
         return out;
     }, [selectedParticipantIds, participantById]);
@@ -1082,10 +1085,15 @@ export default function ParticipantPage(props: PageProps) {
     const allVisibleSelected =
         selectableVisibleParticipants.length > 0 &&
         selectableVisibleParticipants.every((p) => selectedParticipantIds.has(p.id));
+    const selectedCountry = participantCountryFilter === 'all' ? null : countryById.get(Number(participantCountryFilter));
+    const selectedUserType = participantTypeFilter === 'all' ? null : userTypeById.get(Number(participantTypeFilter));
+    const selectedEvent = participantEventFilter === 'all' ? null : programmeById.get(participantEventFilter);
+    const selectedStatusLabel =
+        participantStatusFilter === 'all' ? 'All Statuses' : participantStatusFilter === 'active' ? 'Active' : 'Inactive';
 
     React.useEffect(() => {
         let active = true;
-        const pending = filteredParticipants.filter((p) => !isChedParticipant(p) && p.qr_payload && !qrCacheRef.current[p.id]);
+        const pending = filteredParticipants.filter((p) => p.qr_payload && !qrCacheRef.current[p.id]);
 
         if (pending.length === 0) return undefined;
 
@@ -1451,7 +1459,7 @@ export default function ParticipantPage(props: PageProps) {
 
     async function requestPrintIds(orientation: PrintOrientation) {
         if (selectedParticipantsPrintable.length === 0) {
-            toast.error('Select at least one NON-CHED participant to print.');
+            toast.error('Select at least one participant to print.');
             return;
         }
 
@@ -1547,65 +1555,280 @@ export default function ParticipantPage(props: PageProps) {
                                         <CardDescription></CardDescription>
                                     </div>
 
-                                    <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto lg:justify-end">
-                                        <div className="relative w-full lg:w-[320px]">
+                                    <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-200/70 bg-slate-50/70 p-2 sm:flex-row sm:flex-wrap lg:w-auto lg:justify-end dark:border-slate-800 dark:bg-slate-900/40">
+                                        <div className="flex items-center px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                            Filters
+                                        </div>
+                                        <div className="relative w-full sm:w-[240px]">
                                             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                                             <Input
                                                 value={participantQuery}
                                                 onChange={(e) => setParticipantQuery(e.target.value)}
                                                 placeholder="Search name, email, country, type..."
-                                                className="pl-9"
+                                                className="h-9 pl-9 text-xs"
                                             />
                                         </div>
 
-                                        <Select value={participantCountryFilter} onValueChange={setParticipantCountryFilter}>
-                                            <SelectTrigger className="w-full sm:w-[200px]">
-                                                <SelectValue placeholder="Country" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All Countries</SelectItem>
-                                                {countries.map((c) => (
-                                                    <SelectItem key={c.id} value={String(c.id)}>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="grid size-5 place-items-center overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                                                <FlagImage
-                                                                    code={c.code}
-                                                                    name={c.name}
-                                                                    preferredSrc={c.flag_url}
-                                                                    className="h-full w-full object-cover"
+                                        <Popover open={participantCountryOpen} onOpenChange={setParticipantCountryOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    role="combobox"
+                                                    aria-expanded={participantCountryOpen}
+                                                    className="h-9 w-full justify-between text-xs sm:w-[180px]"
+                                                >
+                                                    <span className="truncate">
+                                                        {selectedCountry ? selectedCountry.name : 'All Countries'}
+                                                    </span>
+                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search country..." />
+                                                    <CommandEmpty>No country found.</CommandEmpty>
+                                                    <CommandList>
+                                                        <CommandGroup>
+                                                            <CommandItem
+                                                                value="All Countries"
+                                                                onSelect={() => {
+                                                                    setParticipantCountryFilter('all');
+                                                                    setParticipantCountryOpen(false);
+                                                                }}
+                                                            >
+                                                                All Countries
+                                                                <Check
+                                                                    className={cn(
+                                                                        'ml-auto h-4 w-4',
+                                                                        participantCountryFilter === 'all' ? 'opacity-100' : 'opacity-0',
+                                                                    )}
                                                                 />
-                                                            </div>
-                                                            <span>{c.name}</span>
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                                            </CommandItem>
+                                                            {countries.map((c) => (
+                                                                <CommandItem
+                                                                    key={c.id}
+                                                                    value={`${c.name} ${c.code}`}
+                                                                    onSelect={() => {
+                                                                        setParticipantCountryFilter(String(c.id));
+                                                                        setParticipantCountryOpen(false);
+                                                                    }}
+                                                                    className="gap-2"
+                                                                >
+                                                                    <div className="grid size-5 place-items-center overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                                        <FlagImage
+                                                                            code={c.code}
+                                                                            name={c.name}
+                                                                            preferredSrc={c.flag_url}
+                                                                            className="h-full w-full object-cover"
+                                                                        />
+                                                                    </div>
+                                                                    <span className="truncate">{c.name}</span>
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'ml-auto h-4 w-4',
+                                                                            participantCountryFilter === String(c.id) ? 'opacity-100' : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
 
-                                        <Select value={participantTypeFilter} onValueChange={setParticipantTypeFilter}>
-                                            <SelectTrigger className="w-full sm:w-[200px]">
-                                                <SelectValue placeholder="User Type" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All Types</SelectItem>
-                                                {userTypes.map((u) => (
-                                                    <SelectItem key={u.id} value={String(u.id)}>
-                                                        {u.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Popover open={participantTypeOpen} onOpenChange={setParticipantTypeOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    role="combobox"
+                                                    aria-expanded={participantTypeOpen}
+                                                    className="h-9 w-full justify-between text-xs sm:w-[170px]"
+                                                >
+                                                    <span className="truncate">{selectedUserType ? selectedUserType.name : 'All Types'}</span>
+                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search user type..." />
+                                                    <CommandEmpty>No user type found.</CommandEmpty>
+                                                    <CommandList>
+                                                        <CommandGroup>
+                                                            <CommandItem
+                                                                value="All Types"
+                                                                onSelect={() => {
+                                                                    setParticipantTypeFilter('all');
+                                                                    setParticipantTypeOpen(false);
+                                                                }}
+                                                            >
+                                                                All Types
+                                                                <Check
+                                                                    className={cn(
+                                                                        'ml-auto h-4 w-4',
+                                                                        participantTypeFilter === 'all' ? 'opacity-100' : 'opacity-0',
+                                                                    )}
+                                                                />
+                                                            </CommandItem>
+                                                            {userTypes.map((u) => (
+                                                                <CommandItem
+                                                                    key={u.id}
+                                                                    value={`${u.name} ${u.slug ?? ''}`.trim()}
+                                                                    onSelect={() => {
+                                                                        setParticipantTypeFilter(String(u.id));
+                                                                        setParticipantTypeOpen(false);
+                                                                    }}
+                                                                >
+                                                                    {u.name}
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'ml-auto h-4 w-4',
+                                                                            participantTypeFilter === String(u.id) ? 'opacity-100' : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
 
-                                        <Select value={participantStatusFilter} onValueChange={(v) => setParticipantStatusFilter(v as any)}>
-                                            <SelectTrigger className="w-full sm:w-[160px]">
-                                                <SelectValue placeholder="Status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All</SelectItem>
-                                                <SelectItem value="active">Active</SelectItem>
-                                                <SelectItem value="inactive">Inactive</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Popover open={participantStatusOpen} onOpenChange={setParticipantStatusOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    role="combobox"
+                                                    aria-expanded={participantStatusOpen}
+                                                    className="h-9 w-full justify-between text-xs sm:w-[150px]"
+                                                >
+                                                    <span className="truncate">{selectedStatusLabel}</span>
+                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search status..." />
+                                                    <CommandEmpty>No status found.</CommandEmpty>
+                                                    <CommandList>
+                                                        <CommandGroup>
+                                                            {[
+                                                                { value: 'all', label: 'All Statuses' },
+                                                                { value: 'active', label: 'Active' },
+                                                                { value: 'inactive', label: 'Inactive' },
+                                                            ].map((status) => (
+                                                                <CommandItem
+                                                                    key={status.value}
+                                                                    value={status.label}
+                                                                    onSelect={() => {
+                                                                        setParticipantStatusFilter(status.value as any);
+                                                                        setParticipantStatusOpen(false);
+                                                                    }}
+                                                                >
+                                                                    {status.label}
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'ml-auto h-4 w-4',
+                                                                            participantStatusFilter === status.value ? 'opacity-100' : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        <Popover open={participantEventOpen} onOpenChange={setParticipantEventOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    role="combobox"
+                                                    aria-expanded={participantEventOpen}
+                                                    className="h-9 w-full justify-between text-xs sm:w-[200px]"
+                                                >
+                                                    <span className="truncate">{selectedEvent ? selectedEvent.title : 'All Events'}</span>
+                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-72 max-w-[90vw] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search event..." />
+                                                    <CommandEmpty>No event found.</CommandEmpty>
+                                                    <CommandList>
+                                                        <CommandGroup>
+                                                            <CommandItem
+                                                                value="All Events"
+                                                                onSelect={() => {
+                                                                    setParticipantEventFilter('all');
+                                                                    setParticipantEventOpen(false);
+                                                                }}
+                                                            >
+                                                                All Events
+                                                                <Check
+                                                                    className={cn(
+                                                                        'ml-auto h-4 w-4',
+                                                                        participantEventFilter === 'all' ? 'opacity-100' : 'opacity-0',
+                                                                    )}
+                                                                />
+                                                            </CommandItem>
+                                                            {normalizedProgrammes.map((event) => {
+                                                                const phaseLabel =
+                                                                    event.phase === 'ongoing'
+                                                                        ? 'Ongoing'
+                                                                        : event.phase === 'upcoming'
+                                                                          ? 'Upcoming'
+                                                                          : 'Closed';
+                                                                const phaseTone =
+                                                                    event.phase === 'ongoing'
+                                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200'
+                                                                        : event.phase === 'upcoming'
+                                                                          ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200'
+                                                                          : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200';
+                                                                const dateLabel = event.endsAt
+                                                                    ? `${formatDateSafe(event.startsAt)} - ${formatDateSafe(event.endsAt)}`
+                                                                    : formatDateSafe(event.startsAt);
+
+                                                                return (
+                                                                    <CommandItem
+                                                                        key={event.id}
+                                                                        value={event.title}
+                                                                        onSelect={() => {
+                                                                            setParticipantEventFilter(String(event.id));
+                                                                            setParticipantEventOpen(false);
+                                                                        }}
+                                                                        className="flex items-start gap-2"
+                                                                    >
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <div className="truncate font-medium text-slate-900 dark:text-slate-100">
+                                                                                {event.title}
+                                                                            </div>
+                                                                            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                                                {dateLabel}
+                                                                            </div>
+                                                                        </div>
+                                                                        <Badge className={cn('rounded-full px-2 py-0.5 text-[10px]', phaseTone)}>
+                                                                            {phaseLabel}
+                                                                        </Badge>
+                                                                        <Check
+                                                                            className={cn(
+                                                                                'ml-auto h-4 w-4',
+                                                                                participantEventFilter === String(event.id) ? 'opacity-100' : 'opacity-0',
+                                                                            )}
+                                                                        />
+                                                                    </CommandItem>
+                                                                );
+                                                            })}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
                                 </div>
 
@@ -1715,20 +1938,18 @@ export default function ParticipantPage(props: PageProps) {
                                                             <TableCell>
                                                                 <div className="flex items-center gap-3">
                                                                     <Checkbox
-                                                                        checked={!isChed && selectedParticipantIds.has(p.id)}
-                                                                        disabled={isChed}
+                                                                        checked={selectedParticipantIds.has(p.id)}
                                                                         onCheckedChange={(checked) => {
-                                                                            if (isChed) return;
                                                                             toggleParticipantSelect(p.id, !!checked);
                                                                         }}
-                                                                        aria-label={isChed ? 'CHED user type excluded from printing' : `Select ${p.full_name}`}
+                                                                        aria-label={`Select ${p.full_name}`}
                                                                     />
 
                                                                     <div>
-                                                                        <div className="text-xs text-slate-500">{isChed ? '(N/A - CHED)' : 'Participant ID'}</div>
+                                                                        <div className="text-xs text-slate-500">Participant ID</div>
 
                                                                         <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                                                                            {isChed ? '' : p.display_id ?? '—'}
+                                                                            {p.display_id ?? '—'}
                                                                         </div>
                                                                     </div>
                                                                 </div>
