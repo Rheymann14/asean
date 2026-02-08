@@ -415,219 +415,218 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                     ))}
 
                                     <div className={cn('grid gap-5', currentStep === 0 ? '' : 'hidden')}>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="country_id">Country of Origin <span className="text-[11px] font-semibold text-red-600"> *</span></Label>
-                                        <input type="hidden" name="country_id" value={country} />
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="country_id">
+                                                Country of Origin <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                            </Label>
+                                            <input type="hidden" name="country_id" value={country} />
 
-                                        <Popover open={countryOpen} onOpenChange={setCountryOpen}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    aria-expanded={countryOpen}
-                                                    className={comboboxTriggerClass}
-                                                    tabIndex={1}
-                                                >
-                                                    <span className="flex min-w-0 items-center gap-2">
-                                                        {selectedCountry ? (
-                                                            <>
-                                                                {selectedCountry.flag_url ? (
-                                                                    <img
-                                                                        src={selectedCountry.flag_url}
-                                                                        alt=""
-                                                                        className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
-                                                                        loading="lazy"
-                                                                        draggable={false}
-                                                                    />
-                                                                ) : (
-                                                                    <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                                                                        {selectedCountry.code}
-                                                                    </span>
-                                                                )}
-                                                                <span className="truncate">{selectedCountry.name}</span>
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-muted-foreground">Select country…</span>
-                                                        )}
-                                                    </span>
-                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-
-                                            <PopoverContent
-                                                className="w-[--radix-popover-trigger-width] p-0"
-                                                align="start"
-                                            >
-                                                <Command>
-                                                    <CommandInput placeholder="Search country…" />
-                                                    <CommandEmpty>No country found.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {countries.map((item) => (
-                                                            <CommandItem
-                                                                key={item.id}
-                                                                value={item.name}
-                                                                onSelect={() => {
-                                                                    setCountry(String(item.id));
-                                                                    setCountryOpen(false);
-                                                                }}
-                                                                className="gap-2"
-                                                            >
-                                                                {item.flag_url ? (
-                                                                    <img
-                                                                        src={item.flag_url}
-                                                                        alt=""
-                                                                        className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
-                                                                        loading="lazy"
-                                                                        draggable={false}
-                                                                    />
-                                                                ) : (
-                                                                    <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                                                                        {item.code}
-                                                                    </span>
-                                                                )}
-                                                                <span className="truncate">{item.name}</span>
-                                                                <Check
-                                                                    className={cn(
-                                                                        'ml-auto h-4 w-4',
-                                                                        country === String(item.id) ? 'opacity-100' : 'opacity-0'
+                                            <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={countryOpen}
+                                                        className={comboboxTriggerClass}
+                                                        tabIndex={1}
+                                                    >
+                                                        <span className="flex min-w-0 items-center gap-2">
+                                                            {selectedCountry ? (
+                                                                <>
+                                                                    {selectedCountry.flag_url ? (
+                                                                        <img
+                                                                            src={selectedCountry.flag_url}
+                                                                            alt=""
+                                                                            className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
+                                                                            loading="lazy"
+                                                                            draggable={false}
+                                                                        />
+                                                                    ) : (
+                                                                        <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                                                                            {selectedCountry.code}
+                                                                        </span>
                                                                     )}
-                                                                />
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
+                                                                    <span className="truncate">{selectedCountry.name}</span>
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-muted-foreground">Select country…</span>
+                                                            )}
+                                                        </span>
+                                                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
 
-                                        <InputError message={err.country_id ?? err.country} />
-                                    </div>
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search country…" />
+                                                        <CommandEmpty>No country found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {countries.map((item) => (
+                                                                <CommandItem
+                                                                    key={item.id}
+                                                                    value={item.name}
+                                                                    onSelect={() => {
+                                                                        setCountry(String(item.id));
+                                                                        setCountryOpen(false);
+                                                                    }}
+                                                                    className="gap-2"
+                                                                >
+                                                                    {item.flag_url ? (
+                                                                        <img
+                                                                            src={item.flag_url}
+                                                                            alt=""
+                                                                            className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
+                                                                            loading="lazy"
+                                                                            draggable={false}
+                                                                        />
+                                                                    ) : (
+                                                                        <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                                                                            {item.code}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="truncate">{item.name}</span>
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'ml-auto h-4 w-4',
+                                                                            country === String(item.id) ? 'opacity-100' : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="honorific_title">
-                                            Honorific / Title <span className="text-[11px] font-semibold text-red-600"> *</span>
-                                        </Label>
-                                        <select
-                                            id="honorific_title"
-                                            name="honorific_title"
-                                            required
-                                            tabIndex={2}
-                                            value={honorificTitle}
-                                            onChange={(event) => setHonorificTitle(event.target.value)}
-                                            className={inputClass}
-                                        >
-                                            <option value="">Select honorific…</option>
-                                            {HONORIFIC_OPTIONS.map((option) => (
-                                                <option key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <InputError message={err.honorific_title} />
-                                    </div>
+                                            <InputError message={err.country_id ?? err.country} />
+                                        </div>
 
-                                    {honorificTitle === 'other' ? (
                                         <div className="grid gap-2">
-                                            <Label htmlFor="honorific_other">Other honorific</Label>
-                                            <Input
-                                                id="honorific_other"
-                                                type="text"
-                                                name="honorific_other"
-                                                required
-                                                tabIndex={3}
-                                                placeholder="Please specify"
-                                                className={inputClass}
-                                            />
-                                        <InputError message={err.honorific_other} />
-                                    </div>
-                                    ) : null}
-
-                                    <div className="grid gap-4 sm:grid-cols-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="given_name">
-                                                Given Name / First Name <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                            <Label htmlFor="honorific_title">
+                                                Honorific / Title <span className="text-[11px] font-semibold text-red-600"> *</span>
                                             </Label>
-                                            <Input
-                                                id="given_name"
-                                                type="text"
+                                            <select
+                                                id="honorific_title"
+                                                name="honorific_title"
                                                 required
-                                                autoFocus
-                                                tabIndex={honorificTitle === 'other' ? 4 : 3}
-                                                autoComplete="given-name"
-                                                name="given_name"
-                                                placeholder="e.g. JUAN"
+                                                tabIndex={2}
+                                                value={honorificTitle}
+                                                onChange={(event) => setHonorificTitle(event.target.value)}
                                                 className={inputClass}
-                                            />
-                                            <InputError message={err.given_name} />
+                                            >
+                                                <option value="">Select honorific…</option>
+                                                {HONORIFIC_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <InputError message={err.honorific_title} />
+                                        </div>
+
+                                        {honorificTitle === 'other' ? (
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="honorific_other">Other honorific</Label>
+                                                <Input
+                                                    id="honorific_other"
+                                                    type="text"
+                                                    name="honorific_other"
+                                                    required
+                                                    tabIndex={3}
+                                                    placeholder="Please specify"
+                                                    className={inputClass}
+                                                />
+                                                <InputError message={err.honorific_other} />
+                                            </div>
+                                        ) : null}
+
+                                        <div className="grid gap-4 sm:grid-cols-3">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="given_name">
+                                                    Given Name / First Name <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                                </Label>
+                                                <Input
+                                                    id="given_name"
+                                                    type="text"
+                                                    required
+                                                    autoFocus
+                                                    tabIndex={honorificTitle === 'other' ? 4 : 3}
+                                                    autoComplete="given-name"
+                                                    name="given_name"
+                                                    placeholder="e.g. JUAN"
+                                                    className={inputClass}
+                                                />
+                                                <InputError message={err.given_name} />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="middle_name">Middle Name</Label>
+                                                <Input
+                                                    id="middle_name"
+                                                    type="text"
+                                                    tabIndex={honorificTitle === 'other' ? 5 : 4}
+                                                    autoComplete="additional-name"
+                                                    name="middle_name"
+                                                    placeholder="e.g. SANTOS"
+                                                    className={inputClass}
+                                                />
+                                                <InputError message={err.middle_name} />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="family_name">
+                                                    Family Name / Surname <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                                </Label>
+                                                <Input
+                                                    id="family_name"
+                                                    type="text"
+                                                    required
+                                                    tabIndex={honorificTitle === 'other' ? 6 : 5}
+                                                    autoComplete="family-name"
+                                                    name="family_name"
+                                                    placeholder="e.g. DELA CRUZ"
+                                                    className={inputClass}
+                                                />
+                                                <InputError message={err.family_name} />
+                                            </div>
                                         </div>
 
                                         <div className="grid gap-2">
-                                            <Label htmlFor="middle_name">Middle Name</Label>
+                                            <Label htmlFor="suffix">Suffix</Label>
                                             <Input
-                                                id="middle_name"
+                                                id="suffix"
                                                 type="text"
-                                                tabIndex={honorificTitle === 'other' ? 5 : 4}
-                                                autoComplete="additional-name"
-                                                name="middle_name"
-                                                placeholder="e.g. SANTOS"
+                                                tabIndex={honorificTitle === 'other' ? 7 : 6}
+                                                name="suffix"
+                                                placeholder="e.g. Jr., III"
                                                 className={inputClass}
                                             />
-                                            <InputError message={err.middle_name} />
+                                            <InputError message={err.suffix} />
                                         </div>
 
                                         <div className="grid gap-2">
-                                            <Label htmlFor="family_name">
-                                                Family Name / Surname <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                            <Label htmlFor="sex_assigned_at_birth">
+                                                Sex assigned at birth <span className="text-[11px] font-semibold text-red-600"> *</span>
                                             </Label>
-                                            <Input
-                                                id="family_name"
-                                                type="text"
+                                            <select
+                                                id="sex_assigned_at_birth"
+                                                name="sex_assigned_at_birth"
                                                 required
-                                                tabIndex={honorificTitle === 'other' ? 6 : 5}
-                                                autoComplete="family-name"
-                                                name="family_name"
-                                                placeholder="e.g. DELA CRUZ"
+                                                tabIndex={honorificTitle === 'other' ? 8 : 7}
+                                                value={sexAssignedAtBirth}
+                                                onChange={(event) => setSexAssignedAtBirth(event.target.value)}
                                                 className={inputClass}
-                                            />
-                                            <InputError message={err.family_name} />
+                                            >
+                                                <option value="">Select…</option>
+                                                {SEX_ASSIGNED_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <InputError message={err.sex_assigned_at_birth} />
                                         </div>
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="suffix">Suffix</Label>
-                                        <Input
-                                            id="suffix"
-                                            type="text"
-                                            tabIndex={honorificTitle === 'other' ? 7 : 6}
-                                            name="suffix"
-                                            placeholder="e.g. Jr., III"
-                                            className={inputClass}
-                                        />
-                                        <InputError message={err.suffix} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="sex_assigned_at_birth">
-                                            Sex assigned at birth <span className="text-[11px] font-semibold text-red-600"> *</span>
-                                        </Label>
-                                        <select
-                                            id="sex_assigned_at_birth"
-                                            name="sex_assigned_at_birth"
-                                            required
-                                            tabIndex={honorificTitle === 'other' ? 8 : 7}
-                                            value={sexAssignedAtBirth}
-                                            onChange={(event) => setSexAssignedAtBirth(event.target.value)}
-                                            className={inputClass}
-                                        >
-                                            <option value="">Select…</option>
-                                            {SEX_ASSIGNED_OPTIONS.map((option) => (
-                                                <option key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <InputError message={err.sex_assigned_at_birth} />
-                                    </div>
                                     </div>
 
                                     <div className={cn('grid gap-5', currentStep === 1 ? '' : 'hidden')}>
