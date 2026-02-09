@@ -19,7 +19,6 @@ import {
     buildCertificatePrintBody,
     CERTIFICATE_PRINT_STYLES,
 } from '@/lib/certificates';
-import printJS from '@/lib/print-js';
 import { cn } from '@/lib/utils';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import {
@@ -189,7 +188,7 @@ export default function EventKitMaterials() {
     );
     const venue = programme.location || '—';
 
-    const handlePrint = () => {
+    const handleDownload = () => {
         if (!hasAttendance) return;
 
         const html = buildCertificatePrintBody({
@@ -208,12 +207,33 @@ export default function EventKitMaterials() {
 
         if (!html.trim()) return;
 
-        printJS({
-            printable: html,
-            type: 'raw-html',
-            style: CERTIFICATE_PRINT_STYLES,
-            documentTitle: 'Certificate',
-        });
+        if (typeof window === 'undefined') return;
+
+        const downloadWindow = window.open('', '_blank', 'noopener,noreferrer');
+        if (!downloadWindow) {
+            toast.error('Unable to open download window.');
+            return;
+        }
+
+        downloadWindow.document.open();
+        downloadWindow.document.write(`<!doctype html>
+            <html>
+                <head>
+                    <meta charset="utf-8" />
+                    <title>Certificates</title>
+                    <style>${CERTIFICATE_PRINT_STYLES}</style>
+                </head>
+                <body>${html}</body>
+            </html>`);
+        downloadWindow.document.close();
+        downloadWindow.focus();
+
+        downloadWindow.onload = () => {
+            downloadWindow.print();
+        };
+        downloadWindow.onafterprint = () => {
+            downloadWindow.close();
+        };
     };
 
     return (
@@ -533,8 +553,8 @@ export default function EventKitMaterials() {
                                         <div className="flex min-w-0 items-center gap-2">
                                             <Medal className="h-4 w-4 shrink-0" />
                                             <span className="min-w-0 font-semibold break-words">
-                                                Print certificates (appearance &
-                                                participation)
+                                                Download certificates (appearance
+                                                & participation)
                                             </span>
                                         </div>
 
@@ -543,9 +563,9 @@ export default function EventKitMaterials() {
                                                 size="sm"
                                                 variant="outline"
                                                 className="h-9 w-full rounded-xl sm:h-8 sm:w-auto"
-                                                onClick={handlePrint}
+                                                onClick={handleDownload}
                                             >
-                                                Print
+                                                Download PDF
                                             </Button>
                                         ) : (
                                             <span className="text-[11px]">
