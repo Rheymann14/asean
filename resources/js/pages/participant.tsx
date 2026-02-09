@@ -2135,21 +2135,17 @@ export default function ParticipantPage(props: PageProps) {
                                     <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
                                         <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 m-2">
                                             <span>Show</span>
-                                            <Select
+                                            <select
+                                                className="h-8 w-[70px] rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-600"
                                                 value={String(entriesPerPage)}
-                                                onValueChange={(value) => setEntriesPerPage(Number(value))}
+                                                onChange={(event) => setEntriesPerPage(Number(event.target.value))}
                                             >
-                                                <SelectTrigger className="h-8 w-[70px]">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {ENTRIES_PER_PAGE_OPTIONS.map((n) => (
-                                                        <SelectItem key={n} value={String(n)}>
-                                                            {n}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                                {ENTRIES_PER_PAGE_OPTIONS.map((n) => (
+                                                    <option key={n} value={String(n)}>
+                                                        {n}
+                                                    </option>
+                                                ))}
+                                            </select>
                                             <span>entries</span>
                                             <span className="ml-2">
                                                 Showing{' '}
