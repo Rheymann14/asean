@@ -2319,7 +2319,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                     <div className="grid gap-4 sm:grid-cols-2">
                                                                         <div>
                                                                             <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                                                                Food Restrictions
+                                                                                Dietary Preferences
                                                                             </div>
                                                                             {(p.food_restrictions ?? []).length > 0 ? (
                                                                                 <div className="space-y-1">
