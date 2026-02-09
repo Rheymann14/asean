@@ -276,8 +276,14 @@ class VehicleAssignmentController extends Controller
         return back();
     }
 
-    public function destroy(VehicleAssignment $vehicleAssignment)
+    public function destroy(int $vehicleAssignmentId)
     {
+        $vehicleAssignment = VehicleAssignment::query()->find($vehicleAssignmentId);
+
+        if (! $vehicleAssignment) {
+            return back();
+        }
+
         $vehicleAssignment->delete();
 
         return back();
