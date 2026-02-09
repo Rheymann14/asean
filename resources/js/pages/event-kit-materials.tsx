@@ -1,6 +1,8 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import printJS from '@/lib/print-js';
+
 import {
     Command,
     CommandEmpty,
@@ -19,7 +21,6 @@ import {
     buildCertificatePrintBody,
     CERTIFICATE_PRINT_STYLES,
 } from '@/lib/certificates';
-import printJS from '@/lib/print-js';
 import { cn } from '@/lib/utils';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import {
@@ -216,6 +217,7 @@ export default function EventKitMaterials() {
         });
     };
 
+
     return (
         <>
             <Head title="Event Kit Materials" />
@@ -396,7 +398,7 @@ export default function EventKitMaterials() {
                                         'w-fit self-start rounded-xl px-2.5 py-1',
                                         'border-emerald-200 bg-emerald-50 text-emerald-700',
                                         !hasAttendance &&
-                                            'border-rose-200 bg-rose-50 text-rose-600',
+                                        'border-rose-200 bg-rose-50 text-rose-600',
                                     )}
                                 >
                                     {hasAttendance
@@ -533,8 +535,8 @@ export default function EventKitMaterials() {
                                         <div className="flex min-w-0 items-center gap-2">
                                             <Medal className="h-4 w-4 shrink-0" />
                                             <span className="min-w-0 font-semibold break-words">
-                                                Print certificates (appearance &
-                                                participation)
+                                                Download certificates (appearance
+                                                & participation)
                                             </span>
                                         </div>
 

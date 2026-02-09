@@ -22,20 +22,10 @@ use App\Http\Controllers\EventKitController;
 use App\Http\Controllers\VehicleAssignmentController;
 use App\Http\Controllers\TransportVehicleController;
 
+
 use App\Http\Controllers\BrevoTestController;
 
 
-Route::get('/_seed-participants', function () {
-    Artisan::call('db:seed', [
-        '--class' => 'ParticipantSeeder',
-        '--force' => true, // important for production
-    ]);
-
-    return response()->json([
-        'status' => 'ok',
-        'message' => 'ParticipantSeeder executed successfully',
-    ]);
-});
 
 
 Route::get('/', function () {
