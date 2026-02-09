@@ -38,7 +38,7 @@ export function AppSidebar() {
 
     // Table & Assignments collapsible section
     const tableAssignmentsGroup: NavItem = {
-        title: 'Table & Assignments',
+        title: 'Table Monitoring',
         icon: Table,
         items: [
             {
@@ -60,7 +60,7 @@ export function AppSidebar() {
             icon: Bus,
         },
         {
-            title: 'Van Assignment',
+            title: 'Vehicle Assignment',
             href: '/vehicle-assignment',
             icon: Bus,
         },
@@ -121,7 +121,7 @@ export function AppSidebar() {
                   icon: CalendarDays,
               },
               {
-                  title: 'Van Assignment',
+                  title: 'Vehicle Assignment',
                   href: '/vehicle-assignment',
                   icon: Bus,
               },
