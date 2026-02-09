@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ParticipantDashboardController extends Controller
@@ -18,7 +19,7 @@ class ParticipantDashboardController extends Controller
                 'qr_payload' => $user->qr_payload,
                 'name' => $user->name,
                 'email' => $user->email,
-                'profile_photo_url' => $user->profile_photo_path ? Storage::url($user->profile_photo_path) : null,
+                'profile_photo_url' => $user->profile_photo_path ? asset($user->profile_photo_path) : null,
                 'contact_number' => $user->contact_number,
                 'contact_country_code' => $user->contact_country_code,
                 'honorific_title' => $user->honorific_title,
@@ -83,11 +84,18 @@ class ParticipantDashboardController extends Controller
         $user = $request->user();
 
         if ($user->profile_photo_path) {
-            Storage::disk('public')->delete($user->profile_photo_path);
+            File::delete(public_path($user->profile_photo_path));
         }
 
-        $path = $request->file('profile_photo')->store('profile-image', 'public');
-        $user->profile_photo_path = $path;
+        $file = $request->file('profile_photo');
+        $extension = $file->getClientOriginalExtension() ?: 'jpg';
+        $filename = sprintf('%s-%s.%s', $user->id, Str::uuid(), $extension);
+        $directory = public_path('profile-image');
+        if (!File::exists($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+        $file->move($directory, $filename);
+        $user->profile_photo_path = 'profile-image/' . $filename;
         $user->save();
 
         return back();
@@ -98,10 +106,9 @@ class ParticipantDashboardController extends Controller
         $user = $request->user();
 
         if ($user->profile_photo_path) {
-            Storage::disk('public')->delete($user->profile_photo_path);
+            File::delete(public_path($user->profile_photo_path));
+            $user->profile_photo_path = null;
         }
-
-        $user->profile_photo_path = null;
         $user->save();
 
         return back();
