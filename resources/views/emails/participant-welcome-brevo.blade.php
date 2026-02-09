@@ -18,7 +18,7 @@
                         <tr>
                             <td style="padding: 0 28px 18px;">
                                 <h1 style="margin: 0 0 10px; font-size: 20px; line-height: 1.3; color: #0f172a;">
-                                    Your ASEAN PH 2026 registration Higher Education Sector is confirmed ðŸŽ‰
+                                    Your ASEAN PH 2026 registration Higher Education Sector is successful! 
                                 </h1>
                                 <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
                                     Hi {{ $user->name }}, thank you for registering! Please keep this message for your records and for smooth entry on event day.
@@ -26,7 +26,7 @@
                                 <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
                                     System link:
                                     <a href="{{ $appUrl }}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">{{ $appUrl }}</a>
-                                    &mdash; log in anytime to review your profile and check-in updates.
+                                    &mdash; log in and answer few questions on the event page to complete your registration.
                                     <strong>Your username is:</strong> {{ $user->email }}
                                 </p>
                                 <p style="margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: #64748b;">

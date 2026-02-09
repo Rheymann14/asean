@@ -52,7 +52,7 @@ type ParticipantInfo = {
     // ✅ from DB columns
     qr_payload?: string | null;
     qr_token?: string | null;
-
+    profile_image_url?: string | null;
     country_code?: string | null;
     email?: string | null;
     country?: string | null;
@@ -690,6 +690,55 @@ export default function Scanner(props: PageProps) {
 
     // ✅ dialog for BOTH success and error
     const [resultOpen, setResultOpen] = React.useState(false);
+
+    const [imagePreviewOpen, setImagePreviewOpen] = React.useState(false);
+    const [imagePreviewParticipant, setImagePreviewParticipant] = React.useState<ParticipantInfo | null>(null);
+    const imagePreviewTimerRef = React.useRef<number | null>(null);
+    const pendingResultRef = React.useRef<ScanResponse | null>(null);
+
+    React.useEffect(() => {
+        return () => {
+            if (imagePreviewTimerRef.current) {
+                window.clearTimeout(imagePreviewTimerRef.current);
+                imagePreviewTimerRef.current = null;
+            }
+        };
+    }, []);
+
+    async function openImagePreviewThenResult(data: ScanResponse) {
+        const p = data.participant ?? null;
+        const img = p?.profile_image_url ? String(p.profile_image_url) : '';
+
+        // Only preview on success + has image
+        if (data.ok && p && img) {
+            pendingResultRef.current = data;
+            setImagePreviewParticipant(p);
+            setImagePreviewOpen(true);
+            setStatus('success');
+
+            if (imagePreviewTimerRef.current) {
+                window.clearTimeout(imagePreviewTimerRef.current);
+                imagePreviewTimerRef.current = null;
+            }
+
+            imagePreviewTimerRef.current = window.setTimeout(() => {
+                setImagePreviewOpen(false);
+                setImagePreviewParticipant(null);
+
+                const pending = pendingResultRef.current;
+                pendingResultRef.current = null;
+
+                if (pending) void openResultDialog(pending);
+            }, 3000);
+
+            return;
+        }
+
+        // If no image uploaded (or error), go straight to result dialog
+        await openResultDialog(data);
+    }
+
+
     const resultOpenRef = React.useRef(false);
 
     // ✅ QR preview that never becomes "undefined"
@@ -1177,7 +1226,7 @@ export default function Scanner(props: PageProps) {
 
             const data = (await res.json()) as ScanResponse;
 
-            await openResultDialog(data); // ✅ plays sound + vibrates
+            await openImagePreviewThenResult(data); // ✅ plays sound + vibrates
         } catch {
             const data = { ok: false, message: 'Network/server error. Please try again.' } as ScanResponse;
             await openResultDialog(data); // ✅ error sound + vibrate
@@ -1230,6 +1279,67 @@ export default function Scanner(props: PageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Scanner" />
+
+            {/* ✅ IMAGE PREVIEW (2 seconds), then opens RESULT DIALOG */}
+            <Dialog
+                open={imagePreviewOpen}
+                onOpenChange={(open) => {
+                    if (open) {
+                        setImagePreviewOpen(true);
+                        return;
+                    }
+
+                    // If user closes early, immediately show result dialog
+                    setImagePreviewOpen(false);
+                    setImagePreviewParticipant(null);
+
+                    if (imagePreviewTimerRef.current) {
+                        window.clearTimeout(imagePreviewTimerRef.current);
+                        imagePreviewTimerRef.current = null;
+                    }
+
+                    const pending = pendingResultRef.current;
+                    pendingResultRef.current = null;
+                    if (pending) void openResultDialog(pending);
+                }}
+            >
+                <DialogContent className="max-w-sm overflow-hidden rounded-3xl bg-white p-0 dark:bg-slate-950">
+                    <div className="p-6 text-center">
+                        <div className="mx-auto flex flex-col items-center">
+                            <div className="relative">
+                                <div className="size-56 overflow-hidden rounded-full border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                    {imagePreviewParticipant?.profile_image_url ? (
+                                        <img
+                                            src={imagePreviewParticipant.profile_image_url}
+                                            alt={imagePreviewParticipant.full_name}
+                                            className="h-full w-full object-cover"
+                                            loading="eager"
+                                            draggable={false}
+                                        />
+                                    ) : (
+                                        <div className="grid h-full w-full place-items-center text-slate-500">
+                                            <UserRound className="h-10 w-10" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow">
+                                    <span className="inline-flex items-center gap-1">
+                                        <ShieldCheck className="h-3.5 w-3.5" />
+                                        Verified
+                                    </span>
+                                </span>
+                            </div>
+
+                            <div className="mt-6 text-base font-semibold text-slate-900 dark:text-slate-100">
+                                {imagePreviewParticipant?.full_name ?? 'Participant'}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">Opening result…</div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
 
             {/* ✅ RESULT DIALOG (Success + Error) */}
             <Dialog open={resultOpen} onOpenChange={setResultOpen}>
@@ -1368,7 +1478,7 @@ export default function Scanner(props: PageProps) {
                                                     <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                                                         Checked-in:
                                                     </div>
-                                                    
+
                                                 </div>
                                             ) : null}
                                         </div>
