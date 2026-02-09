@@ -309,54 +309,7 @@ function HeroStickyParallax() {
             {/* ✅ remove overflow-hidden here so flags/logo won't be cut */}
             <div className="sticky top-0 relative flex min-h-[100svh] flex-col items-center justify-center px-4 pt-24 pb-12 overflow-visible">
                 {/* ✅ stays visible while HERO is sticky (won’t scroll away) */}
-                <div className="pointer-events-none absolute left-1/2 top-16 z-[70] w-[calc(100%-1rem)] -translate-x-1/2 sm:top-20 sm:w-auto">
-                    <div className="flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
-
-                        <AnimatePresence>
-
-                            <motion.div
-                                initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -10, scale: 0.98 }}
-                                animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-                                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.98 }}
-                                transition={{ duration: 0.22, ease: easeOut }}
-                                // ✅ sticky below navbar (adjust top if your navbar height differs)
-                                className="sticky top-[86px] z-[80] w-full px-2 sm:top-[98px] sm:px-3"
-                            >
-                                <div className="mx-auto w-[min(980px,calc(100vw-1rem))]">
-                                    <div className="flex w-full items-center gap-3 rounded-2xl border border-amber-300/70 bg-white/90 px-4 py-3 shadow-lg ring-1 ring-amber-200/40 backdrop-blur">
-                                        {/* ping dot */}
-                                        <span className="relative inline-flex h-2.5 w-2.5 shrink-0">
-                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
-                                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
-                                        </span>
-
-                                        <MonitorCog className="h-5 w-5 shrink-0 text-amber-700" />
-
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                                                <span className="text-xs font-extrabold tracking-[0.22em] text-amber-800">
-                                                    ONGOING BETA TESTING
-                                                </span>
-
-                                                <span className="text-xs font-medium text-amber-900/70">
-                                                    Expect minor changes.
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <span className="hidden shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800 sm:inline">
-                                            BETA
-                                        </span>
-
-                                    </div>
-                                </div>
-                            </motion.div>
-
-                        </AnimatePresence>
-
-                    </div>
-                </div>
-
+            
                 <div className="relative flex w-full max-w-7xl flex-col items-center justify-center">
                     {/* ✅ give more vertical room for flags that move up/down */}
                     <div className="relative flex h-[300px] w-full items-center justify-center sm:h-[520px]">
