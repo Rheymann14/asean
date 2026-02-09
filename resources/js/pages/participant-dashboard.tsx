@@ -609,430 +609,430 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                             {/* ✅ FIX: remove “wide middle gap” by using flex split instead of grid-cols-[1fr_460px] */}
                             <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
                                 {/* LEFT: Details (fills remaining width) */}
-                             
 
-                          
+
+
 
                                 <div className="mx-auto w-full max-w-6xl">
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-4">
-        {/* LEFT: Details */}
-          <div className="min-w-0 flex-1 space-y-3">
-                                    <div>
-                                        <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Profile Details</div>
-                                        <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                            Check your details to make sure they're correct.
-                                        </div>
-                                    </div>
+                                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-4">
+                                        {/* LEFT: Details */}
+                                        <div className="min-w-0 flex-1 space-y-3">
+                                            <div>
+                                                <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Profile Details</div>
+                                                <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                    Check your details to make sure they're correct.
+                                                </div>
+                                            </div>
 
-                                    <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/60 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
-                                        <div className="divide-y divide-slate-200/60 dark:divide-white/10">
-                                            <InfoRow
-                                                icon={<Flag className="h-4 w-4" />}
-                                                label="Country"
-                                                value={
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
-                                                            {flagSrc ? (
-                                                                <img
-                                                                    src={flagSrc}
-                                                                    alt={participant.country?.name ?? 'Country flag'}
-                                                                    className="h-full w-full object-cover"
-                                                                    loading="lazy"
-                                                                    draggable={false}
-                                                                    onError={(e) => {
-                                                                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                                                    }}
-                                                                />
-                                                            ) : null}
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <div className="truncate">{participant.country?.name ?? '—'}</div>
-                                                            {participant.country?.code ? (
-                                                                <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                                    {participant.country.code.toUpperCase()}
+                                            <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/60 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                                <div className="divide-y divide-slate-200/60 dark:divide-white/10">
+                                                    <InfoRow
+                                                        icon={<Flag className="h-4 w-4" />}
+                                                        label="Country"
+                                                        value={
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="h-8 w-8 overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
+                                                                    {flagSrc ? (
+                                                                        <img
+                                                                            src={flagSrc}
+                                                                            alt={participant.country?.name ?? 'Country flag'}
+                                                                            className="h-full w-full object-cover"
+                                                                            loading="lazy"
+                                                                            draggable={false}
+                                                                            onError={(e) => {
+                                                                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                                            }}
+                                                                        />
+                                                                    ) : null}
                                                                 </div>
-                                                            ) : null}
-                                                        </div>
-                                                    </div>
-                                                }
-                                            />
+                                                                <div className="min-w-0">
+                                                                    <div className="truncate">{participant.country?.name ?? '—'}</div>
+                                                                    {participant.country?.code ? (
+                                                                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                                            {participant.country.code.toUpperCase()}
+                                                                        </div>
+                                                                    ) : null}
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    />
 
-                                            <InfoRow
-                                                icon={<User2 className="h-4 w-4" />}
-                                                label="Name"
-                                                value={participant.name}
-                                                right={
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        className="rounded-xl"
-                                                        onClick={() => copyToClipboard(participant.name, 'Name copied')}
-                                                    >
-                                                        <Copy className="h-4 w-4" />
-                                                    </Button>
-                                                }
-                                            />
-
-                                            <InfoRow
-                                                icon={<Mail className="h-4 w-4" />}
-                                                label="Email"
-                                                value={participant.email}
-                                                right={
-                                                    <a href={`mailto:${participant.email}`} className="inline-flex">
-                                                        <Button size="sm" variant="ghost" className="rounded-xl">
-                                                            <Mail className="h-4 w-4" />
-                                                        </Button>
-                                                    </a>
-                                                }
-                                            />
-
-                                            <InfoRow
-                                                icon={<Phone className="h-4 w-4" />}
-                                                label="Contact number"
-                                                value={participant.contact_number ?? '—'}
-                                                right={
-                                                    participant.contact_number ? (
-                                                        <a href={`tel:${participant.contact_number}`} className="inline-flex">
-                                                            <Button size="sm" variant="ghost" className="rounded-xl">
-                                                                <Phone className="h-4 w-4" />
+                                                    <InfoRow
+                                                        icon={<User2 className="h-4 w-4" />}
+                                                        label="Name"
+                                                        value={participant.name}
+                                                        right={
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="rounded-xl"
+                                                                onClick={() => copyToClipboard(participant.name, 'Name copied')}
+                                                            >
+                                                                <Copy className="h-4 w-4" />
                                                             </Button>
-                                                        </a>
-                                                    ) : null
-                                                }
-                                            />
-                                        </div>
-                                    </div>
+                                                        }
+                                                    />
 
-                                    <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
-                                        <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Registration Details</div>
-                                        <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                            Personal information, contact & organization, and additional info.
-                                        </div>
+                                                    <InfoRow
+                                                        icon={<Mail className="h-4 w-4" />}
+                                                        label="Email"
+                                                        value={participant.email}
+                                                        right={
+                                                            <a href={`mailto:${participant.email}`} className="inline-flex">
+                                                                <Button size="sm" variant="ghost" className="rounded-xl">
+                                                                    <Mail className="h-4 w-4" />
+                                                                </Button>
+                                                            </a>
+                                                        }
+                                                    />
 
-                                        <div className="mt-4 grid gap-6 lg:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                                    Personal information
-                                                </h4>
-                                                <dl className="space-y-2 text-sm">
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Honorific</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{honorificTitle || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Given name</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.given_name || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Middle name</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.middle_name || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Family name</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.family_name || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Suffix</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.suffix || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Sex assigned at birth</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{sexAssignedLabel || '—'}</dd>
-                                                    </div>
-                                                </dl>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                                    Contact & organization
-                                                </h4>
-                                                <dl className="space-y-2 text-sm">
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Email</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.email}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Contact number</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{fullContactNumber || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Organization</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.organization_name || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Position title</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.position_title || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Registrant type</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
-                                                            {participant.user_type || participant.other_user_type || '—'}
-                                                        </dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">IP group</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.ip_group_name || '—'}</dd>
-                                                    </div>
-                                                </dl>
-                                            </div>
-
-                                            <div className="space-y-2 lg:col-span-2">
-                                                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                                    Additional info
-                                                </h4>
-                                                <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Dietary preferences</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
-                                                            {dietaryPreferenceLabels.length ? dietaryPreferenceLabels.join(', ') : 'None'}
-                                                        </dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Dietary allergies</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.dietary_allergies || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Dietary notes</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.dietary_other || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Accessibility needs</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
-                                                            {accessibilityLabels.length ? accessibilityLabels.join(', ') : 'None'}
-                                                        </dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Accessibility notes</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.accessibility_other || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Emergency contact</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_name || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Emergency relationship</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_relationship || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Emergency phone</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_phone || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Emergency email</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_email || '—'}</dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Consent to contact sharing</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
-                                                            {participant.consent_contact_sharing ? 'Yes' : 'No'}
-                                                        </dd>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Consent to photo/video</dt>
-                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
-                                                            {participant.consent_photo_video ? 'Yes' : 'No'}
-                                                        </dd>
-                                                    </div>
-                                                </dl>
-                                            </div>
-                                        </div>
-                                    </form>
-
-                                    <form onSubmit={handleDietarySubmit} className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
-                                        <div className="flex flex-col gap-1">
-                                            <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Update dietary & accessibility</div>
-                                            <div className="text-sm text-slate-600 dark:text-slate-300">
-                                                Adjust your dietary restrictions and accessibility needs.
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 space-y-4">
-                                            <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/40">
-                                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00359c]/10 text-[#00359c]">
-                                                        1
-                                                    </span>
-                                                    Dietary preferences
+                                                    <InfoRow
+                                                        icon={<Phone className="h-4 w-4" />}
+                                                        label="Contact number"
+                                                        value={participant.contact_number ?? '—'}
+                                                        right={
+                                                            participant.contact_number ? (
+                                                                <a href={`tel:${participant.contact_number}`} className="inline-flex">
+                                                                    <Button size="sm" variant="ghost" className="rounded-xl">
+                                                                        <Phone className="h-4 w-4" />
+                                                                    </Button>
+                                                                </a>
+                                                            ) : null
+                                                        }
+                                                    />
                                                 </div>
-                                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                                    Select all that apply.
-                                                </p>
+                                            </div>
 
-                                                <div className="mt-4 grid gap-4">
-                                                    <div className="grid gap-2">
-                                                        <Label className="text-sm font-medium">Dietary preferences</Label>
-                                                        <div className="grid gap-3 sm:grid-cols-2">
-                                                            {DIETARY_PREFERENCE_OPTIONS.map((option) => (
-                                                                <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
-                                                                    <Checkbox
-                                                                        checked={form.data.food_restrictions.includes(option.value)}
-                                                                        onCheckedChange={() => toggleFoodRestriction(option.value)}
-                                                                    />
-                                                                    <span>{option.label}</span>
-                                                                </label>
-                                                            ))}
+                                            <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                                <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Registration Details</div>
+                                                <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                    Personal information, contact & organization, and additional info.
+                                                </div>
+
+                                                <div className="mt-4 grid gap-6 lg:grid-cols-2">
+                                                    <div className="space-y-2">
+                                                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                            Personal information
+                                                        </h4>
+                                                        <dl className="space-y-2 text-sm">
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Honorific</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{honorificTitle || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Given name</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.given_name || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Middle name</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.middle_name || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Family name</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.family_name || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Suffix</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.suffix || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Sex assigned at birth</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{sexAssignedLabel || '—'}</dd>
+                                                            </div>
+                                                        </dl>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                            Contact & organization
+                                                        </h4>
+                                                        <dl className="space-y-2 text-sm">
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Email</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.email}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Contact number</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{fullContactNumber || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Organization</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.organization_name || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Position title</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.position_title || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Registrant type</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                                    {participant.user_type || participant.other_user_type || '—'}
+                                                                </dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">IP group</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.ip_group_name || '—'}</dd>
+                                                            </div>
+                                                        </dl>
+                                                    </div>
+
+                                                    <div className="space-y-2 lg:col-span-2">
+                                                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                            Additional info
+                                                        </h4>
+                                                        <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Dietary preferences</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                                    {dietaryPreferenceLabels.length ? dietaryPreferenceLabels.join(', ') : 'None'}
+                                                                </dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Dietary allergies</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.dietary_allergies || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Dietary notes</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.dietary_other || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Accessibility needs</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                                    {accessibilityLabels.length ? accessibilityLabels.join(', ') : 'None'}
+                                                                </dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Accessibility notes</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.accessibility_other || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Emergency contact</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_name || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Emergency relationship</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_relationship || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Emergency phone</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_phone || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Emergency email</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_email || '—'}</dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Consent to contact sharing</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                                    {participant.consent_contact_sharing ? 'Yes' : 'No'}
+                                                                </dd>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <dt className="text-slate-500 dark:text-slate-400">Consent to photo/video</dt>
+                                                                <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                                    {participant.consent_photo_video ? 'Yes' : 'No'}
+                                                                </dd>
+                                                            </div>
+                                                        </dl>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <form onSubmit={handleDietarySubmit} className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Update dietary & accessibility</div>
+                                                    <div className="text-sm text-slate-600 dark:text-slate-300">
+                                                        Adjust your dietary restrictions and accessibility needs.
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4 space-y-4">
+                                                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/40">
+                                                        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00359c]/10 text-[#00359c]">
+                                                                1
+                                                            </span>
+                                                            Dietary preferences
                                                         </div>
-                                                        {form.errors.food_restrictions || form.errors['food_restrictions.0'] ? (
-                                                            <p className="text-xs text-rose-500">
-                                                                {form.errors.food_restrictions || form.errors['food_restrictions.0']}
-                                                            </p>
-                                                        ) : null}
-                                                    </div>
+                                                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                            Select all that apply.
+                                                        </p>
 
-                                                    <div className="grid gap-2">
-                                                        <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
-                                                        <Input
-                                                            id="dietary_allergies"
-                                                            value={form.data.dietary_allergies}
-                                                            onChange={(event) => form.setData('dietary_allergies', event.target.value)}
-                                                            placeholder="List any allergies"
-                                                        />
-                                                        {form.errors.dietary_allergies ? (
-                                                            <p className="text-xs text-rose-500">{form.errors.dietary_allergies}</p>
-                                                        ) : null}
-                                                    </div>
+                                                        <div className="mt-4 grid gap-4">
+                                                            <div className="grid gap-2">
+                                                                <Label className="text-sm font-medium">Dietary preferences</Label>
+                                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                                    {DIETARY_PREFERENCE_OPTIONS.map((option) => (
+                                                                        <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                                                                            <Checkbox
+                                                                                checked={form.data.food_restrictions.includes(option.value)}
+                                                                                onCheckedChange={() => toggleFoodRestriction(option.value)}
+                                                                            />
+                                                                            <span>{option.label}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                                {form.errors.food_restrictions || form.errors['food_restrictions.0'] ? (
+                                                                    <p className="text-xs text-rose-500">
+                                                                        {form.errors.food_restrictions || form.errors['food_restrictions.0']}
+                                                                    </p>
+                                                                ) : null}
+                                                            </div>
 
-                                                    <div className="grid gap-2">
-                                                        <Label htmlFor="dietary_other">Other (please specify)</Label>
-                                                        <Input
-                                                            id="dietary_other"
-                                                            value={form.data.dietary_other}
-                                                            onChange={(event) => form.setData('dietary_other', event.target.value)}
-                                                            placeholder="Other dietary requests"
-                                                        />
-                                                        {form.errors.dietary_other ? (
-                                                            <p className="text-xs text-rose-500">{form.errors.dietary_other}</p>
-                                                        ) : null}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
+                                                                <Input
+                                                                    id="dietary_allergies"
+                                                                    value={form.data.dietary_allergies}
+                                                                    onChange={(event) => form.setData('dietary_allergies', event.target.value)}
+                                                                    placeholder="List any allergies"
+                                                                />
+                                                                {form.errors.dietary_allergies ? (
+                                                                    <p className="text-xs text-rose-500">{form.errors.dietary_allergies}</p>
+                                                                ) : null}
+                                                            </div>
 
-                                            <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/40">
-                                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00359c]/10 text-[#00359c]">
-                                                        2
-                                                    </span>
-                                                    Accessibility needs
-                                                </div>
-                                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                                    Tell us what accommodations you need.
-                                                </p>
-
-                                                <div className="mt-4 grid gap-4">
-                                                    <div className="grid gap-2">
-                                                        <Label className="text-sm font-medium">Accessibility needs</Label>
-                                                        <div className="grid gap-3 sm:grid-cols-2">
-                                                            {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => (
-                                                                <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
-                                                                    <Checkbox
-                                                                        checked={form.data.accessibility_needs.includes(option.value)}
-                                                                        onCheckedChange={() => toggleAccessibilityNeed(option.value)}
-                                                                    />
-                                                                    <span>{option.label}</span>
-                                                                </label>
-                                                            ))}
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="dietary_other">Other (please specify)</Label>
+                                                                <Input
+                                                                    id="dietary_other"
+                                                                    value={form.data.dietary_other}
+                                                                    onChange={(event) => form.setData('dietary_other', event.target.value)}
+                                                                    placeholder="Other dietary requests"
+                                                                />
+                                                                {form.errors.dietary_other ? (
+                                                                    <p className="text-xs text-rose-500">{form.errors.dietary_other}</p>
+                                                                ) : null}
+                                                            </div>
                                                         </div>
-                                                        {form.errors.accessibility_needs || form.errors['accessibility_needs.0'] ? (
-                                                            <p className="text-xs text-rose-500">
-                                                                {form.errors.accessibility_needs || form.errors['accessibility_needs.0']}
-                                                            </p>
-                                                        ) : null}
                                                     </div>
 
-                                                    <div className="grid gap-2">
-                                                        <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
-                                                        <Input
-                                                            id="accessibility_other"
-                                                            value={form.data.accessibility_other}
-                                                            onChange={(event) => form.setData('accessibility_other', event.target.value)}
-                                                            placeholder="Other accommodations"
-                                                        />
-                                                        {form.errors.accessibility_other ? (
-                                                            <p className="text-xs text-rose-500">{form.errors.accessibility_other}</p>
-                                                        ) : null}
+                                                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/40">
+                                                        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00359c]/10 text-[#00359c]">
+                                                                2
+                                                            </span>
+                                                            Accessibility needs
+                                                        </div>
+                                                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                            Tell us what accommodations you need.
+                                                        </p>
+
+                                                        <div className="mt-4 grid gap-4">
+                                                            <div className="grid gap-2">
+                                                                <Label className="text-sm font-medium">Accessibility needs</Label>
+                                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                                    {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => (
+                                                                        <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                                                                            <Checkbox
+                                                                                checked={form.data.accessibility_needs.includes(option.value)}
+                                                                                onCheckedChange={() => toggleAccessibilityNeed(option.value)}
+                                                                            />
+                                                                            <span>{option.label}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                                {form.errors.accessibility_needs || form.errors['accessibility_needs.0'] ? (
+                                                                    <p className="text-xs text-rose-500">
+                                                                        {form.errors.accessibility_needs || form.errors['accessibility_needs.0']}
+                                                                    </p>
+                                                                ) : null}
+                                                            </div>
+
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
+                                                                <Input
+                                                                    id="accessibility_other"
+                                                                    value={form.data.accessibility_other}
+                                                                    onChange={(event) => form.setData('accessibility_other', event.target.value)}
+                                                                    placeholder="Other accommodations"
+                                                                />
+                                                                {form.errors.accessibility_other ? (
+                                                                    <p className="text-xs text-rose-500">{form.errors.accessibility_other}</p>
+                                                                ) : null}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex justify-end">
+                                                        <Button type="submit" disabled={form.processing} className="bg-[#00359c] text-white hover:bg-[#00359c]/90">
+                                                            Save preferences
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </form>
+
+                                            {!participant.qr_payload ? (
+                                                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                                                    QR payload is missing. Please generate it on the server for secure scanning.
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        {/* RIGHT: Virtual ID */}
+                                        {/* RIGHT: Virtual ID (fixed width on lg, full width on mobile) */}
+                                        <div className="w-full space-y-3 lg:w-[460px] lg:shrink-0 lg:self-start lg:sticky lg:top-6">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Virtual ID</div>
+                                                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                        Use this virtual ID card for attendance verification.
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex justify-end">
-                                                <Button type="submit" disabled={form.processing} className="bg-[#00359c] text-white hover:bg-[#00359c]/90">
-                                                    Save preferences
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </form>
+                                            <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-3 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <Tabs value={orientation} onValueChange={(v) => setOrientation(v as 'portrait' | 'landscape')}>
+                                                        <TabsList className="rounded-2xl bg-white/70 p-1 dark:bg-slate-950/40">
+                                                            <TabsTrigger
+                                                                value="portrait"
+                                                                className={cn(
+                                                                    'rounded-xl px-3 text-xs',
+                                                                    'data-[state=active]:bg-sky-600 data-[state=active]:text-white',
+                                                                    'dark:data-[state=active]:bg-sky-500',
+                                                                )}
+                                                            >
+                                                                <Smartphone className="mr-2 h-4 w-4" />
+                                                                Portrait
+                                                            </TabsTrigger>
 
-                                    {!participant.qr_payload ? (
-                                        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-                                            QR payload is missing. Please generate it on the server for secure scanning.
-                                        </div>
-                                    ) : null}
-                                </div>
+                                                            <TabsTrigger
+                                                                value="landscape"
+                                                                className={cn(
+                                                                    'rounded-xl px-3 text-xs',
+                                                                    'data-[state=active]:bg-emerald-600 data-[state=active]:text-white',
+                                                                    'dark:data-[state=active]:bg-emerald-500',
+                                                                )}
+                                                            >
+                                                                <IdCard className="mr-2 h-4 w-4" />
+                                                                Landscape
+                                                            </TabsTrigger>
+                                                        </TabsList>
+                                                    </Tabs>
+                                                </div>
 
-        {/* RIGHT: Virtual ID */}
-           {/* RIGHT: Virtual ID (fixed width on lg, full width on mobile) */}
-                                <div className="w-full space-y-3 lg:w-[460px] lg:shrink-0 lg:self-start lg:sticky lg:top-6">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Virtual ID</div>
-                                            <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                                Use this virtual ID card for attendance verification.
+                                                <Separator className="my-3 bg-slate-200/70 dark:bg-white/10" />
+
+                                                <div
+                                                    className={cn(
+                                                        'rounded-2xl border border-slate-200/70 bg-white/70 p-2 shadow-sm dark:border-white/10 dark:bg-slate-950/30',
+                                                        'overflow-visible sm:overflow-auto sm:[-webkit-overflow-scrolling:touch]',
+                                                        orientation === 'portrait' ? 'sm:max-h-[520px]' : 'sm:max-h-[340px]',
+                                                    )}
+                                                >
+                                                    <IdCardPreview
+                                                        participant={participant}
+                                                        flagSrc={flagSrc}
+                                                        qrDataUrl={qrDataUrl}
+                                                        loading={qrLoading}
+                                                        orientation={orientation}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-3 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <Tabs value={orientation} onValueChange={(v) => setOrientation(v as 'portrait' | 'landscape')}>
-                                                <TabsList className="rounded-2xl bg-white/70 p-1 dark:bg-slate-950/40">
-                                                    <TabsTrigger
-                                                        value="portrait"
-                                                        className={cn(
-                                                            'rounded-xl px-3 text-xs',
-                                                            'data-[state=active]:bg-sky-600 data-[state=active]:text-white',
-                                                            'dark:data-[state=active]:bg-sky-500',
-                                                        )}
-                                                    >
-                                                        <Smartphone className="mr-2 h-4 w-4" />
-                                                        Portrait
-                                                    </TabsTrigger>
-
-                                                    <TabsTrigger
-                                                        value="landscape"
-                                                        className={cn(
-                                                            'rounded-xl px-3 text-xs',
-                                                            'data-[state=active]:bg-emerald-600 data-[state=active]:text-white',
-                                                            'dark:data-[state=active]:bg-emerald-500',
-                                                        )}
-                                                    >
-                                                        <IdCard className="mr-2 h-4 w-4" />
-                                                        Landscape
-                                                    </TabsTrigger>
-                                                </TabsList>
-                                            </Tabs>
-                                        </div>
-
-                                        <Separator className="my-3 bg-slate-200/70 dark:bg-white/10" />
-
-                                        <div
-                                            className={cn(
-                                                'rounded-2xl border border-slate-200/70 bg-white/70 p-2 shadow-sm dark:border-white/10 dark:bg-slate-950/30',
-                                                'overflow-visible sm:overflow-auto sm:[-webkit-overflow-scrolling:touch]',
-                                                orientation === 'portrait' ? 'sm:max-h-[520px]' : 'sm:max-h-[340px]',
-                                            )}
-                                        >
-                                            <IdCardPreview
-                                                participant={participant}
-                                                flagSrc={flagSrc}
-                                                qrDataUrl={qrDataUrl}
-                                                loading={qrLoading}
-                                                orientation={orientation}
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
-    </div>
-</div>
                             </div>
                         </CardContent>
                     </Card>
