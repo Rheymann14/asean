@@ -16,7 +16,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
-import { Copy, Download, Flag, Mail, Phone, QrCode as QrCodeIcon, Smartphone, IdCard, User2 } from 'lucide-react';
+import {
+    Camera,
+    Copy,
+    Download,
+    Flag,
+    Mail,
+    Pencil,
+    Phone,
+    QrCode as QrCodeIcon,
+    Smartphone,
+    IdCard,
+    Trash2,
+    Upload,
+    User2,
+} from 'lucide-react';
 
 type Country = {
     code: string;
@@ -413,9 +427,13 @@ export default function ParticipantDashboard({ participant }: PageProps) {
 
     const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
     const [qrLoading, setQrLoading] = React.useState(true);
+    const [profileImage, setProfileImage] = React.useState<string | null>(null);
 
     // ✅ opens full-size preview only when needed
     const [previewOpen, setPreviewOpen] = React.useState(false);
+
+    const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
+    const selfieInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const fullContactNumber = [participant.contact_country_code, participant.contact_number].filter(Boolean).join(' ');
     const honorificTitle =
@@ -485,6 +503,26 @@ export default function ParticipantDashboard({ participant }: PageProps) {
         a.click();
         a.remove();
         toast.success('QR code downloaded.');
+    };
+
+    const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        setProfileImage(url);
+        event.target.value = '';
+    };
+
+    React.useEffect(() => {
+        return () => {
+            if (profileImage) {
+                URL.revokeObjectURL(profileImage);
+            }
+        };
+    }, [profileImage]);
+
+    const removeProfileImage = () => {
+        setProfileImage(null);
     };
 
     const toggleFoodRestriction = (value: string) => {
@@ -1045,6 +1083,97 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                     orientation={orientation}
                                                 />
                                             </div>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <div className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                                                        Profile photo
+                                                    </div>
+                                                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                        Upload an image or take a selfie for your badge.
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 flex flex-col gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
+                                                        {profileImage ? (
+                                                            <img
+                                                                src={profileImage}
+                                                                alt="Profile preview"
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <User2 className="h-8 w-8 text-slate-400" />
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-slate-600 dark:text-slate-300">
+                                                        {profileImage ? 'Preview ready for your profile.' : 'No photo uploaded yet.'}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <Button
+                                                        type="button"
+                                                        className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
+                                                        onClick={() => uploadInputRef.current?.click()}
+                                                    >
+                                                        <Upload className="mr-2 h-4 w-4" />
+                                                        Upload image
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="border-slate-200/70 bg-white/70"
+                                                        onClick={() => selfieInputRef.current?.click()}
+                                                    >
+                                                        <Camera className="mr-2 h-4 w-4" />
+                                                        Take a selfie
+                                                    </Button>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="border-slate-200/70 bg-white/70"
+                                                        onClick={() => uploadInputRef.current?.click()}
+                                                        disabled={!profileImage}
+                                                    >
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="border-rose-200/70 text-rose-600 hover:text-rose-700"
+                                                        onClick={removeProfileImage}
+                                                        disabled={!profileImage}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Remove
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            <input
+                                                ref={uploadInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleImageChange}
+                                            />
+                                            <input
+                                                ref={selfieInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                capture="user"
+                                                className="hidden"
+                                                onChange={handleImageChange}
+                                            />
                                         </div>
                                     </div>
                                 </div>
