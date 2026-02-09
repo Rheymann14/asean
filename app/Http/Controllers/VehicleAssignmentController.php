@@ -31,7 +31,7 @@ class VehicleAssignmentController extends Controller
         $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
 
         $vehicles = TransportVehicle::query()
-            ->with(['incharge'])
+            ->with(['incharge', 'assignments.user'])
             ->withCount('assignments')
             ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
             ->orderBy('label')
@@ -42,6 +42,13 @@ class VehicleAssignmentController extends Controller
                 'driver_name' => $vehicle->driver_name,
                 'plate_number' => $vehicle->plate_number,
                 'driver_contact_number' => $vehicle->driver_contact_number,
+                'participants' => $vehicle->assignments
+                    ->map(fn ($assignment) => [
+                        'id' => $assignment->user_id,
+                        'full_name' => $assignment->user?->name,
+                        'email' => $assignment->user?->email,
+                    ])
+                    ->values(),
                 'incharge' => $vehicle->incharge
                     ? [
                         'id' => $vehicle->incharge->id,
@@ -343,10 +350,11 @@ class VehicleAssignmentController extends Controller
         $roleName = Str::upper((string) ($user->userType?->name ?? ''));
         $roleSlug = Str::upper((string) ($user->userType?->slug ?? ''));
 
+        $isAdmin = in_array('ADMIN', [$roleName, $roleSlug], true);
         $isChed = in_array('CHED', [$roleName, $roleSlug], true);
         $isChedLo = in_array('CHED LO', [$roleName, $roleSlug], true)
             || in_array('CHED-LO', [$roleSlug], true);
 
-        return $isChed || $isChedLo;
+        return $isAdmin || $isChed || $isChedLo;
     }
 }
