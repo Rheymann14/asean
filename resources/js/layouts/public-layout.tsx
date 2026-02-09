@@ -12,7 +12,7 @@ export const PUBLIC_NAV_ITEMS: NavItem[] = [
     { label: 'Home', href: '/' },
     { label: 'Venue', href: '/venue' },
     { label: 'Event', href: '/event' },
-    { label: 'Issuances', href: '/issuances' },
+    { label: 'Resources', href: '/issuances' },
     { label: 'Contact Us', href: '/contact-us' },
 ];
 
@@ -354,7 +354,7 @@ export default function PublicLayout({
                                     {[
                                         { label: 'Venue', href: '/venue' },
                                         { label: 'Event', href: '/event' },
-                                        { label: 'Issuances', href: '/issuances' },
+                                        { label: 'Resources', href: '/issuances' },
                                         { label: 'Contact Us', href: '/contact-us' },
                                     ].map((item) => (
                                         <li key={item.href}>
