@@ -86,7 +86,7 @@ class ParticipantDashboardController extends Controller
             Storage::disk('public')->delete($user->profile_photo_path);
         }
 
-        $path = $request->file('profile_photo')->store('profile-photos', 'public');
+        $path = $request->file('profile_photo')->store('profile-image', 'public');
         $user->profile_photo_path = $path;
         $user->save();
 

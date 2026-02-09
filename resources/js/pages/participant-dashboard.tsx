@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import {
-    Camera,
     Copy,
     Download,
     Flag,
@@ -441,8 +440,6 @@ export default function ParticipantDashboard({ participant }: PageProps) {
     const [previewOpen, setPreviewOpen] = React.useState(false);
 
     const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
-    const selfieInputRef = React.useRef<HTMLInputElement | null>(null);
-
     const fullContactNumber = [participant.contact_country_code, participant.contact_number].filter(Boolean).join(' ');
     const honorificTitle =
         participant.honorific_title === 'other'
@@ -1142,7 +1139,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                         Profile photo
                                                     </div>
                                                     <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                                        Upload an image or take a selfie for your badge.
+                                                        Upload an image for your badge.
                                                     </div>
                                                 </div>
                                             </div>
@@ -1169,7 +1166,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                     </div>
                                                 </div>
 
-                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="grid gap-3">
                                                     <Button
                                                         type="button"
                                                         className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
@@ -1177,15 +1174,6 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                     >
                                                         <Upload className="mr-2 h-4 w-4" />
                                                         Upload image
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        className="border-slate-200/70 bg-white/70"
-                                                        onClick={() => selfieInputRef.current?.click()}
-                                                    >
-                                                        <Camera className="mr-2 h-4 w-4" />
-                                                        Take a selfie
                                                     </Button>
                                                 </div>
 
@@ -1225,14 +1213,6 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 ref={uploadInputRef}
                                                 type="file"
                                                 accept="image/*"
-                                                className="hidden"
-                                                onChange={handleImageChange}
-                                            />
-                                            <input
-                                                ref={selfieInputRef}
-                                                type="file"
-                                                accept="image/*"
-                                                capture="user"
                                                 className="hidden"
                                                 onChange={handleImageChange}
                                             />
