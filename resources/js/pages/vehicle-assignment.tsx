@@ -321,15 +321,6 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                             </div>
                         </div>
 
-                        <Button
-                            type="button"
-                            onClick={assignBulk}
-                            disabled={!selectedIds.length || assignmentForm.processing}
-                            className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
-                        >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Assign Selected Participants
-                        </Button>
                         {assignmentForm.errors.participant_ids ? (
                             <p className="text-xs text-rose-500">{assignmentForm.errors.participant_ids}</p>
                         ) : null}
