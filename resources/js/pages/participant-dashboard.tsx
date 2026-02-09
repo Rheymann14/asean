@@ -1,11 +1,14 @@
 import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,8 +30,31 @@ type Participant = {
     name: string;
     email: string;
     contact_number?: string | null;
+    contact_country_code?: string | null;
+    honorific_title?: string | null;
+    honorific_other?: string | null;
+    given_name?: string | null;
+    middle_name?: string | null;
+    family_name?: string | null;
+    suffix?: string | null;
+    sex_assigned_at_birth?: string | null;
     country?: Country | null;
+    organization_name?: string | null;
+    position_title?: string | null;
+    user_type?: string | null;
+    other_user_type?: string | null;
+    ip_group_name?: string | null;
     food_restrictions?: string[];
+    dietary_allergies?: string | null;
+    dietary_other?: string | null;
+    accessibility_needs?: string[];
+    accessibility_other?: string | null;
+    emergency_contact_name?: string | null;
+    emergency_contact_relationship?: string | null;
+    emergency_contact_phone?: string | null;
+    emergency_contact_email?: string | null;
+    consent_contact_sharing?: boolean;
+    consent_photo_video?: boolean;
 };
 
 type PageProps = {
@@ -37,15 +63,38 @@ type PageProps = {
 
 const FOOD_RESTRICTION_LABELS: Record<string, string> = {
     vegetarian: 'Vegetarian',
-    vegan: 'Vegan',
     halal: 'Halal',
-    kosher: 'Kosher',
-    gluten_free: 'Gluten-free',
-    lactose_intolerant: 'Lactose intolerant',
-    nut_allergy: 'Nut allergy',
-    seafood_allergy: 'Seafood allergy',
     allergies: 'Allergies',
     other: 'Other',
+};
+
+const DIETARY_PREFERENCE_OPTIONS = [
+    { value: 'vegetarian', label: 'Vegetarian' },
+    { value: 'halal', label: 'Halal' },
+    { value: 'allergies', label: 'Allergies (please specify)' },
+    { value: 'other', label: 'Other (please specify)' },
+] as const;
+
+const ACCESSIBILITY_NEEDS_OPTIONS = [
+    { value: 'wheelchair_access', label: 'Wheelchair access' },
+    { value: 'sign_language_interpreter', label: 'Sign language interpreter' },
+    { value: 'assistive_technology_support', label: 'Assistive technology support' },
+    { value: 'other', label: 'Other accommodations' },
+] as const;
+
+const HONORIFIC_LABELS: Record<string, string> = {
+    mr: 'Mr.',
+    mrs: 'Mrs.',
+    ms: 'Ms.',
+    miss: 'Miss',
+    dr: 'Dr.',
+    prof: 'Prof.',
+    other: 'Other',
+};
+
+const SEX_ASSIGNED_LABELS: Record<string, string> = {
+    male: 'Male',
+    female: 'Female',
 };
 
 function getFlagSrc(country?: Country | null) {
@@ -341,8 +390,16 @@ function IdCardPreview({
 
 export default function ParticipantDashboard({ participant }: PageProps) {
     const flagSrc = getFlagSrc(participant.country);
+    const form = useForm({
+        has_food_restrictions: (participant.food_restrictions ?? []).length > 0,
+        food_restrictions: participant.food_restrictions ?? [],
+        dietary_allergies: participant.dietary_allergies ?? '',
+        dietary_other: participant.dietary_other ?? '',
+        accessibility_needs: participant.accessibility_needs ?? [],
+        accessibility_other: participant.accessibility_other ?? '',
+    });
 
-    const foodRestrictionLabels = React.useMemo(
+    const dietaryPreferenceLabels = React.useMemo(
         () =>
             (participant.food_restrictions ?? []).map(
                 (value) => FOOD_RESTRICTION_LABELS[value] ?? value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
@@ -359,6 +416,21 @@ export default function ParticipantDashboard({ participant }: PageProps) {
 
     // ✅ opens full-size preview only when needed
     const [previewOpen, setPreviewOpen] = React.useState(false);
+
+    const fullContactNumber = [participant.contact_country_code, participant.contact_number].filter(Boolean).join(' ');
+    const honorificTitle =
+        participant.honorific_title === 'other'
+            ? participant.honorific_other || 'Other'
+            : (participant.honorific_title ? HONORIFIC_LABELS[participant.honorific_title] : undefined);
+    const sexAssignedLabel = participant.sex_assigned_at_birth ? SEX_ASSIGNED_LABELS[participant.sex_assigned_at_birth] : undefined;
+
+    const accessibilityLabels = React.useMemo(
+        () =>
+            (participant.accessibility_needs ?? []).map(
+                (value) => ACCESSIBILITY_NEEDS_OPTIONS.find((option) => option.value === value)?.label ?? value,
+            ),
+        [participant.accessibility_needs],
+    );
 
     React.useEffect(() => {
         let mounted = true;
@@ -413,6 +485,30 @@ export default function ParticipantDashboard({ participant }: PageProps) {
         a.click();
         a.remove();
         toast.success('QR code downloaded.');
+    };
+
+    const toggleFoodRestriction = (value: string) => {
+        const next = form.data.food_restrictions.includes(value)
+            ? form.data.food_restrictions.filter((item) => item !== value)
+            : [...form.data.food_restrictions, value];
+        form.setData('food_restrictions', next);
+        form.setData('has_food_restrictions', next.length > 0);
+    };
+
+    const toggleAccessibilityNeed = (value: string) => {
+        const next = form.data.accessibility_needs.includes(value)
+            ? form.data.accessibility_needs.filter((item) => item !== value)
+            : [...form.data.accessibility_needs, value];
+        form.setData('accessibility_needs', next);
+    };
+
+    const handleDietarySubmit = (event: React.FormEvent) => {
+        event.preventDefault();
+        form.patch('/participant-dashboard/preferences', {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Dietary and accessibility preferences updated.'),
+            onError: () => toast.error('Unable to update preferences.'),
+        });
     };
 
     return (
@@ -595,22 +691,264 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Food Restrictions</div>
-                                        <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
-                                            {foodRestrictionLabels.length > 0 ? (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {foodRestrictionLabels.map((label) => (
-                                                        <Badge key={label} variant="secondary" className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
-                                                            {label}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-sm text-slate-600 dark:text-slate-300">No food restrictions selected.</p>
-                                            )}
+                                    <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                        <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Registration Details</div>
+                                        <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                            Personal information, contact & organization, and additional info.
+                                        </div>
+
+                                        <div className="mt-4 grid gap-6 lg:grid-cols-2">
+                                            <div className="space-y-2">
+                                                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    Personal information
+                                                </h4>
+                                                <dl className="space-y-2 text-sm">
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Honorific</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{honorificTitle || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Given name</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.given_name || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Middle name</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.middle_name || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Family name</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.family_name || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Suffix</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.suffix || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Sex assigned at birth</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{sexAssignedLabel || '—'}</dd>
+                                                    </div>
+                                                </dl>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    Contact & organization
+                                                </h4>
+                                                <dl className="space-y-2 text-sm">
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Email</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.email}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Contact number</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{fullContactNumber || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Organization</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.organization_name || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Position title</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.position_title || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Registrant type</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                            {participant.user_type || participant.other_user_type || '—'}
+                                                        </dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">IP group</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.ip_group_name || '—'}</dd>
+                                                    </div>
+                                                </dl>
+                                            </div>
+
+                                            <div className="space-y-2 lg:col-span-2">
+                                                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    Additional info
+                                                </h4>
+                                                <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Dietary preferences</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                            {dietaryPreferenceLabels.length ? dietaryPreferenceLabels.join(', ') : 'None'}
+                                                        </dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Dietary allergies</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.dietary_allergies || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Dietary notes</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.dietary_other || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Accessibility needs</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                            {accessibilityLabels.length ? accessibilityLabels.join(', ') : 'None'}
+                                                        </dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Accessibility notes</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.accessibility_other || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Emergency contact</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_name || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Emergency relationship</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_relationship || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Emergency phone</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_phone || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Emergency email</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">{participant.emergency_contact_email || '—'}</dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Consent to contact sharing</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                            {participant.consent_contact_sharing ? 'Yes' : 'No'}
+                                                        </dd>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <dt className="text-slate-500 dark:text-slate-400">Consent to photo/video</dt>
+                                                        <dd className="font-medium text-slate-900 dark:text-slate-100">
+                                                            {participant.consent_photo_video ? 'Yes' : 'No'}
+                                                        </dd>
+                                                    </div>
+                                                </dl>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    <form onSubmit={handleDietarySubmit} className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                        <div className="flex flex-col gap-1">
+                                            <div className="text-base font-semibold text-slate-900 dark:text-slate-100">Update dietary & accessibility</div>
+                                            <div className="text-sm text-slate-600 dark:text-slate-300">
+                                                Adjust your dietary restrictions and accessibility needs.
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 space-y-4">
+                                            <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/40">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00359c]/10 text-[#00359c]">
+                                                        1
+                                                    </span>
+                                                    Dietary preferences
+                                                </div>
+                                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                    Select all that apply.
+                                                </p>
+
+                                                <div className="mt-4 grid gap-4">
+                                                    <div className="grid gap-2">
+                                                        <Label className="text-sm font-medium">Dietary preferences</Label>
+                                                        <div className="grid gap-3 sm:grid-cols-2">
+                                                            {DIETARY_PREFERENCE_OPTIONS.map((option) => (
+                                                                <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                                                                    <Checkbox
+                                                                        checked={form.data.food_restrictions.includes(option.value)}
+                                                                        onCheckedChange={() => toggleFoodRestriction(option.value)}
+                                                                    />
+                                                                    <span>{option.label}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                        {form.errors.food_restrictions || form.errors['food_restrictions.0'] ? (
+                                                            <p className="text-xs text-rose-500">
+                                                                {form.errors.food_restrictions || form.errors['food_restrictions.0']}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
+                                                        <Input
+                                                            id="dietary_allergies"
+                                                            value={form.data.dietary_allergies}
+                                                            onChange={(event) => form.setData('dietary_allergies', event.target.value)}
+                                                            placeholder="List any allergies"
+                                                        />
+                                                        {form.errors.dietary_allergies ? (
+                                                            <p className="text-xs text-rose-500">{form.errors.dietary_allergies}</p>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="dietary_other">Other (please specify)</Label>
+                                                        <Input
+                                                            id="dietary_other"
+                                                            value={form.data.dietary_other}
+                                                            onChange={(event) => form.setData('dietary_other', event.target.value)}
+                                                            placeholder="Other dietary requests"
+                                                        />
+                                                        {form.errors.dietary_other ? (
+                                                            <p className="text-xs text-rose-500">{form.errors.dietary_other}</p>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/40">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00359c]/10 text-[#00359c]">
+                                                        2
+                                                    </span>
+                                                    Accessibility needs
+                                                </div>
+                                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                    Tell us what accommodations you need.
+                                                </p>
+
+                                                <div className="mt-4 grid gap-4">
+                                                    <div className="grid gap-2">
+                                                        <Label className="text-sm font-medium">Accessibility needs</Label>
+                                                        <div className="grid gap-3 sm:grid-cols-2">
+                                                            {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => (
+                                                                <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                                                                    <Checkbox
+                                                                        checked={form.data.accessibility_needs.includes(option.value)}
+                                                                        onCheckedChange={() => toggleAccessibilityNeed(option.value)}
+                                                                    />
+                                                                    <span>{option.label}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                        {form.errors.accessibility_needs || form.errors['accessibility_needs.0'] ? (
+                                                            <p className="text-xs text-rose-500">
+                                                                {form.errors.accessibility_needs || form.errors['accessibility_needs.0']}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
+                                                        <Input
+                                                            id="accessibility_other"
+                                                            value={form.data.accessibility_other}
+                                                            onChange={(event) => form.setData('accessibility_other', event.target.value)}
+                                                            placeholder="Other accommodations"
+                                                        />
+                                                        {form.errors.accessibility_other ? (
+                                                            <p className="text-xs text-rose-500">{form.errors.accessibility_other}</p>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-end">
+                                                <Button type="submit" disabled={form.processing} className="bg-[#00359c] text-white hover:bg-[#00359c]/90">
+                                                    Save preferences
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </form>
 
                                     {!participant.qr_payload ? (
                                         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">

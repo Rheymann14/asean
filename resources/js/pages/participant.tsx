@@ -196,7 +196,7 @@ const ENDPOINTS = {
 const PRIMARY_BTN =
     'bg-[#00359c] text-white hover:bg-[#00359c]/90 focus-visible:ring-[#00359c]/30 dark:bg-[#00359c] dark:hover:bg-[#00359c]/90';
 
-const FOOD_RESTRICTION_OPTIONS = [
+const DIETARY_PREFERENCE_OPTIONS = [
     { value: 'vegetarian', label: 'Vegetarian' },
     { value: 'halal', label: 'Halal' },
     { value: 'allergies', label: 'Allergies (please specify)' },
@@ -2320,7 +2320,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                                 <div className="space-y-1">
                                                                                     <div className="flex flex-wrap gap-1">
                                                                                         {(p.food_restrictions ?? []).map((r) => {
-                                                                                            const label = FOOD_RESTRICTION_OPTIONS.find((o) => o.value === r)?.label ?? r;
+                                                                                            const label = DIETARY_PREFERENCE_OPTIONS.find((o) => o.value === r)?.label ?? r;
                                                                                             return (
                                                                                                 <Badge key={r} variant="secondary" className="text-xs">
                                                                                                     {label}
@@ -3345,7 +3345,7 @@ export default function ParticipantPage(props: PageProps) {
                                                 </div>
                                             </div>
                                             <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                                {FOOD_RESTRICTION_OPTIONS.map((option) => {
+                                                {DIETARY_PREFERENCE_OPTIONS.map((option) => {
                                                     const checked = participantForm.data.food_restrictions.includes(option.value);
 
                                                     return (

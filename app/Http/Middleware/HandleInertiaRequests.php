@@ -38,7 +38,7 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
         $user = $request->user();
-        $user?->loadMissing('userType');
+        $user?->loadMissing('userType', 'country');
 
         return [
             ...parent::share($request),

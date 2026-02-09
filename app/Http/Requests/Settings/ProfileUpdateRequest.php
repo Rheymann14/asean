@@ -27,6 +27,14 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'has_food_restrictions' => ['nullable', 'boolean'],
+            'food_restrictions' => ['nullable', 'array'],
+            'food_restrictions.*' => ['string', 'max:255'],
+            'dietary_allergies' => ['nullable', 'string', 'max:255'],
+            'dietary_other' => ['nullable', 'string', 'max:255'],
+            'accessibility_needs' => ['nullable', 'array'],
+            'accessibility_needs.*' => ['string', 'max:255'],
+            'accessibility_other' => ['nullable', 'string', 'max:255'],
         ];
     }
 }
