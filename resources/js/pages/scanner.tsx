@@ -1368,9 +1368,7 @@ export default function Scanner(props: PageProps) {
                                                     <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                                                         Checked-in:
                                                     </div>
-                                                    <div className="mt-1 text-xs font-semibold text-slate-900 dark:text-slate-100">
-                                                        {result.checked_in_event.title}
-                                                    </div>
+                                                    
                                                 </div>
                                             ) : null}
                                         </div>
