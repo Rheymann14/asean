@@ -140,6 +140,13 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
         participant_ids: [] as number[],
     });
 
+    React.useEffect(() => {
+        if (!selectedEventId) return;
+        if (assignmentForm.data.programme_id !== selectedEventId) {
+            assignmentForm.setData('programme_id', selectedEventId);
+        }
+    }, [assignmentForm.data.programme_id, assignmentForm.setData, selectedEventId]);
+
     const onChangeEvent = (value: string) => {
         assignmentForm.setData('programme_id', value);
         assignmentForm.setData('vehicle_id', '');
