@@ -79,6 +79,10 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
                 ->name('participant.dashboard');
             Route::patch('/participant-dashboard/preferences', [ParticipantDashboardController::class, 'updatePreferences'])
                 ->name('participant-dashboard.preferences.update');
+            Route::post('/participant-dashboard/photo', [ParticipantDashboardController::class, 'updatePhoto'])
+                ->name('participant-dashboard.photo.update');
+            Route::delete('/participant-dashboard/photo', [ParticipantDashboardController::class, 'destroyPhoto'])
+                ->name('participant-dashboard.photo.destroy');
             Route::get('/event-list', [ProgrammeController::class, 'participantIndex'])
                 ->name('event-list');
             Route::post('/event-list/{programme}/join', [ProgrammeController::class, 'join'])

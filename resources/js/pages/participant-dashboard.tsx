@@ -43,6 +43,7 @@ type Participant = {
     qr_payload: string; // ✅ encrypted/opaque payload (NOT user.id)
     name: string;
     email: string;
+    profile_photo_url?: string | null;
     contact_number?: string | null;
     contact_country_code?: string | null;
     honorific_title?: string | null;
@@ -427,7 +428,14 @@ export default function ParticipantDashboard({ participant }: PageProps) {
 
     const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
     const [qrLoading, setQrLoading] = React.useState(true);
-    const [profileImage, setProfileImage] = React.useState<string | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = React.useState<string | null>(
+        participant.profile_photo_url ?? null,
+    );
+    const [profileImageObjectUrl, setProfileImageObjectUrl] = React.useState<string | null>(null);
+    const [selectedProfileImage, setSelectedProfileImage] = React.useState<File | null>(null);
+    const photoForm = useForm<{ profile_photo: File | null }>({
+        profile_photo: null,
+    });
 
     // ✅ opens full-size preview only when needed
     const [previewOpen, setPreviewOpen] = React.useState(false);
@@ -509,20 +517,62 @@ export default function ParticipantDashboard({ participant }: PageProps) {
         const file = event.target.files?.[0];
         if (!file) return;
         const url = URL.createObjectURL(file);
-        setProfileImage(url);
+        if (profileImageObjectUrl) {
+            URL.revokeObjectURL(profileImageObjectUrl);
+        }
+        setProfileImageObjectUrl(url);
+        setProfileImagePreview(url);
+        setSelectedProfileImage(file);
+        photoForm.setData('profile_photo', file);
         event.target.value = '';
     };
 
     React.useEffect(() => {
         return () => {
-            if (profileImage) {
-                URL.revokeObjectURL(profileImage);
+            if (profileImageObjectUrl) {
+                URL.revokeObjectURL(profileImageObjectUrl);
             }
         };
-    }, [profileImage]);
+    }, [profileImageObjectUrl]);
+
+    React.useEffect(() => {
+        if (!selectedProfileImage && participant.profile_photo_url !== profileImagePreview) {
+            setProfileImagePreview(participant.profile_photo_url ?? null);
+        }
+    }, [participant.profile_photo_url, profileImagePreview, selectedProfileImage]);
+
+    const saveProfileImage = () => {
+        if (!selectedProfileImage) return;
+        photoForm.post('/participant-dashboard/photo', {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Profile photo saved.');
+                setSelectedProfileImage(null);
+                if (profileImageObjectUrl) {
+                    URL.revokeObjectURL(profileImageObjectUrl);
+                    setProfileImageObjectUrl(null);
+                }
+            },
+            onError: () => toast.error('Unable to save profile photo.'),
+        });
+    };
 
     const removeProfileImage = () => {
-        setProfileImage(null);
+        if (!profileImagePreview) return;
+        photoForm.setData('profile_photo', null);
+        photoForm.delete('/participant-dashboard/photo', {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Profile photo removed.');
+                setSelectedProfileImage(null);
+                setProfileImagePreview(null);
+                if (profileImageObjectUrl) {
+                    URL.revokeObjectURL(profileImageObjectUrl);
+                }
+                setProfileImageObjectUrl(null);
+            },
+            onError: () => toast.error('Unable to remove profile photo.'),
+        });
     };
 
     const toggleFoodRestriction = (value: string) => {
@@ -1097,12 +1147,12 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 </div>
                                             </div>
 
-                                            <div className="mt-4 flex flex-col gap-4">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
-                                                        {profileImage ? (
+                                                <div className="mt-4 flex flex-col gap-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
+                                                        {profileImagePreview ? (
                                                             <img
-                                                                src={profileImage}
+                                                                src={profileImagePreview}
                                                                 alt="Profile preview"
                                                                 className="h-full w-full object-cover"
                                                             />
@@ -1111,7 +1161,11 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                         )}
                                                     </div>
                                                     <div className="text-sm text-slate-600 dark:text-slate-300">
-                                                        {profileImage ? 'Preview ready for your profile.' : 'No photo uploaded yet.'}
+                                                        {selectedProfileImage
+                                                            ? 'Ready to save your new profile photo.'
+                                                            : profileImagePreview
+                                                                ? 'Current profile photo on file.'
+                                                                : 'No photo uploaded yet.'}
                                                     </div>
                                                 </div>
 
@@ -1138,10 +1192,18 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 <div className="flex flex-wrap gap-2">
                                                     <Button
                                                         type="button"
+                                                        className="bg-emerald-600 text-white hover:bg-emerald-600/90"
+                                                        onClick={saveProfileImage}
+                                                        disabled={!selectedProfileImage || photoForm.processing}
+                                                    >
+                                                        Save photo
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
                                                         variant="outline"
                                                         className="border-slate-200/70 bg-white/70"
                                                         onClick={() => uploadInputRef.current?.click()}
-                                                        disabled={!profileImage}
+                                                        disabled={!profileImagePreview}
                                                     >
                                                         <Pencil className="mr-2 h-4 w-4" />
                                                         Edit
@@ -1151,7 +1213,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                         variant="outline"
                                                         className="border-rose-200/70 text-rose-600 hover:text-rose-700"
                                                         onClick={removeProfileImage}
-                                                        disabled={!profileImage}
+                                                        disabled={!profileImagePreview || photoForm.processing}
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                         Remove
