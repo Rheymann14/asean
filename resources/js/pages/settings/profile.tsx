@@ -1,3 +1,4 @@
+import * as React from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { send } from '@/routes/verification';
 import { type BreadcrumbItem, type SharedData } from '@/types';
@@ -9,6 +10,7 @@ import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
@@ -22,6 +24,20 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const FOOD_RESTRICTION_OPTIONS = [
+    { value: 'vegetarian', label: 'Vegetarian' },
+    { value: 'halal', label: 'Halal' },
+    { value: 'allergies', label: 'Allergies (please specify)' },
+    { value: 'other', label: 'Other (please specify)' },
+] as const;
+
+const ACCESSIBILITY_NEEDS_OPTIONS = [
+    { value: 'wheelchair_access', label: 'Wheelchair access' },
+    { value: 'sign_language_interpreter', label: 'Sign language interpreter' },
+    { value: 'assistive_technology_support', label: 'Assistive technology support' },
+    { value: 'other', label: 'Other accommodations' },
+] as const;
+
 export default function Profile({
     mustVerifyEmail,
     status,
@@ -31,6 +47,8 @@ export default function Profile({
 }) {
     const { auth } = usePage<SharedData>().props;
     const user = auth.user;
+    const [selectedFoodRestrictions, setSelectedFoodRestrictions] = React.useState<string[]>(() => user.food_restrictions ?? []);
+    const [selectedAccessibilityNeeds, setSelectedAccessibilityNeeds] = React.useState<string[]>(() => user.accessibility_needs ?? []);
 
     const honorificLabels: Record<string, string> = {
         mr: 'Mr.',
@@ -47,7 +65,7 @@ export default function Profile({
         female: 'Female',
     };
 
-    const foodRestrictionLabels: Record<string, string> = {
+    const foodRestrictionLabelMap: Record<string, string> = {
         vegetarian: 'Vegetarian',
         halal: 'Halal',
         allergies: 'Allergies',
@@ -67,12 +85,24 @@ export default function Profile({
         user.honorific_title === 'other'
             ? user.honorific_other || 'Other'
             : (user.honorific_title ? honorificLabels[user.honorific_title] : undefined);
-    const foodRestrictions = (user.food_restrictions ?? [])
-        .map((item) => foodRestrictionLabels[item] ?? item)
+    const foodRestrictionLabels = (user.food_restrictions ?? [])
+        .map((item) => foodRestrictionLabelMap[item] ?? item)
         .filter(Boolean);
-    const accessibilityNeeds = (user.accessibility_needs ?? [])
+    const accessibilityNeedLabels = (user.accessibility_needs ?? [])
         .map((item) => accessibilityLabels[item] ?? item)
         .filter(Boolean);
+
+    const toggleFoodRestriction = (value: string) => {
+        setSelectedFoodRestrictions((prev) =>
+            prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
+        );
+    };
+
+    const toggleAccessibilityNeed = (value: string) => {
+        setSelectedAccessibilityNeeds((prev) =>
+            prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
+        );
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -131,6 +161,94 @@ export default function Profile({
                                         className="mt-2"
                                         message={errors.email}
                                     />
+                                </div>
+
+                                <div className="space-y-4 rounded-xl border border-slate-200/70 bg-white/70 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                                    <div>
+                                        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                            Dietary & accessibility
+                                        </h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            Update your dietary restrictions and accessibility needs.
+                                        </p>
+                                    </div>
+
+                                    <input type="hidden" name="has_food_restrictions" value={selectedFoodRestrictions.length > 0 ? '1' : '0'} />
+                                    {selectedFoodRestrictions.map((restriction) => (
+                                        <input key={restriction} type="hidden" name="food_restrictions[]" value={restriction} />
+                                    ))}
+                                    {selectedAccessibilityNeeds.map((need) => (
+                                        <input key={need} type="hidden" name="accessibility_needs[]" value={need} />
+                                    ))}
+
+                                    <div className="grid gap-3">
+                                        <Label className="text-sm font-medium">Food restrictions</Label>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            {FOOD_RESTRICTION_OPTIONS.map((option) => (
+                                                <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                                                    <Checkbox
+                                                        checked={selectedFoodRestrictions.includes(option.value)}
+                                                        onCheckedChange={() => toggleFoodRestriction(option.value)}
+                                                    />
+                                                    <span>{option.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <InputError
+                                            message={errors.food_restrictions || errors['food_restrictions.0']}
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
+                                        <Input
+                                            id="dietary_allergies"
+                                            name="dietary_allergies"
+                                            defaultValue={user.dietary_allergies ?? ''}
+                                            placeholder="List any allergies"
+                                        />
+                                        <InputError message={errors.dietary_allergies} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="dietary_other">Dietary notes (optional)</Label>
+                                        <Input
+                                            id="dietary_other"
+                                            name="dietary_other"
+                                            defaultValue={user.dietary_other ?? ''}
+                                            placeholder="Other dietary requests"
+                                        />
+                                        <InputError message={errors.dietary_other} />
+                                    </div>
+
+                                    <div className="grid gap-3">
+                                        <Label className="text-sm font-medium">Accessibility needs</Label>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => (
+                                                <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                                                    <Checkbox
+                                                        checked={selectedAccessibilityNeeds.includes(option.value)}
+                                                        onCheckedChange={() => toggleAccessibilityNeed(option.value)}
+                                                    />
+                                                    <span>{option.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <InputError
+                                            message={errors.accessibility_needs || errors['accessibility_needs.0']}
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
+                                        <Input
+                                            id="accessibility_other"
+                                            name="accessibility_other"
+                                            defaultValue={user.accessibility_other ?? ''}
+                                            placeholder="Other accommodations"
+                                        />
+                                        <InputError message={errors.accessibility_other} />
+                                    </div>
                                 </div>
 
                                 {mustVerifyEmail &&
@@ -291,15 +409,15 @@ export default function Profile({
 
                             <div className="space-y-4">
                                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                    Preferences
+                                    Additional info
                                 </h3>
                                 <dl className="space-y-3">
                                     <div className="flex items-start justify-between gap-4">
                                         <dt className="text-sm text-slate-500 dark:text-slate-400">Food restrictions</dt>
                                         <dd className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                            {foodRestrictions.length ? (
+                                            {foodRestrictionLabels.length ? (
                                                 <div className="flex flex-wrap justify-end gap-2">
-                                                    {foodRestrictions.map((label) => (
+                                                    {foodRestrictionLabels.map((label) => (
                                                         <Badge key={label} variant="secondary" className="rounded-full">
                                                             {label}
                                                         </Badge>
@@ -325,9 +443,9 @@ export default function Profile({
                                     <div className="flex items-start justify-between gap-4">
                                         <dt className="text-sm text-slate-500 dark:text-slate-400">Accessibility needs</dt>
                                         <dd className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                            {accessibilityNeeds.length ? (
+                                            {accessibilityNeedLabels.length ? (
                                                 <div className="flex flex-wrap justify-end gap-2">
-                                                    {accessibilityNeeds.map((label) => (
+                                                    {accessibilityNeedLabels.map((label) => (
                                                         <Badge key={label} variant="secondary" className="rounded-full">
                                                             {label}
                                                         </Badge>
@@ -356,34 +474,26 @@ export default function Profile({
                                             {user.consent_photo_video ? 'Yes' : 'No'}
                                         </dd>
                                     </div>
-                                </dl>
-                            </div>
-
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                    Emergency contact
-                                </h3>
-                                <dl className="space-y-3">
                                     <div className="flex items-start justify-between gap-4">
-                                        <dt className="text-sm text-slate-500 dark:text-slate-400">Name</dt>
+                                        <dt className="text-sm text-slate-500 dark:text-slate-400">Emergency contact</dt>
                                         <dd className="text-sm font-medium text-slate-900 dark:text-slate-100">
                                             {formatValue(user.emergency_contact_name)}
                                         </dd>
                                     </div>
                                     <div className="flex items-start justify-between gap-4">
-                                        <dt className="text-sm text-slate-500 dark:text-slate-400">Relationship</dt>
+                                        <dt className="text-sm text-slate-500 dark:text-slate-400">Emergency relationship</dt>
                                         <dd className="text-sm font-medium text-slate-900 dark:text-slate-100">
                                             {formatValue(user.emergency_contact_relationship)}
                                         </dd>
                                     </div>
                                     <div className="flex items-start justify-between gap-4">
-                                        <dt className="text-sm text-slate-500 dark:text-slate-400">Phone</dt>
+                                        <dt className="text-sm text-slate-500 dark:text-slate-400">Emergency phone</dt>
                                         <dd className="text-sm font-medium text-slate-900 dark:text-slate-100">
                                             {formatValue(user.emergency_contact_phone)}
                                         </dd>
                                     </div>
                                     <div className="flex items-start justify-between gap-4">
-                                        <dt className="text-sm text-slate-500 dark:text-slate-400">Email</dt>
+                                        <dt className="text-sm text-slate-500 dark:text-slate-400">Emergency email</dt>
                                         <dd className="text-sm font-medium text-slate-900 dark:text-slate-100">
                                             {formatValue(user.emergency_contact_email)}
                                         </dd>
