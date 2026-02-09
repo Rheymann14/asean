@@ -1220,14 +1220,7 @@ export default function ParticipantPage(props: PageProps) {
         return null;
     }, [participantForm.data.user_type_id, userTypeById, editingParticipant]);
 
-    const showFoodRestrictionsField = !isChedUserType(selectedParticipantUserType);
-
-    React.useEffect(() => {
-        if (!showFoodRestrictionsField && participantForm.data.food_restrictions.length > 0) {
-            participantForm.setData('food_restrictions', []);
-            participantForm.setData('has_food_restrictions', false);
-        }
-    }, [showFoodRestrictionsField, participantForm]);
+    const showFoodRestrictionsField = true;
 
     const stepWithErrors = React.useMemo(() => {
         const result = new Set<ParticipantFormStep>();
