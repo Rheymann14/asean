@@ -645,8 +645,20 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
 
                                 <div className="grid gap-5">
+                                    <div className="mt-3 rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2">
+                                        <p className="text-[11px] leading-snug text-amber-800">
+                                            Please accomplish this form in its entirety to register. Ensure that all required field(s) are duly completed before clicking <span className="font-semibold">Next</span> to proceed.
+                                        </p>
+
+                                        <p className="mt-1 text-[11px] leading-snug text-amber-800">
+                                            <span className="font-semibold uppercase tracking-wide">Note:</span>{' '}
+                                            Please enter your full government name as shown on your passport or government-issued ID.
+                                        </p>
+                                    </div>
+
                                     <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4">
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
                                             <div>
                                                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                                     Step {currentStep + 1} of {steps.length}
@@ -1551,7 +1563,14 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                                 </div>
                                             ) : null}
+
+                                            <span className="mt-3 block text-[11px] leading-snug text-amber-600/90">
+                                                Disclaimer: The organizing committee will make its best efforts to accommodate dietary preferences.
+                                                However, availability may be subject to venue and catering limitations.
+                                            </span>
+
                                         </div>
+
 
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between gap-3">
@@ -1673,6 +1692,11 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     <InputError message={showIfEmpty(err.accessibility_other, accessibilityOther)} />
                                                 </div>
                                             ) : null}
+
+                                            <span className="mt-3 block text-[11px] leading-snug text-amber-600/90">
+                                                Disclaimer: Accessibility requests will be addressed on a best efforts basis. While the committee strives to provide inclusive support, some accommodations may depend on venue facilities and resource availability.
+                                            </span>
+
 
                                         </div>
 
