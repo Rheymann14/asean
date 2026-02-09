@@ -213,7 +213,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Add Vehicle</CardTitle>
-                        <CardDescription>Example: Van 1</CardDescription>
+                        <CardDescription>Model/Color/Type Example: Innova Black SUV</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={submit} className="space-y-4">
@@ -222,7 +222,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                     <Label htmlFor="label">Vehicle name <span className="text-[11px] font-semibold text-red-600">*</span></Label>
                                     <Input
                                         id="label"
-                                        placeholder="Van 1"
+                                        placeholder="Innova Black SUV"
                                         value={form.data.label}
                                         onChange={(e) => form.setData('label', e.target.value)}
                                     />
@@ -316,7 +316,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                         <TableHead>Plate #</TableHead>
                                         <TableHead>Contact</TableHead>
                                         <TableHead>CHED LO In Charge</TableHead>
-                                        <TableHead>Participants</TableHead>
+                                        <TableHead>Passengers</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
