@@ -9,7 +9,7 @@ class ParticipantDashboardController extends Controller
 {
     public function show(Request $request)
     {
-        $user = $request->user()->load('country'); // make sure User has country() relation
+        $user = $request->user()->load(['country', 'userType']);
 
         return Inertia::render('participant-dashboard', [
             'participant' => [
@@ -18,6 +18,29 @@ class ParticipantDashboardController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'contact_number' => $user->contact_number,
+                'contact_country_code' => $user->contact_country_code,
+                'honorific_title' => $user->honorific_title,
+                'honorific_other' => $user->honorific_other,
+                'given_name' => $user->given_name,
+                'middle_name' => $user->middle_name,
+                'family_name' => $user->family_name,
+                'suffix' => $user->suffix,
+                'sex_assigned_at_birth' => $user->sex_assigned_at_birth,
+                'organization_name' => $user->organization_name,
+                'position_title' => $user->position_title,
+                'user_type' => $user->userType?->name,
+                'other_user_type' => $user->other_user_type,
+                'ip_group_name' => $user->ip_group_name,
+                'dietary_allergies' => $user->dietary_allergies,
+                'dietary_other' => $user->dietary_other,
+                'accessibility_needs' => $user->accessibility_needs ?? [],
+                'accessibility_other' => $user->accessibility_other,
+                'emergency_contact_name' => $user->emergency_contact_name,
+                'emergency_contact_relationship' => $user->emergency_contact_relationship,
+                'emergency_contact_phone' => $user->emergency_contact_phone,
+                'emergency_contact_email' => $user->emergency_contact_email,
+                'consent_contact_sharing' => (bool) $user->consent_contact_sharing,
+                'consent_photo_video' => (bool) $user->consent_photo_video,
                 'country' => $user->country ? [
                     'code' => $user->country->code,
                     'name' => $user->country->name,
@@ -27,5 +50,25 @@ class ParticipantDashboardController extends Controller
             ],
         ]);
 
+    }
+
+    public function updatePreferences(Request $request)
+    {
+        $validated = $request->validate([
+            'has_food_restrictions' => ['nullable', 'boolean'],
+            'food_restrictions' => ['nullable', 'array'],
+            'food_restrictions.*' => ['string', 'max:255'],
+            'dietary_allergies' => ['nullable', 'string', 'max:255'],
+            'dietary_other' => ['nullable', 'string', 'max:255'],
+            'accessibility_needs' => ['nullable', 'array'],
+            'accessibility_needs.*' => ['string', 'max:255'],
+            'accessibility_other' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $user = $request->user();
+        $user->fill($validated);
+        $user->save();
+
+        return back();
     }
 }
