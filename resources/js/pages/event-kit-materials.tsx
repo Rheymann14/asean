@@ -19,7 +19,6 @@ import {
     buildCertificatePrintBody,
     CERTIFICATE_PRINT_STYLES,
 } from '@/lib/certificates';
-import printJS from '@/lib/print-js';
 import { cn } from '@/lib/utils';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import {
