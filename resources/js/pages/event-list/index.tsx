@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { CalendarDays, MapPin, Users2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -98,25 +98,20 @@ function formatEventWindow(startsAt: string, endsAt?: string) {
 
 function getEventPhase(startsAt: string, endsAt: string | undefined, nowTs: number): EventPhase {
     const start = new Date(startsAt);
-    const startTs = start.getTime();
     const end = endsAt ? new Date(endsAt) : null;
-    const endTs = end ? end.getTime() : null;
+    const nowDateTs = toDateOnlyTimestamp(new Date(nowTs));
+    const startDateTs = toDateOnlyTimestamp(start);
+    const endDateTs = end ? toDateOnlyTimestamp(end) : null;
 
-    if (endTs !== null) {
-        if (nowTs < startTs) return 'upcoming';
-        if (nowTs <= endTs) return 'ongoing';
+    if (endDateTs !== null) {
+        if (nowDateTs < startDateTs) return 'upcoming';
+        if (nowDateTs <= endDateTs) return 'ongoing';
         return 'closed';
     }
 
-    if (nowTs < startTs) return 'upcoming';
-
-    const now = new Date(nowTs);
-    const sameDay =
-        now.getFullYear() === start.getFullYear() &&
-        now.getMonth() === start.getMonth() &&
-        now.getDate() === start.getDate();
-
-    return sameDay ? 'ongoing' : 'closed';
+    if (nowDateTs < startDateTs) return 'upcoming';
+    if (nowDateTs === startDateTs) return 'ongoing';
+    return 'closed';
 }
 
 function normalizeProgrammes(programmes: ProgrammeRow[], nowTs: number): EventItem[] {
