@@ -35,17 +35,25 @@ export function AppSidebar() {
     const roleSlug = (userType?.slug ?? '').toUpperCase();
     const isAdmin = roleName === 'ADMIN' || roleSlug === 'ADMIN';
     const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
+
+    // Table & Assignments collapsible section
+    const tableAssignmentsGroup: NavItem = {
+        title: 'Table & Assignments',
+        icon: Table,
+        items: [
+            {
+                title: 'Table Management',
+                href: '/table-assignment/create',
+            },
+            {
+                title: 'Table Assignment',
+                href: '/table-assignment/assignment',
+            },
+        ],
+    };
+
     const managementNavItems: NavItem[] = [
-        {
-            title: 'Create Table',
-            href: '/table-assignment/create',
-            icon: Table,
-        },
-        {
-            title: 'Table Assignment',
-            href: '/table-assignment/assignment',
-            icon: Table,
-        },
+        tableAssignmentsGroup,
         {
             title: 'Vehicle Management',
             href: '/vehicle-management',
@@ -118,9 +126,14 @@ export function AppSidebar() {
                   icon: Bus,
               },
               {
-                  title: 'Table Assignment',
-                  href: '/table-assignment',
+                  title: 'Table Monitoring',
                   icon: Table,
+                  items: [
+                      {
+                          title: 'Table Assignment',
+                          href: '/table-assignment',
+                      },
+                  ],
               },
           ];
 

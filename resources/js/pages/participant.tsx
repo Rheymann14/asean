@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -61,6 +62,9 @@ import {
     CalendarDays,
     MapPin,
     KeyRound,
+    ChevronLeft,
+    ChevronRight,
+    ChevronDown,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -205,6 +209,24 @@ const FOOD_RESTRICTION_OPTIONS = [
     { value: 'allergies', label: 'Allergies' },
     { value: 'other', label: 'Other' },
 ] as const;
+
+const PARTICIPANT_FORM_STEPS = [
+    { id: 1, label: 'Personal Information' },
+    { id: 2, label: 'Contact & Organization' },
+    { id: 3, label: 'Dietary & Accessibility' },
+    { id: 4, label: 'Additional Info' },
+] as const;
+
+type ParticipantFormStep = 1 | 2 | 3 | 4;
+
+const STEP_FIELDS: Record<ParticipantFormStep, string[]> = {
+    1: ['full_name', 'honorific_title', 'honorific_other', 'given_name', 'middle_name', 'family_name', 'suffix', 'sex_assigned_at_birth', 'email'],
+    2: ['contact_country_code', 'contact_number', 'organization_name', 'position_title', 'country_id', 'user_type_id', 'other_user_type'],
+    3: ['food_restrictions', 'dietary_allergies', 'dietary_other', 'accessibility_needs', 'accessibility_other'],
+    4: ['ip_affiliation', 'ip_group_name', 'emergency_contact_name', 'emergency_contact_relationship', 'emergency_contact_phone', 'emergency_contact_email', 'is_active'],
+};
+
+const ENTRIES_PER_PAGE_OPTIONS = [10, 20, 50, 100, 1000] as const;
 
 const ACCESSIBILITY_NEEDS_OPTIONS = [
     { value: 'wheelchair_access', label: 'Wheelchair access' },
@@ -854,6 +876,10 @@ export default function ParticipantPage(props: PageProps) {
     const [countryQuery, setCountryQuery] = React.useState('');
     const [userTypeQuery, setUserTypeQuery] = React.useState('');
     const [selectedParticipantIds, setSelectedParticipantIds] = React.useState<Set<number>>(new Set());
+    const [expandedRowIds, setExpandedRowIds] = React.useState<Set<number>>(new Set());
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const [entriesPerPage, setEntriesPerPage] = React.useState(10);
+    const [participantFormStep, setParticipantFormStep] = React.useState<ParticipantFormStep>(1);
     const [printOrientation, setPrintOrientation] = React.useState<PrintOrientation>('portrait');
     const [qrDataUrls, setQrDataUrls] = React.useState<Record<number, string>>({});
     const qrCacheRef = React.useRef<Record<number, string>>({});
@@ -1113,6 +1139,16 @@ export default function ParticipantPage(props: PageProps) {
         participantEventFilter,
     ]);
 
+    const totalPages = React.useMemo(
+        () => Math.max(1, Math.ceil(filteredParticipants.length / entriesPerPage)),
+        [filteredParticipants.length, entriesPerPage],
+    );
+
+    const paginatedParticipants = React.useMemo(() => {
+        const start = (currentPage - 1) * entriesPerPage;
+        return filteredParticipants.slice(start, start + entriesPerPage);
+    }, [filteredParticipants, currentPage, entriesPerPage]);
+
     const filteredCountries = React.useMemo(() => {
         const q = countryQuery.trim().toLowerCase();
         return countries.filter((c) => (!q ? true : c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)));
@@ -1136,7 +1172,7 @@ export default function ParticipantPage(props: PageProps) {
 
     const participantById = React.useMemo(() => new Map(resolvedParticipants.map((p) => [p.id, p])), [resolvedParticipants]);
 
-    const selectableVisibleParticipants = React.useMemo(() => filteredParticipants, [filteredParticipants]);
+    const selectableVisibleParticipants = React.useMemo(() => paginatedParticipants, [paginatedParticipants]);
 
     const selectedParticipantsPrintable = React.useMemo(() => {
         const out: ParticipantRow[] = [];
@@ -1167,6 +1203,29 @@ export default function ParticipantPage(props: PageProps) {
             participantForm.setData('has_food_restrictions', false);
         }
     }, [showFoodRestrictionsField, participantForm]);
+
+    const stepWithErrors = React.useMemo(() => {
+        const result = new Set<ParticipantFormStep>();
+        for (const [step, fields] of Object.entries(STEP_FIELDS)) {
+            if (fields.some((field) => !!(participantForm.errors as Record<string, string>)[field])) {
+                result.add(Number(step) as ParticipantFormStep);
+            }
+        }
+        return result;
+    }, [participantForm.errors]);
+
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [participantQuery, participantCountryFilter, participantTypeFilter, participantStatusFilter, participantEventFilter, entriesPerPage]);
+
+    const toggleRowExpand = React.useCallback((id: number) => {
+        setExpandedRowIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }, []);
 
     const allVisibleSelected =
         selectableVisibleParticipants.length > 0 &&
@@ -1238,6 +1297,7 @@ export default function ParticipantPage(props: PageProps) {
         setEditingParticipant(null);
         participantForm.reset();
         participantForm.clearErrors();
+        setParticipantFormStep(1);
         setParticipantDialogOpen(true);
     }
 
@@ -1275,11 +1335,17 @@ export default function ParticipantPage(props: PageProps) {
             emergency_contact_email: p.emergency_contact_email ?? '',
         });
         participantForm.clearErrors();
+        setParticipantFormStep(1);
         setParticipantDialogOpen(true);
     }
 
     function submitParticipant(e: React.FormEvent) {
         e.preventDefault();
+
+        if (participantFormStep < 4) {
+            setParticipantFormStep((s) => (s + 1) as ParticipantFormStep);
+            return;
+        }
 
         participantForm.transform((data) => ({
             full_name: data.full_name.trim(),
@@ -1314,6 +1380,16 @@ export default function ParticipantPage(props: PageProps) {
             ...(editingParticipant ? {} : { password: data.password }),
         }));
 
+        const handleSubmitError = (errors: Record<string, string | string[]>) => {
+            showToastError(errors);
+            for (const [step, fields] of Object.entries(STEP_FIELDS)) {
+                if (fields.some((field) => !!errors[field])) {
+                    setParticipantFormStep(Number(step) as ParticipantFormStep);
+                    break;
+                }
+            }
+        };
+
         if (editingParticipant) {
             participantForm.patch(ENDPOINTS.participants.update(editingParticipant.id), {
                 preserveScroll: true,
@@ -1322,7 +1398,7 @@ export default function ParticipantPage(props: PageProps) {
                     setEditingParticipant(null);
                     toast.success('Participant updated.');
                 },
-                onError: showToastError,
+                onError: handleSubmitError,
             });
         } else {
             participantForm.post(ENDPOINTS.participants.store, {
@@ -1331,7 +1407,7 @@ export default function ParticipantPage(props: PageProps) {
                     setParticipantDialogOpen(false);
                     toast.success('Participant added.');
                 },
-                onError: showToastError,
+                onError: handleSubmitError,
             });
         }
     }
@@ -2030,7 +2106,62 @@ export default function ParticipantPage(props: PageProps) {
                                         subtitle="Try adjusting your search or filters, or add a new participant."
                                     />
                                 ) : (
+
                                     <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+                                        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 m-2">
+                                            <span>Show</span>
+                                            <Select
+                                                value={String(entriesPerPage)}
+                                                onValueChange={(value) => setEntriesPerPage(Number(value))}
+                                            >
+                                                <SelectTrigger className="h-8 w-[70px]">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {ENTRIES_PER_PAGE_OPTIONS.map((n) => (
+                                                        <SelectItem key={n} value={String(n)}>
+                                                            {n}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <span>entries</span>
+                                            <span className="ml-2">
+                                                Showing{' '}
+                                                {filteredParticipants.length === 0
+                                                    ? 0
+                                                    : (currentPage - 1) * entriesPerPage + 1}{' '}
+                                                to {Math.min(currentPage * entriesPerPage, filteredParticipants.length)} of{' '}
+                                                {filteredParticipants.length} entries
+                                            </span>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const currentPageIds = paginatedParticipants.map((p) => p.id);
+                                                    const allExpanded = currentPageIds.every((id) => expandedRowIds.has(id));
+                                                    if (allExpanded) {
+                                                        setExpandedRowIds((prev) => {
+                                                            const next = new Set(prev);
+                                                            currentPageIds.forEach((id) => next.delete(id));
+                                                            return next;
+                                                        });
+                                                    } else {
+                                                        setExpandedRowIds((prev) => {
+                                                            const next = new Set(prev);
+                                                            currentPageIds.forEach((id) => next.add(id));
+                                                            return next;
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                {paginatedParticipants.length > 0 && paginatedParticipants.every((p) => expandedRowIds.has(p.id))
+                                                    ? 'Collapse All'
+                                                    : 'View All'}
+                                            </Button>
+                                        </div>
+
                                         <Table>
                                             <TableHeader>
                                                 <TableRow className="bg-slate-50 dark:bg-slate-900/40">
@@ -2054,18 +2185,21 @@ export default function ParticipantPage(props: PageProps) {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {filteredParticipants.map((p) => {
+                                                {paginatedParticipants.map((p) => {
                                                     const isChed = isChedParticipant(p);
+                                                    const isExpanded = expandedRowIds.has(p.id);
 
                                                     return (
+                                                        <React.Fragment key={p.id}>
                                                         <TableRow
-                                                            key={p.id}
                                                             className={cn(
-                                                                'transition-colors',
+                                                                'cursor-pointer transition-colors',
                                                                 isChed
                                                                     ? 'bg-blue-50/70 hover:bg-blue-50 dark:bg-blue-950/30 dark:hover:bg-blue-950/40'
                                                                     : 'hover:bg-slate-50 dark:hover:bg-slate-900/40',
+                                                                isExpanded && 'border-b-0',
                                                             )}
+                                                            onClick={() => toggleRowExpand(p.id)}
                                                         >
                                                             <TableCell className="text-slate-700 dark:text-slate-300">
                                                                 {p.country ? (
@@ -2084,11 +2218,14 @@ export default function ParticipantPage(props: PageProps) {
                                                                     isChed && 'text-blue-900 dark:text-blue-100',
                                                                 )}
                                                             >
-                                                                {p.full_name}
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <ChevronDown className={cn('h-3.5 w-3.5 text-slate-400 transition-transform', isExpanded && 'rotate-180')} />
+                                                                    {p.full_name}
+                                                                </div>
                                                             </TableCell>
 
                                                             <TableCell>
-                                                                <div className="flex items-center gap-3">
+                                                                <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                                                                     <Checkbox
                                                                         checked={selectedParticipantIds.has(p.id)}
                                                                         onCheckedChange={(checked) => {
@@ -2116,7 +2253,7 @@ export default function ParticipantPage(props: PageProps) {
 
                                                             <TableCell className="text-slate-700 dark:text-slate-300">{formatDateSafe(p.created_at)}</TableCell>
 
-                                                            <TableCell className="text-right">
+                                                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                                 <DropdownMenu>
                                                                     <DropdownMenuTrigger asChild>
                                                                         <Button variant="ghost" size="icon" className="rounded-full">
@@ -2153,10 +2290,180 @@ export default function ParticipantPage(props: PageProps) {
                                                                 </DropdownMenu>
                                                             </TableCell>
                                                         </TableRow>
+
+                                                        {/* Expanded detail row */}
+                                                        {isExpanded && (
+                                                            <TableRow
+                                                                className={cn(
+                                                                    'border-b',
+                                                                    isChed
+                                                                        ? 'bg-blue-50/40 dark:bg-blue-950/20'
+                                                                        : 'bg-slate-50/50 dark:bg-slate-900/20',
+                                                                )}
+                                                            >
+                                                                <TableCell colSpan={8} className="px-6 py-3">
+                                                                    <div className="grid gap-4 sm:grid-cols-2">
+                                                                        <div>
+                                                                            <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                                                                Food Restrictions
+                                                                            </div>
+                                                                            {(p.food_restrictions ?? []).length > 0 ? (
+                                                                                <div className="space-y-1">
+                                                                                    <div className="flex flex-wrap gap-1">
+                                                                                        {(p.food_restrictions ?? []).map((r) => {
+                                                                                            const label = FOOD_RESTRICTION_OPTIONS.find((o) => o.value === r)?.label ?? r;
+                                                                                            return (
+                                                                                                <Badge key={r} variant="secondary" className="text-xs">
+                                                                                                    {label}
+                                                                                                </Badge>
+                                                                                            );
+                                                                                        })}
+                                                                                    </div>
+                                                                                    {p.dietary_allergies && (
+                                                                                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                                                                                            <span className="font-medium">Allergies:</span> {p.dietary_allergies}
+                                                                                        </div>
+                                                                                    )}
+                                                                                    {p.dietary_other && (
+                                                                                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                                                                                            <span className="font-medium">Other:</span> {p.dietary_other}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="text-xs text-slate-400">None specified</div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                                                                Accessibility Needs
+                                                                            </div>
+                                                                            {(p.accessibility_needs ?? []).length > 0 ? (
+                                                                                <div className="space-y-1">
+                                                                                    <div className="flex flex-wrap gap-1">
+                                                                                        {(p.accessibility_needs ?? []).map((n) => {
+                                                                                            const label = ACCESSIBILITY_NEEDS_OPTIONS.find((o) => o.value === n)?.label ?? n;
+                                                                                            return (
+                                                                                                <Badge key={n} variant="secondary" className="text-xs">
+                                                                                                    {label}
+                                                                                                </Badge>
+                                                                                            );
+                                                                                        })}
+                                                                                    </div>
+                                                                                    {p.accessibility_other && (
+                                                                                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                                                                                            <span className="font-medium">Other:</span> {p.accessibility_other}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="text-xs text-slate-400">None specified</div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                        </React.Fragment>
                                                     );
                                                 })}
                                             </TableBody>
                                         </Table>
+
+                                        {/* Pagination controls */}
+                                        <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+                                            {/* <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                                <span>Show</span>
+                                                <Select
+                                                    value={String(entriesPerPage)}
+                                                    onValueChange={(value) => setEntriesPerPage(Number(value))}
+                                                >
+                                                    <SelectTrigger className="h-8 w-[70px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {ENTRIES_PER_PAGE_OPTIONS.map((n) => (
+                                                            <SelectItem key={n} value={String(n)}>
+                                                                {n}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <span>entries</span>
+                                                <span className="ml-2">
+                                                    Showing{' '}
+                                                    {filteredParticipants.length === 0
+                                                        ? 0
+                                                        : (currentPage - 1) * entriesPerPage + 1}{' '}
+                                                    to {Math.min(currentPage * entriesPerPage, filteredParticipants.length)} of{' '}
+                                                    {filteredParticipants.length} entries
+                                                </span>
+                                            </div> */}
+
+                                            <div className="flex items-right gap-1">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                                    disabled={currentPage === 1}
+                                                    className="h-8 px-3 text-xs"
+                                                >
+                                                    <ChevronLeft className="mr-1 h-3 w-3" />
+                                                    Previous
+                                                </Button>
+
+                                                {(() => {
+                                                    const pages: (number | '...')[] = [];
+                                                    if (totalPages <= 7) {
+                                                        for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                                    } else {
+                                                        pages.push(1);
+                                                        if (currentPage > 3) pages.push('...');
+                                                        for (
+                                                            let i = Math.max(2, currentPage - 1);
+                                                            i <= Math.min(totalPages - 1, currentPage + 1);
+                                                            i++
+                                                        ) {
+                                                            pages.push(i);
+                                                        }
+                                                        if (currentPage < totalPages - 2) pages.push('...');
+                                                        pages.push(totalPages);
+                                                    }
+                                                    return pages.map((page, idx) =>
+                                                        page === '...' ? (
+                                                            <span key={`ellipsis-${idx}`} className="px-2 text-xs text-slate-400">
+                                                                ...
+                                                            </span>
+                                                        ) : (
+                                                            <Button
+                                                                key={page}
+                                                                variant={currentPage === page ? 'default' : 'outline'}
+                                                                size="sm"
+                                                                onClick={() => setCurrentPage(page)}
+                                                                className={cn(
+                                                                    'h-8 w-8 p-0 text-xs',
+                                                                    currentPage === page && PRIMARY_BTN,
+                                                                )}
+                                                            >
+                                                                {page}
+                                                            </Button>
+                                                        ),
+                                                    );
+                                                })()}
+
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                                    disabled={currentPage === totalPages}
+                                                    className="h-8 px-3 text-xs"
+                                                >
+                                                    Next
+                                                    <ChevronRight className="ml-1 h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </CardContent>
@@ -2536,7 +2843,7 @@ export default function ParticipantPage(props: PageProps) {
             </Dialog>
 
             {/* -------------------- Participant Dialog -------------------- */}
-            <Dialog open={participantDialogOpen} onOpenChange={setParticipantDialogOpen}>
+            <Dialog open={participantDialogOpen} onOpenChange={(open) => { setParticipantDialogOpen(open); if (!open) setParticipantFormStep(1); }}>
                 <DialogContent
                     className={cn(
                         // ✅ bigger + responsive
@@ -2550,10 +2857,61 @@ export default function ParticipantPage(props: PageProps) {
                         <DialogDescription>Fill out the participant details below.</DialogDescription>
                     </DialogHeader>
 
+                    {/* Stepper indicator */}
+                    <div className="flex items-center justify-between px-2 pt-2 pb-1">
+                        {PARTICIPANT_FORM_STEPS.map((step, index) => (
+                            <React.Fragment key={step.id}>
+                                <button
+                                    type="button"
+                                    onClick={() => setParticipantFormStep(step.id as ParticipantFormStep)}
+                                    className={cn(
+                                        'flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                                        participantFormStep === step.id
+                                            ? 'bg-[#00359c] text-white'
+                                            : stepWithErrors.has(step.id as ParticipantFormStep)
+                                              ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
+                                              : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
+                                    )}
+                                >
+                                    <span
+                                        className={cn(
+                                            'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold',
+                                            participantFormStep === step.id
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+                                        )}
+                                    >
+                                        {step.id}
+                                    </span>
+                                    <span className="hidden sm:inline">{step.label}</span>
+                                </button>
+                                {index < PARTICIPANT_FORM_STEPS.length - 1 && (
+                                    <div className="mx-1 h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                    <Separator />
+
                     {/* ✅ Make body scrollable, keep footer visible */}
-                    <form onSubmit={submitParticipant} className="flex flex-1 flex-col overflow-hidden">
+                    <form
+                        onSubmit={submitParticipant}
+                        onKeyDown={(e) => {
+                            if (
+                                e.key === 'Enter' &&
+                                participantFormStep < 4 &&
+                                (e.target as HTMLElement).tagName !== 'TEXTAREA'
+                            ) {
+                                e.preventDefault();
+                                setParticipantFormStep((s) => Math.min(s + 1, 4) as ParticipantFormStep);
+                            }
+                        }}
+                        className="flex flex-1 flex-col overflow-hidden"
+                    >
                         <div className="flex-1 overflow-y-auto pr-1">
                             <div className="space-y-4">
+                                {/* Step 1: Personal Information */}
+                                {participantFormStep === 1 && (
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-1.5 sm:col-span-2">
                                         <div className="text-sm font-medium">
@@ -2625,11 +2983,21 @@ export default function ParticipantPage(props: PageProps) {
 
                                     <div className="space-y-1.5">
                                         <div className="text-sm font-medium">Sex assigned at birth</div>
-                                        <Input
-                                            value={participantForm.data.sex_assigned_at_birth}
-                                            onChange={(e) => participantForm.setData('sex_assigned_at_birth', e.target.value)}
-                                            placeholder="Male or Female"
-                                        />
+                                        <Select
+                                            value={participantForm.data.sex_assigned_at_birth || undefined}
+                                            onValueChange={(value) => participantForm.setData('sex_assigned_at_birth', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select sex" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="male">Male</SelectItem>
+                                                <SelectItem value="female">Female</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {participantForm.errors.sex_assigned_at_birth ? (
+                                            <div className="text-xs text-red-600">{participantForm.errors.sex_assigned_at_birth}</div>
+                                        ) : null}
                                     </div>
 
                                     <div className="space-y-1.5 sm:col-span-2">
@@ -2650,7 +3018,12 @@ export default function ParticipantPage(props: PageProps) {
                                             <div className="text-xs text-red-600">{participantForm.errors.email}</div>
                                         ) : null}
                                     </div>
+                                </div>
+                                )}
 
+                                {/* Step 2: Contact & Organization */}
+                                {participantFormStep === 2 && (
+                                <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-1.5 sm:col-span-2">
                                         <div className="text-sm font-medium">Contact number</div>
                                         <div className="grid gap-2 sm:grid-cols-[160px_1fr]">
@@ -2813,7 +3186,12 @@ export default function ParticipantPage(props: PageProps) {
                                             />
                                         </div>
                                     ) : null}
+                                </div>
+                                )}
 
+                                {/* Step 3: Dietary & Accessibility */}
+                                {participantFormStep === 3 && (
+                                <div className="grid gap-3 sm:grid-cols-2">
                                     {showFoodRestrictionsField ? (
                                         <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
                                             <div className="space-y-0.5">
@@ -2933,7 +3311,12 @@ export default function ParticipantPage(props: PageProps) {
                                             </div>
                                         ) : null}
                                     </div>
+                                </div>
+                                )}
 
+                                {/* Step 4: Additional Info */}
+                                {participantFormStep === 4 && (
+                                <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -3035,21 +3418,51 @@ export default function ParticipantPage(props: PageProps) {
                                         </div>
                                     ) : null}
                                 </div>
+                                )}
                             </div>
                         </div>
 
-                        <DialogFooter className="mt-4 gap-2 border-t border-slate-200/70 pt-4 sm:gap-0 dark:border-slate-800">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setParticipantDialogOpen(false)}
-                                disabled={participantForm.processing}
-                            >
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={participantForm.processing} className={PRIMARY_BTN}>
-                                {editingParticipant ? 'Save changes' : 'Create'}
-                            </Button>
+                        <DialogFooter className="mt-4 gap-2 border-t border-slate-200/70 pt-4 dark:border-slate-800">
+                            <div className="flex w-full items-center justify-between">
+                                <div>
+                                    {participantFormStep > 1 && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setParticipantFormStep((s) => (s - 1) as ParticipantFormStep)}
+                                            disabled={participantForm.processing}
+                                        >
+                                            <ChevronLeft className="mr-1 h-4 w-4" />
+                                            Previous
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setParticipantDialogOpen(false)}
+                                        disabled={participantForm.processing}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    {participantFormStep < 4 ? (
+                                        <Button
+                                            key="step-next"
+                                            type="button"
+                                            onClick={() => setParticipantFormStep((s) => (s + 1) as ParticipantFormStep)}
+                                            className={PRIMARY_BTN}
+                                        >
+                                            Next
+                                            <ChevronRight className="ml-1 h-4 w-4" />
+                                        </Button>
+                                    ) : (
+                                        <Button key="step-submit" type="submit" disabled={participantForm.processing} className={PRIMARY_BTN}>
+                                            {editingParticipant ? 'Save changes' : 'Create'}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
                         </DialogFooter>
                     </form>
                 </DialogContent>
