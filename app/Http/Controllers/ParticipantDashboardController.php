@@ -113,4 +113,22 @@ class ParticipantDashboardController extends Controller
 
         return back();
     }
+
+    public function updateWelcomeDinner(Request $request)
+    {
+        $validated = $request->validate([
+            'attend_welcome_dinner' => ['required', 'boolean'],
+            'avail_transport_from_makati_to_peninsula' => ['nullable', 'boolean'],
+        ]);
+
+        if (!$validated['attend_welcome_dinner']) {
+            $validated['avail_transport_from_makati_to_peninsula'] = false;
+        }
+
+        $user = $request->user();
+        $user->fill($validated);
+        $user->save();
+
+        return back();
+    }
 }
