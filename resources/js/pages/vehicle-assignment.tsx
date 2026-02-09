@@ -124,8 +124,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
     const selectedEventId = selected_event_id ? String(selected_event_id) : events[0] ? String(events[0].id) : '';
     const [selectedIds, setSelectedIds] = React.useState<number[]>([]);
     const [selectedAssignedIds, setSelectedAssignedIds] = React.useState<number[]>([]);
-    const [assignedSearch, setAssignedSearch] = React.useState('');
-    const [unassignedSearch, setUnassignedSearch] = React.useState('');
+    const [participantSearch, setParticipantSearch] = React.useState('');
     const [assignedPage, setAssignedPage] = React.useState(1);
     const [unassignedPage, setUnassignedPage] = React.useState(1);
     const perPage = 10;
@@ -155,31 +154,28 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
     const unassignedParticipants = React.useMemo(() => participants.filter((participant) => !participant.assignment), [participants]);
 
     const filteredAssignedParticipants = React.useMemo(() => {
-        if (!assignedSearch.trim()) return assignedParticipants;
-        const query = assignedSearch.trim().toLowerCase();
+        if (!participantSearch.trim()) return assignedParticipants;
+        const query = participantSearch.trim().toLowerCase();
         return assignedParticipants.filter((participant) =>
             [participant.full_name, participant.email].filter(Boolean).some((value) => value!.toLowerCase().includes(query)),
         );
-    }, [assignedParticipants, assignedSearch]);
+    }, [assignedParticipants, participantSearch]);
 
     const filteredUnassignedParticipants = React.useMemo(() => {
-        if (!unassignedSearch.trim()) return unassignedParticipants;
-        const query = unassignedSearch.trim().toLowerCase();
+        if (!participantSearch.trim()) return unassignedParticipants;
+        const query = participantSearch.trim().toLowerCase();
         return unassignedParticipants.filter((participant) =>
             [participant.full_name, participant.email].filter(Boolean).some((value) => value!.toLowerCase().includes(query)),
         );
-    }, [unassignedParticipants, unassignedSearch]);
+    }, [unassignedParticipants, participantSearch]);
 
     const assignedTotalPages = Math.max(1, Math.ceil(filteredAssignedParticipants.length / perPage));
     const unassignedTotalPages = Math.max(1, Math.ceil(filteredUnassignedParticipants.length / perPage));
 
     React.useEffect(() => {
         setAssignedPage(1);
-    }, [assignedSearch, selectedEventId]);
-
-    React.useEffect(() => {
         setUnassignedPage(1);
-    }, [unassignedSearch, selectedEventId]);
+    }, [participantSearch, selectedEventId]);
 
     const assignedPageItems = filteredAssignedParticipants.slice((assignedPage - 1) * perPage, assignedPage * perPage);
     const unassignedPageItems = filteredUnassignedParticipants.slice((unassignedPage - 1) * perPage, unassignedPage * perPage);
@@ -285,6 +281,15 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                         <CardDescription>Select event and vehicle, then assign individual or bulk participants.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        <div className="space-y-1 md:max-w-sm">
+                            <Label htmlFor="participant-search">Search participant</Label>
+                            <Input
+                                id="participant-search"
+                                placeholder="Search participants..."
+                                value={participantSearch}
+                                onChange={(event) => setParticipantSearch(event.target.value)}
+                            />
+                        </div>
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-1">
                                 <Label>Event <span className="text-[11px] font-semibold text-red-600">*</span></Label>
@@ -335,15 +340,6 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="w-full sm:max-w-xs">
-                                    <Label htmlFor="assigned-search">Search participant</Label>
-                                    <Input
-                                        id="assigned-search"
-                                        placeholder="Search assigned participant..."
-                                        value={assignedSearch}
-                                        onChange={(event) => setAssignedSearch(event.target.value)}
-                                    />
-                                </div>
                                 <Button type="button" variant="outline" onClick={removeBulkAssignments} disabled={!selectedAssignedIds.length}>
                                     Remove Selected
                                 </Button>
@@ -436,16 +432,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                             <CardDescription>Select participants and assign them to a vehicle.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                                <div className="space-y-1">
-                                    <Label htmlFor="unassigned-search">Search participant</Label>
-                                    <Input
-                                        id="unassigned-search"
-                                        placeholder="Search unassigned participant..."
-                                        value={unassignedSearch}
-                                        onChange={(event) => setUnassignedSearch(event.target.value)}
-                                    />
-                                </div>
+                            <div className="flex justify-end">
                                 <Button
                                     type="button"
                                     onClick={assignBulk}
