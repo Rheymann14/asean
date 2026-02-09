@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ParticipantDashboardController extends Controller
@@ -17,6 +18,7 @@ class ParticipantDashboardController extends Controller
                 'qr_payload' => $user->qr_payload,
                 'name' => $user->name,
                 'email' => $user->email,
+                'profile_photo_url' => $user->profile_photo_path ? Storage::url($user->profile_photo_path) : null,
                 'contact_number' => $user->contact_number,
                 'contact_country_code' => $user->contact_country_code,
                 'honorific_title' => $user->honorific_title,
@@ -67,6 +69,39 @@ class ParticipantDashboardController extends Controller
 
         $user = $request->user();
         $user->fill($validated);
+        $user->save();
+
+        return back();
+    }
+
+    public function updatePhoto(Request $request)
+    {
+        $validated = $request->validate([
+            'profile_photo' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user->profile_photo_path) {
+            Storage::disk('public')->delete($user->profile_photo_path);
+        }
+
+        $path = $request->file('profile_photo')->store('profile-photos', 'public');
+        $user->profile_photo_path = $path;
+        $user->save();
+
+        return back();
+    }
+
+    public function destroyPhoto(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->profile_photo_path) {
+            Storage::disk('public')->delete($user->profile_photo_path);
+        }
+
+        $user->profile_photo_path = null;
         $user->save();
 
         return back();

@@ -16,7 +16,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
-import { Copy, Download, Flag, Mail, Phone, QrCode as QrCodeIcon, Smartphone, IdCard, User2 } from 'lucide-react';
+import {
+    Camera,
+    Copy,
+    Download,
+    Flag,
+    Mail,
+    Pencil,
+    Phone,
+    QrCode as QrCodeIcon,
+    Smartphone,
+    IdCard,
+    Trash2,
+    Upload,
+    User2,
+} from 'lucide-react';
 
 type Country = {
     code: string;
@@ -29,6 +43,7 @@ type Participant = {
     qr_payload: string; // ✅ encrypted/opaque payload (NOT user.id)
     name: string;
     email: string;
+    profile_photo_url?: string | null;
     contact_number?: string | null;
     contact_country_code?: string | null;
     honorific_title?: string | null;
@@ -413,9 +428,20 @@ export default function ParticipantDashboard({ participant }: PageProps) {
 
     const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
     const [qrLoading, setQrLoading] = React.useState(true);
+    const [profileImagePreview, setProfileImagePreview] = React.useState<string | null>(
+        participant.profile_photo_url ?? null,
+    );
+    const [profileImageObjectUrl, setProfileImageObjectUrl] = React.useState<string | null>(null);
+    const [selectedProfileImage, setSelectedProfileImage] = React.useState<File | null>(null);
+    const photoForm = useForm<{ profile_photo: File | null }>({
+        profile_photo: null,
+    });
 
     // ✅ opens full-size preview only when needed
     const [previewOpen, setPreviewOpen] = React.useState(false);
+
+    const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
+    const selfieInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const fullContactNumber = [participant.contact_country_code, participant.contact_number].filter(Boolean).join(' ');
     const honorificTitle =
@@ -487,19 +513,95 @@ export default function ParticipantDashboard({ participant }: PageProps) {
         toast.success('QR code downloaded.');
     };
 
+    const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        if (profileImageObjectUrl) {
+            URL.revokeObjectURL(profileImageObjectUrl);
+        }
+        setProfileImageObjectUrl(url);
+        setProfileImagePreview(url);
+        setSelectedProfileImage(file);
+        photoForm.setData('profile_photo', file);
+        event.target.value = '';
+    };
+
+    React.useEffect(() => {
+        return () => {
+            if (profileImageObjectUrl) {
+                URL.revokeObjectURL(profileImageObjectUrl);
+            }
+        };
+    }, [profileImageObjectUrl]);
+
+    React.useEffect(() => {
+        if (!selectedProfileImage && participant.profile_photo_url !== profileImagePreview) {
+            setProfileImagePreview(participant.profile_photo_url ?? null);
+        }
+    }, [participant.profile_photo_url, profileImagePreview, selectedProfileImage]);
+
+    const saveProfileImage = () => {
+        if (!selectedProfileImage) return;
+        photoForm.post('/participant-dashboard/photo', {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Profile photo saved.');
+                setSelectedProfileImage(null);
+                if (profileImageObjectUrl) {
+                    URL.revokeObjectURL(profileImageObjectUrl);
+                    setProfileImageObjectUrl(null);
+                }
+            },
+            onError: () => toast.error('Unable to save profile photo.'),
+        });
+    };
+
+    const removeProfileImage = () => {
+        if (!profileImagePreview) return;
+        photoForm.setData('profile_photo', null);
+        photoForm.delete('/participant-dashboard/photo', {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Profile photo removed.');
+                setSelectedProfileImage(null);
+                setProfileImagePreview(null);
+                if (profileImageObjectUrl) {
+                    URL.revokeObjectURL(profileImageObjectUrl);
+                }
+                setProfileImageObjectUrl(null);
+            },
+            onError: () => toast.error('Unable to remove profile photo.'),
+        });
+    };
+
     const toggleFoodRestriction = (value: string) => {
-        const next = form.data.food_restrictions.includes(value)
+        const currentlySelected = form.data.food_restrictions.includes(value);
+        const next = currentlySelected
             ? form.data.food_restrictions.filter((item) => item !== value)
             : [...form.data.food_restrictions, value];
         form.setData('food_restrictions', next);
         form.setData('has_food_restrictions', next.length > 0);
+
+        if (currentlySelected && value === 'allergies') {
+            form.setData('dietary_allergies', '');
+        }
+
+        if (currentlySelected && value === 'other') {
+            form.setData('dietary_other', '');
+        }
     };
 
     const toggleAccessibilityNeed = (value: string) => {
-        const next = form.data.accessibility_needs.includes(value)
+        const currentlySelected = form.data.accessibility_needs.includes(value);
+        const next = currentlySelected
             ? form.data.accessibility_needs.filter((item) => item !== value)
             : [...form.data.accessibility_needs, value];
         form.setData('accessibility_needs', next);
+
+        if (currentlySelected && value === 'other') {
+            form.setData('accessibility_other', '');
+        }
     };
 
     const handleDietarySubmit = (event: React.FormEvent) => {
@@ -871,29 +973,33 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                             </div>
                                                         </div>
 
-                                                        <div className="grid gap-2">
-                                                            <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
-                                                            <Input
-                                                                id="dietary_allergies"
-                                                                value={form.data.dietary_allergies}
-                                                                onChange={(event) =>
-                                                                    form.setData('dietary_allergies', event.target.value)
-                                                                }
-                                                                placeholder="List any allergies"
-                                                            />
-                                                        </div>
+                                                        {form.data.food_restrictions.includes('allergies') ? (
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
+                                                                <Input
+                                                                    id="dietary_allergies"
+                                                                    value={form.data.dietary_allergies}
+                                                                    onChange={(event) =>
+                                                                        form.setData('dietary_allergies', event.target.value)
+                                                                    }
+                                                                    placeholder="List any allergies"
+                                                                />
+                                                            </div>
+                                                        ) : null}
 
-                                                        <div className="grid gap-2">
-                                                            <Label htmlFor="dietary_other">Other (please specify)</Label>
-                                                            <Input
-                                                                id="dietary_other"
-                                                                value={form.data.dietary_other}
-                                                                onChange={(event) =>
-                                                                    form.setData('dietary_other', event.target.value)
-                                                                }
-                                                                placeholder="Other dietary requests"
-                                                            />
-                                                        </div>
+                                                        {form.data.food_restrictions.includes('other') ? (
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="dietary_other">Other (please specify)</Label>
+                                                                <Input
+                                                                    id="dietary_other"
+                                                                    value={form.data.dietary_other}
+                                                                    onChange={(event) =>
+                                                                        form.setData('dietary_other', event.target.value)
+                                                                    }
+                                                                    placeholder="Other dietary requests"
+                                                                />
+                                                            </div>
+                                                        ) : null}
                                                     </div>
                                                 </div>
 
@@ -927,17 +1033,19 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                             </div>
                                                         </div>
 
-                                                        <div className="grid gap-2">
-                                                            <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
-                                                            <Input
-                                                                id="accessibility_other"
-                                                                value={form.data.accessibility_other}
-                                                                onChange={(event) =>
-                                                                    form.setData('accessibility_other', event.target.value)
-                                                                }
-                                                                placeholder="Other accommodations"
-                                                            />
-                                                        </div>
+                                                        {form.data.accessibility_needs.includes('other') ? (
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
+                                                                <Input
+                                                                    id="accessibility_other"
+                                                                    value={form.data.accessibility_other}
+                                                                    onChange={(event) =>
+                                                                        form.setData('accessibility_other', event.target.value)
+                                                                    }
+                                                                    placeholder="Other accommodations"
+                                                                />
+                                                            </div>
+                                                        ) : null}
                                                     </div>
                                                 </div>
 
@@ -1025,6 +1133,109 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                     orientation={orientation}
                                                 />
                                             </div>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <div className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                                                        Profile photo
+                                                    </div>
+                                                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                        Upload an image or take a selfie for your badge.
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                                <div className="mt-4 flex flex-col gap-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
+                                                        {profileImagePreview ? (
+                                                            <img
+                                                                src={profileImagePreview}
+                                                                alt="Profile preview"
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <User2 className="h-8 w-8 text-slate-400" />
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-slate-600 dark:text-slate-300">
+                                                        {selectedProfileImage
+                                                            ? 'Ready to save your new profile photo.'
+                                                            : profileImagePreview
+                                                                ? 'Current profile photo on file.'
+                                                                : 'No photo uploaded yet.'}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <Button
+                                                        type="button"
+                                                        className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
+                                                        onClick={() => uploadInputRef.current?.click()}
+                                                    >
+                                                        <Upload className="mr-2 h-4 w-4" />
+                                                        Upload image
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="border-slate-200/70 bg-white/70"
+                                                        onClick={() => selfieInputRef.current?.click()}
+                                                    >
+                                                        <Camera className="mr-2 h-4 w-4" />
+                                                        Take a selfie
+                                                    </Button>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        className="bg-emerald-600 text-white hover:bg-emerald-600/90"
+                                                        onClick={saveProfileImage}
+                                                        disabled={!selectedProfileImage || photoForm.processing}
+                                                    >
+                                                        Save photo
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="border-slate-200/70 bg-white/70"
+                                                        onClick={() => uploadInputRef.current?.click()}
+                                                        disabled={!profileImagePreview}
+                                                    >
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="border-rose-200/70 text-rose-600 hover:text-rose-700"
+                                                        onClick={removeProfileImage}
+                                                        disabled={!profileImagePreview || photoForm.processing}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Remove
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            <input
+                                                ref={uploadInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleImageChange}
+                                            />
+                                            <input
+                                                ref={selfieInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                capture="user"
+                                                className="hidden"
+                                                onChange={handleImageChange}
+                                            />
                                         </div>
                                     </div>
                                 </div>
