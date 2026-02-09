@@ -199,15 +199,9 @@ const PRIMARY_BTN =
 
 const FOOD_RESTRICTION_OPTIONS = [
     { value: 'vegetarian', label: 'Vegetarian' },
-    { value: 'vegan', label: 'Vegan' },
     { value: 'halal', label: 'Halal' },
-    { value: 'kosher', label: 'Kosher' },
-    { value: 'gluten_free', label: 'Gluten-free' },
-    { value: 'lactose_intolerant', label: 'Lactose intolerant' },
-    { value: 'nut_allergy', label: 'Nut allergy' },
-    { value: 'seafood_allergy', label: 'Seafood allergy' },
-    { value: 'allergies', label: 'Allergies' },
-    { value: 'other', label: 'Other' },
+    { value: 'allergies', label: 'Allergies (please specify)' },
+    { value: 'other', label: 'Other (please specify)' },
 ] as const;
 
 const PARTICIPANT_FORM_STEPS = [
@@ -3195,9 +3189,9 @@ export default function ParticipantPage(props: PageProps) {
                                     {showFoodRestrictionsField ? (
                                         <div className="rounded-xl border border-slate-200 px-3 py-3 sm:col-span-2 dark:border-slate-800">
                                             <div className="space-y-0.5">
-                                                <div className="text-sm font-medium">Food restrictions</div>
+                                                <div className="text-sm font-medium">Dietary Preferences</div>
                                                 <div className="text-xs text-slate-600 dark:text-slate-400">
-                                                    Select all applicable food restrictions.
+                                                    Select all that apply.
                                                 </div>
                                             </div>
                                             <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -3241,17 +3235,17 @@ export default function ParticipantPage(props: PageProps) {
                                                     <Input
                                                         value={participantForm.data.dietary_allergies}
                                                         onChange={(e) => participantForm.setData('dietary_allergies', e.target.value)}
-                                                        placeholder="e.g. Nuts, seafood"
+                                                        placeholder="Please specify"
                                                     />
                                                 </div>
                                             ) : null}
                                             {participantForm.data.food_restrictions.includes('other') ? (
                                                 <div className="mt-3 space-y-1.5">
-                                                    <div className="text-sm font-medium">Other dietary needs</div>
+                                                    <div className="text-sm font-medium">Other (please specify)</div>
                                                     <Input
                                                         value={participantForm.data.dietary_other}
                                                         onChange={(e) => participantForm.setData('dietary_other', e.target.value)}
-                                                        placeholder="Specify other dietary preferences"
+                                                        placeholder="Please specify"
                                                     />
                                                 </div>
                                             ) : null}
