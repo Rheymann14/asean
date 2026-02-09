@@ -52,18 +52,24 @@ export function AppSidebar() {
         ],
     };
 
+    const vehicleMonitoringGroup: NavItem = {
+        title: 'Vehicle Monitoring',
+        icon: Bus,
+        items: [
+            {
+                title: 'Vehicle Management',
+                href: '/vehicle-management',
+            },
+            {
+                title: 'Vehicle Assignment',
+                href: '/vehicle-assignment',
+            },
+        ],
+    };
+
     const managementNavItems: NavItem[] = [
         tableAssignmentsGroup,
-        {
-            title: 'Vehicle Management',
-            href: '/vehicle-management',
-            icon: Bus,
-        },
-        {
-            title: 'Van Assignment',
-            href: '/vehicle-assignment',
-            icon: Bus,
-        },
+        vehicleMonitoringGroup,
     ];
 
     const mainNavItems: NavItem[] = isAdmin
@@ -121,7 +127,7 @@ export function AppSidebar() {
                   icon: CalendarDays,
               },
               {
-                  title: 'Van Assignment',
+                  title: 'Vehicle Assignment',
                   href: '/vehicle-assignment',
                   icon: Bus,
               },
