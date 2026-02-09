@@ -128,6 +128,12 @@ class VehicleAssignmentController extends Controller
                     : null,
             ]);
 
+        $assignmentsByUser = VehicleAssignment::query()
+            ->with('vehicle')
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->get()
+            ->keyBy('user_id');
+
         $participants = User::query()
             ->with(['country', 'userType'])
             ->when(
@@ -146,12 +152,8 @@ class VehicleAssignmentController extends Controller
             })
             ->orderBy('name')
             ->get()
-            ->map(function (User $participant) use ($selectedEventId) {
-                $assignment = VehicleAssignment::query()
-                    ->with('vehicle')
-                    ->where('programme_id', $selectedEventId)
-                    ->where('user_id', $participant->id)
-                    ->first();
+            ->map(function (User $participant) use ($assignmentsByUser, $selectedEventId) {
+                $assignment = $assignmentsByUser->get($participant->id);
 
                 return [
                     'id' => $participant->id,

@@ -132,14 +132,9 @@ export function AppSidebar() {
                   icon: Bus,
               },
               {
-                  title: 'Table Monitoring',
+                  title: 'Table Assignment',
+                  href: '/table-assignment',
                   icon: Table,
-                  items: [
-                      {
-                          title: 'Table Assignment',
-                          href: '/table-assignment',
-                      },
-                  ],
               },
           ];
 
