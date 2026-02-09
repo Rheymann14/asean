@@ -488,18 +488,32 @@ export default function ParticipantDashboard({ participant }: PageProps) {
     };
 
     const toggleFoodRestriction = (value: string) => {
-        const next = form.data.food_restrictions.includes(value)
+        const currentlySelected = form.data.food_restrictions.includes(value);
+        const next = currentlySelected
             ? form.data.food_restrictions.filter((item) => item !== value)
             : [...form.data.food_restrictions, value];
         form.setData('food_restrictions', next);
         form.setData('has_food_restrictions', next.length > 0);
+
+        if (currentlySelected && value === 'allergies') {
+            form.setData('dietary_allergies', '');
+        }
+
+        if (currentlySelected && value === 'other') {
+            form.setData('dietary_other', '');
+        }
     };
 
     const toggleAccessibilityNeed = (value: string) => {
-        const next = form.data.accessibility_needs.includes(value)
+        const currentlySelected = form.data.accessibility_needs.includes(value);
+        const next = currentlySelected
             ? form.data.accessibility_needs.filter((item) => item !== value)
             : [...form.data.accessibility_needs, value];
         form.setData('accessibility_needs', next);
+
+        if (currentlySelected && value === 'other') {
+            form.setData('accessibility_other', '');
+        }
     };
 
     const handleDietarySubmit = (event: React.FormEvent) => {
@@ -871,29 +885,33 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                             </div>
                                                         </div>
 
-                                                        <div className="grid gap-2">
-                                                            <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
-                                                            <Input
-                                                                id="dietary_allergies"
-                                                                value={form.data.dietary_allergies}
-                                                                onChange={(event) =>
-                                                                    form.setData('dietary_allergies', event.target.value)
-                                                                }
-                                                                placeholder="List any allergies"
-                                                            />
-                                                        </div>
+                                                        {form.data.food_restrictions.includes('allergies') ? (
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
+                                                                <Input
+                                                                    id="dietary_allergies"
+                                                                    value={form.data.dietary_allergies}
+                                                                    onChange={(event) =>
+                                                                        form.setData('dietary_allergies', event.target.value)
+                                                                    }
+                                                                    placeholder="List any allergies"
+                                                                />
+                                                            </div>
+                                                        ) : null}
 
-                                                        <div className="grid gap-2">
-                                                            <Label htmlFor="dietary_other">Other (please specify)</Label>
-                                                            <Input
-                                                                id="dietary_other"
-                                                                value={form.data.dietary_other}
-                                                                onChange={(event) =>
-                                                                    form.setData('dietary_other', event.target.value)
-                                                                }
-                                                                placeholder="Other dietary requests"
-                                                            />
-                                                        </div>
+                                                        {form.data.food_restrictions.includes('other') ? (
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="dietary_other">Other (please specify)</Label>
+                                                                <Input
+                                                                    id="dietary_other"
+                                                                    value={form.data.dietary_other}
+                                                                    onChange={(event) =>
+                                                                        form.setData('dietary_other', event.target.value)
+                                                                    }
+                                                                    placeholder="Other dietary requests"
+                                                                />
+                                                            </div>
+                                                        ) : null}
                                                     </div>
                                                 </div>
 
@@ -927,17 +945,19 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                             </div>
                                                         </div>
 
-                                                        <div className="grid gap-2">
-                                                            <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
-                                                            <Input
-                                                                id="accessibility_other"
-                                                                value={form.data.accessibility_other}
-                                                                onChange={(event) =>
-                                                                    form.setData('accessibility_other', event.target.value)
-                                                                }
-                                                                placeholder="Other accommodations"
-                                                            />
-                                                        </div>
+                                                        {form.data.accessibility_needs.includes('other') ? (
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
+                                                                <Input
+                                                                    id="accessibility_other"
+                                                                    value={form.data.accessibility_other}
+                                                                    onChange={(event) =>
+                                                                        form.setData('accessibility_other', event.target.value)
+                                                                    }
+                                                                    placeholder="Other accommodations"
+                                                                />
+                                                            </div>
+                                                        ) : null}
                                                     </div>
                                                 </div>
 
