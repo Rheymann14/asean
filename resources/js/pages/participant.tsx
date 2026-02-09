@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -202,6 +201,35 @@ const FOOD_RESTRICTION_OPTIONS = [
     { value: 'halal', label: 'Halal' },
     { value: 'allergies', label: 'Allergies (please specify)' },
     { value: 'other', label: 'Other (please specify)' },
+] as const;
+
+const HONORIFIC_OPTIONS = [
+    { value: 'mr', label: 'Mr.' },
+    { value: 'mrs', label: 'Mrs.' },
+    { value: 'ms', label: 'Ms.' },
+    { value: 'miss', label: 'Miss' },
+    { value: 'dr', label: 'Dr.' },
+    { value: 'prof', label: 'Prof.' },
+    { value: 'other', label: 'Other' },
+] as const;
+
+const SEX_ASSIGNED_OPTIONS = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+] as const;
+
+const PHONE_CODE_OPTIONS = [
+    { value: '+673', label: 'Brunei (+673)' },
+    { value: '+855', label: 'Cambodia (+855)' },
+    { value: '+62', label: 'Indonesia (+62)' },
+    { value: '+856', label: 'Laos (+856)' },
+    { value: '+60', label: 'Malaysia (+60)' },
+    { value: '+95', label: 'Myanmar (+95)' },
+    { value: '+63', label: 'Philippines (+63)' },
+    { value: '+65', label: 'Singapore (+65)' },
+    { value: '+66', label: 'Thailand (+66)' },
+    { value: '+84', label: 'Vietnam (+84)' },
+    { value: '+670', label: 'Timor-Leste (+670)' },
 ] as const;
 
 const PARTICIPANT_FORM_STEPS = [
@@ -866,6 +894,9 @@ export default function ParticipantPage(props: PageProps) {
     const [participantEventOpen, setParticipantEventOpen] = React.useState(false);
     const [participantFormCountryOpen, setParticipantFormCountryOpen] = React.useState(false);
     const [participantFormTypeOpen, setParticipantFormTypeOpen] = React.useState(false);
+    const [participantFormHonorificOpen, setParticipantFormHonorificOpen] = React.useState(false);
+    const [participantFormSexOpen, setParticipantFormSexOpen] = React.useState(false);
+    const [participantFormPhoneCodeOpen, setParticipantFormPhoneCodeOpen] = React.useState(false);
 
     const [countryQuery, setCountryQuery] = React.useState('');
     const [userTypeQuery, setUserTypeQuery] = React.useState('');
@@ -2922,22 +2953,74 @@ export default function ParticipantPage(props: PageProps) {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <div className="text-sm font-medium">Honorific / Title</div>
-                                        <Input
-                                            value={participantForm.data.honorific_title}
-                                            onChange={(e) => participantForm.setData('honorific_title', e.target.value)}
-                                            placeholder="e.g. Mr., Ms., Dr."
-                                        />
+                                        <div className="text-sm font-medium">
+                                            Honorific / Title <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </div>
+                                        <Popover open={participantFormHonorificOpen} onOpenChange={setParticipantFormHonorificOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={participantFormHonorificOpen}
+                                                    className="w-full justify-between"
+                                                >
+                                                    <span className="truncate">
+                                                        {participantForm.data.honorific_title
+                                                            ? (HONORIFIC_OPTIONS.find((o) => o.value === participantForm.data.honorific_title)?.label ??
+                                                                participantForm.data.honorific_title)
+                                                            : 'Select honorific…'}
+                                                    </span>
+                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search honorific…" />
+                                                    <CommandEmpty>No honorific found.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {HONORIFIC_OPTIONS.map((item) => (
+                                                            <CommandItem
+                                                                key={item.value}
+                                                                value={item.label}
+                                                                onSelect={() => {
+                                                                    participantForm.setData('honorific_title', item.value);
+                                                                    if (item.value !== 'other') {
+                                                                        participantForm.setData('honorific_other', '');
+                                                                    }
+                                                                    setParticipantFormHonorificOpen(false);
+                                                                }}
+                                                            >
+                                                                {item.label}
+                                                                <Check
+                                                                    className={cn(
+                                                                        'ml-auto h-4 w-4',
+                                                                        participantForm.data.honorific_title === item.value ? 'opacity-100' : 'opacity-0',
+                                                                    )}
+                                                                />
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                        {participantForm.errors.honorific_title ? (
+                                            <div className="text-xs text-red-600">{participantForm.errors.honorific_title}</div>
+                                        ) : null}
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <div className="text-sm font-medium">Honorific (Other)</div>
-                                        <Input
-                                            value={participantForm.data.honorific_other}
-                                            onChange={(e) => participantForm.setData('honorific_other', e.target.value)}
-                                            placeholder="Specify honorific"
-                                        />
-                                    </div>
+                                    {participantForm.data.honorific_title === 'other' ? (
+                                        <div className="space-y-1.5">
+                                            <div className="text-sm font-medium">Other honorific</div>
+                                            <Input
+                                                value={participantForm.data.honorific_other}
+                                                onChange={(e) => participantForm.setData('honorific_other', e.target.value)}
+                                                placeholder="Please specify"
+                                            />
+                                            {participantForm.errors.honorific_other ? (
+                                                <div className="text-xs text-red-600">{participantForm.errors.honorific_other}</div>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
 
                                     <div className="space-y-1.5">
                                         <div className="text-sm font-medium">Given name</div>
@@ -2976,19 +3059,54 @@ export default function ParticipantPage(props: PageProps) {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <div className="text-sm font-medium">Sex assigned at birth</div>
-                                        <Select
-                                            value={participantForm.data.sex_assigned_at_birth || undefined}
-                                            onValueChange={(value) => participantForm.setData('sex_assigned_at_birth', value)}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select sex" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="male">Male</SelectItem>
-                                                <SelectItem value="female">Female</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="text-sm font-medium">
+                                            Sex assigned at birth <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </div>
+                                        <Popover open={participantFormSexOpen} onOpenChange={setParticipantFormSexOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={participantFormSexOpen}
+                                                    className="w-full justify-between"
+                                                >
+                                                    <span className="truncate">
+                                                        {participantForm.data.sex_assigned_at_birth
+                                                            ? (SEX_ASSIGNED_OPTIONS.find(
+                                                                (o) => o.value === participantForm.data.sex_assigned_at_birth,
+                                                            )?.label ?? participantForm.data.sex_assigned_at_birth)
+                                                            : 'Select…'}
+                                                    </span>
+                                                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search…" />
+                                                    <CommandEmpty>No option found.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {SEX_ASSIGNED_OPTIONS.map((item) => (
+                                                            <CommandItem
+                                                                key={item.value}
+                                                                value={item.label}
+                                                                onSelect={() => {
+                                                                    participantForm.setData('sex_assigned_at_birth', item.value);
+                                                                    setParticipantFormSexOpen(false);
+                                                                }}
+                                                            >
+                                                                {item.label}
+                                                                <Check
+                                                                    className={cn(
+                                                                        'ml-auto h-4 w-4',
+                                                                        participantForm.data.sex_assigned_at_birth === item.value ? 'opacity-100' : 'opacity-0',
+                                                                    )}
+                                                                />
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                         {participantForm.errors.sex_assigned_at_birth ? (
                                             <div className="text-xs text-red-600">{participantForm.errors.sex_assigned_at_birth}</div>
                                         ) : null}
@@ -3019,13 +3137,55 @@ export default function ParticipantPage(props: PageProps) {
                                 {participantFormStep === 2 && (
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-1.5 sm:col-span-2">
-                                        <div className="text-sm font-medium">Contact number</div>
-                                        <div className="grid gap-2 sm:grid-cols-[160px_1fr]">
-                                            <Input
-                                                value={participantForm.data.contact_country_code}
-                                                onChange={(e) => participantForm.setData('contact_country_code', e.target.value)}
-                                                placeholder="e.g. +63"
-                                            />
+                                        <div className="text-sm font-medium">
+                                            Contact number <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </div>
+                                        <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
+                                            <Popover open={participantFormPhoneCodeOpen} onOpenChange={setParticipantFormPhoneCodeOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={participantFormPhoneCodeOpen}
+                                                        className="w-full justify-between"
+                                                    >
+                                                        <span className="truncate">
+                                                            {participantForm.data.contact_country_code
+                                                                ? (PHONE_CODE_OPTIONS.find(
+                                                                    (o) => o.value === participantForm.data.contact_country_code,
+                                                                )?.label ?? participantForm.data.contact_country_code)
+                                                                : 'Country code…'}
+                                                        </span>
+                                                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search country code…" />
+                                                        <CommandEmpty>No country code found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {PHONE_CODE_OPTIONS.map((item) => (
+                                                                <CommandItem
+                                                                    key={item.value}
+                                                                    value={item.value}
+                                                                    onSelect={() => {
+                                                                        participantForm.setData('contact_country_code', item.value);
+                                                                        setParticipantFormPhoneCodeOpen(false);
+                                                                    }}
+                                                                >
+                                                                    {item.label}
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'ml-auto h-4 w-4',
+                                                                            participantForm.data.contact_country_code === item.value ? 'opacity-100' : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <Input
                                                 type="tel"
                                                 inputMode="numeric"
@@ -3038,7 +3198,9 @@ export default function ParticipantPage(props: PageProps) {
                                                 placeholder="e.g. 9123456789"
                                             />
                                         </div>
-                                        {participantForm.errors.contact_number ? (
+                                        {participantForm.errors.contact_country_code ? (
+                                            <div className="text-xs text-red-600">{participantForm.errors.contact_country_code}</div>
+                                        ) : participantForm.errors.contact_number ? (
                                             <div className="text-xs text-red-600">{participantForm.errors.contact_number}</div>
                                         ) : null}
                                     </div>
@@ -3062,7 +3224,9 @@ export default function ParticipantPage(props: PageProps) {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <div className="text-sm font-medium">Country</div>
+                                        <div className="text-sm font-medium">
+                                            Country of Origin <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </div>
                                         <Popover open={participantFormCountryOpen} onOpenChange={setParticipantFormCountryOpen}>
                                             <PopoverTrigger asChild>
                                                 <Button
@@ -3072,14 +3236,14 @@ export default function ParticipantPage(props: PageProps) {
                                                     className="w-full justify-between"
                                                 >
                                                     <span className="truncate">
-                                                        {selectedFormCountry ? selectedFormCountry.name : 'Select country'}
+                                                        {selectedFormCountry ? selectedFormCountry.name : 'Select country…'}
                                                     </span>
                                                     <ChevronsUpDown className="h-4 w-4 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                                 <Command>
-                                                    <CommandInput placeholder="Search country..." />
+                                                    <CommandInput placeholder="Search country…" />
                                                     <CommandEmpty>No country found.</CommandEmpty>
                                                     <CommandList>
                                                         <CommandGroup>
@@ -3118,7 +3282,9 @@ export default function ParticipantPage(props: PageProps) {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <div className="text-sm font-medium">User type</div>
+                                        <div className="text-sm font-medium">
+                                            Registrant Type <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                        </div>
                                         <Popover open={participantFormTypeOpen} onOpenChange={setParticipantFormTypeOpen}>
                                             <PopoverTrigger asChild>
                                                 <Button
@@ -3128,14 +3294,14 @@ export default function ParticipantPage(props: PageProps) {
                                                     className="w-full justify-between"
                                                 >
                                                     <span className="truncate">
-                                                        {selectedFormUserType ? selectedFormUserType.name : 'Select type'}
+                                                        {selectedFormUserType ? selectedFormUserType.name : 'Select registrant type…'}
                                                     </span>
                                                     <ChevronsUpDown className="h-4 w-4 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                                 <Command>
-                                                    <CommandInput placeholder="Search user type..." />
+                                                    <CommandInput placeholder="Search type…" />
                                                     <CommandEmpty>No user type found.</CommandEmpty>
                                                     <CommandList>
                                                         <CommandGroup>
@@ -3172,11 +3338,11 @@ export default function ParticipantPage(props: PageProps) {
 
                                     {isOtherParticipantType ? (
                                         <div className="space-y-1.5">
-                                            <div className="text-sm font-medium">Other user type</div>
+                                            <div className="text-sm font-medium">Please specify</div>
                                             <Input
                                                 value={participantForm.data.other_user_type}
                                                 onChange={(event) => participantForm.setData('other_user_type', event.target.value)}
-                                                placeholder="Specify user type"
+                                                placeholder="Enter your role"
                                             />
                                         </div>
                                     ) : null}
