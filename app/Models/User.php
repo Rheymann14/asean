@@ -63,6 +63,7 @@ class User extends Authenticatable
         'consent_photo_video',
         'has_food_restrictions',
         'food_restrictions',
+        'profile_photo_path',
     ];
 
     /**
