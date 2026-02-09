@@ -406,33 +406,34 @@ export default function IssuancesManagement(props: PageProps) {
 
                                                     <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
                                                         <Button
-                                                            size="sm"
-                                                            className={cn('h-9 rounded-full', PRIMARY_BTN)}
+                                                            type="button"
+                                                            size="icon"
+                                                            className={cn('h-8 w-8 rounded-full', PRIMARY_BTN)}
                                                             onClick={(e) => {
                                                                 e.preventDefault();
                                                                 openEdit(item);
                                                             }}
+                                                            title="Edit"
+                                                            aria-label="Edit"
                                                         >
-                                                            <Pencil className="mr-2 h-4 w-4" />
-                                                            Edit
+                                                            <Pencil className="h-4 w-4" />
                                                         </Button>
 
                                                         <div className="flex items-center gap-2">
-                                                            <Button asChild size="sm" variant="secondary" className="h-9 rounded-full">
-                                                                <a href={item.pdf_url} download>
-                                                                    <Download className="mr-2 h-4 w-4" />
-                                                                    Download
+                                                            <Button asChild size="icon" variant="secondary" className="h-8 w-8 rounded-full" title="Download">
+                                                                <a href={item.pdf_url} download aria-label="Download">
+                                                                    <Download className="h-4 w-4" />
                                                                 </a>
                                                             </Button>
 
-                                                            <Button asChild size="sm" variant="secondary" className="h-9 rounded-full">
-                                                                <a href={item.pdf_url} target="_blank" rel="noreferrer">
-                                                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                                                    Open
+                                                            <Button asChild size="icon" variant="secondary" className="h-8 w-8 rounded-full" title="Open">
+                                                                <a href={item.pdf_url} target="_blank" rel="noreferrer" aria-label="Open">
+                                                                    <ExternalLink className="h-4 w-4" />
                                                                 </a>
                                                             </Button>
                                                         </div>
                                                     </div>
+
                                                 </div>
                                             </div>
 
