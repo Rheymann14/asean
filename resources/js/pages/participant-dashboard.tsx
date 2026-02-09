@@ -836,7 +836,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 </dl>
                                             </div>
                                         </div>
-                                    </div>
+                                    </form>
 
                                     <form onSubmit={handleDietarySubmit} className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
                                         <div className="flex flex-col gap-1">
