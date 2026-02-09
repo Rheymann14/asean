@@ -16,9 +16,10 @@ return new class extends Migration
             $table->string('honorific_other')->nullable()->after('honorific_title');
             $table->string('given_name')->nullable()->after('honorific_other');
             $table->string('middle_name')->nullable()->after('given_name');
-            $table->string('family_name')->nullable()->after('middle_name');
-            $table->string('suffix', 50)->nullable()->after('family_name');
+            $table->string('family_name')->nullable()->after('middle_name');        
+            $table->string('suffix', 50)->nullable()->after('family_name');     
             $table->string('sex_assigned_at_birth', 20)->nullable()->after('suffix');
+            
             $table->string('organization_name')->nullable()->after('sex_assigned_at_birth');
             $table->string('position_title')->nullable()->after('organization_name');
             $table->string('contact_country_code', 10)->nullable()->after('position_title');

@@ -130,6 +130,21 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const page = usePage();
     const serverErrors = (page.props.errors ?? {}) as Record<string, string | undefined>;
 
+    const submittedRef = React.useRef(false);
+
+    const [dirtyFields, setDirtyFields] = React.useState<Record<string, boolean>>({});
+
+    const markDirty = React.useCallback((name?: string) => {
+        if (!name) return;
+        setDirtyFields((prev) => (prev[name] ? prev : { ...prev, [name]: true }));
+    }, []);
+
+    const shouldShowError = React.useCallback(
+        (name: string) => !dirtyFields[name],
+        [dirtyFields]
+    );
+
+
     const FIELD_STEP_MAP: Array<{ step: number; fields: string[] }> = [
         {
             step: 0,
@@ -187,31 +202,47 @@ export default function Register({ countries, registrantTypes, programmes, statu
             if (!keys.length) return null;
 
             for (const group of FIELD_STEP_MAP) {
-                if (keys.some((k) => group.fields.includes(k))) return group.step;
+                const hit = keys.some((k) =>
+                    group.fields.some((f) => k === f || k.startsWith(`${f}.`))
+                );
+                if (hit) return group.step;
             }
 
-            return 0;
+            // fallback: keep user where they are instead of forcing Step 1
+            return currentStep;
         },
-        [FIELD_STEP_MAP]
+        [FIELD_STEP_MAP, currentStep]
     );
 
 
+
     React.useEffect(() => {
+        // ✅ don't auto-jump while user is navigating steps
+        if (!submittedRef.current) return;
+
         const step = findStepFromErrors(serverErrors);
         if (step === null) return;
 
         setCurrentStep(step);
 
-        // Wait for DOM to show that step, then report validity to highlight fields
         requestAnimationFrame(() => {
             const form = getFormElement();
             const fieldsets = Array.from(form?.querySelectorAll('fieldset') ?? []) as HTMLFieldSetElement[];
             const target = fieldsets[step];
             target?.reportValidity();
-
             toast.error('Please check the highlighted fields.');
         });
+
+        // ✅ reset flag after we handled this response
+        submittedRef.current = false;
     }, [serverErrors, findStepFromErrors]);
+
+
+
+    const [honorificOpen, setHonorificOpen] = React.useState(false);
+    const [sexOpen, setSexOpen] = React.useState(false);
+    const [phoneCodeOpen, setPhoneCodeOpen] = React.useState(false);
+
 
     const [countryOpen, setCountryOpen] = React.useState(false);
     const [typeOpen, setTypeOpen] = React.useState(false);
@@ -247,23 +278,25 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const [programmeIds, setProgrammeIds] = useRemember<string[]>([], 'register.programme_ids');
     const [otherRegistrantType, setOtherRegistrantType] = useRemember<string>('', 'register.other_user_type');
 
+    const [honorificOther, setHonorificOther] = useRemember<string>('', 'register.honorific_other');
+
+
     const selectedCountry = React.useMemo(
         () => countries.find((c) => String(c.id) === country) ?? null,
         [countries, country]
     );
 
     React.useEffect(() => {
-        // if country is cleared, also clear the phone code
-        if (!selectedCountry?.code) {
-            if (contactCountryCode) setContactCountryCode('');
-            return;
-        }
+        if (!selectedCountry?.code) return;
 
         const nextCode = COUNTRY_PHONE_CODE_MAP[selectedCountry.code.toUpperCase()] ?? '';
-        if (nextCode && nextCode !== contactCountryCode) {
+
+        // ✅ only auto-fill if user hasn't chosen yet
+        if (!contactCountryCode && nextCode) {
             setContactCountryCode(nextCode);
         }
-    }, [selectedCountry?.code, contactCountryCode, setContactCountryCode]);
+    }, [selectedCountry?.code]); // ✅ remove contactCountryCode deps to avoid loops
+
 
 
     const filteredRegistrantTypes = React.useMemo(() => {
@@ -281,6 +314,30 @@ export default function Register({ countries, registrantTypes, programmes, statu
     );
     const isOtherRegistrantType =
         (selectedType?.slug ?? '').toLowerCase() === 'other' || (selectedType?.name ?? '').toLowerCase() === 'other';
+
+    // ✅ auto-focus "please specify" inputs when they appear
+    const honorificOtherRef = React.useRef<HTMLInputElement | null>(null);
+    const otherUserTypeRef = React.useRef<HTMLInputElement | null>(null);
+    const ipGroupNameRef = React.useRef<HTMLInputElement | null>(null);
+
+    React.useEffect(() => {
+        if (honorificTitle === 'other') {
+            requestAnimationFrame(() => honorificOtherRef.current?.focus());
+        }
+    }, [honorificTitle]);
+
+    React.useEffect(() => {
+        if (isOtherRegistrantType) {
+            requestAnimationFrame(() => otherUserTypeRef.current?.focus());
+        }
+    }, [isOtherRegistrantType]);
+
+    React.useEffect(() => {
+        if (ipAffiliation === 'yes') {
+            requestAnimationFrame(() => ipGroupNameRef.current?.focus());
+        }
+    }, [ipAffiliation]);
+
 
     const selectedProgrammes = React.useMemo(
         () => programmes.filter((programme) => programmeIds.includes(String(programme.id))),
@@ -333,32 +390,31 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
     const findFirstInvalidStep = () => {
         const form = getFormElement();
-        if (!form) {
-            return null;
-        }
+        if (!form) return null;
 
-        const fieldsets = Array.from(form.querySelectorAll('fieldset')) as HTMLFieldSetElement[];
-        const disabledStates = fieldsets.map((fieldset) => fieldset.disabled);
-        fieldsets.forEach((fieldset) => {
-            fieldset.disabled = false;
-        });
+        const fieldsets = Array.from(
+            form.querySelectorAll('fieldset')
+        ) as HTMLFieldSetElement[];
 
-        let invalidStep: number | null = null;
-        for (let index = 0; index < fieldsets.length; index += 1) {
-            const fieldset = fieldsets[index];
-            if (fieldset.checkValidity()) {
-                continue;
+        const previous = fieldsets.map((fs) => fs.disabled);
+
+        try {
+            // temporarily enable all
+            fieldsets.forEach((fs) => (fs.disabled = false));
+
+            for (let i = 0; i < fieldsets.length; i++) {
+                if (!fieldsets[i].checkValidity()) {
+                    return i;
+                }
             }
 
-            invalidStep = index;
-            break;
+            return null;
+        } finally {
+            // ✅ ALWAYS restore state
+            fieldsets.forEach((fs, i) => {
+                fs.disabled = previous[i];
+            });
         }
-
-        fieldsets.forEach((fieldset, index) => {
-            fieldset.disabled = disabledStates[index];
-        });
-
-        return invalidStep;
     };
 
     const validateActiveStep = () => {
@@ -404,16 +460,10 @@ export default function Register({ countries, registrantTypes, programmes, statu
     };
 
     const goNext = () => {
-        if (!validateActiveStep()) {
-            return;
-        }
-        const errorStep = findStepFromErrors(serverErrors);
-        if (errorStep !== null && errorStep !== currentStep) {
-            setCurrentStep(errorStep);
-            return;
-        }
+        if (!validateActiveStep()) return;
         setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
     };
+
 
     const goPrev = () => {
         setCurrentStep((prev) => Math.max(prev - 1, 0));
@@ -422,6 +472,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
     const resetFormState = React.useCallback(() => {
         // Force remount to clear uncontrolled inputs
         setFormKey((k) => k + 1);
+
+        setDirtyFields({});
 
         setCountry('');
         setRegistrantType('');
@@ -475,32 +527,10 @@ export default function Register({ countries, registrantTypes, programmes, statu
         }
     }, [resetFormState, status]);
 
-    React.useEffect(() => {
-        if (!isOtherRegistrantType && otherRegistrantType) {
-            setOtherRegistrantType('');
-        }
-    }, [isOtherRegistrantType, otherRegistrantType, setOtherRegistrantType]);
 
-    React.useEffect(() => {
-        if (!foodRestrictions.includes('allergies') && dietaryAllergies) {
-            setDietaryAllergies('');
-        }
-        if (!foodRestrictions.includes('other') && dietaryOther) {
-            setDietaryOther('');
-        }
-    }, [dietaryAllergies, dietaryOther, foodRestrictions, setDietaryAllergies, setDietaryOther]);
 
-    React.useEffect(() => {
-        if (!accessibilityNeeds.includes('other') && accessibilityOther) {
-            setAccessibilityOther('');
-        }
-    }, [accessibilityNeeds, accessibilityOther, setAccessibilityOther]);
 
-    React.useEffect(() => {
-        if (ipAffiliation !== 'yes' && ipGroupName) {
-            setIpGroupName('');
-        }
-    }, [ipAffiliation, ipGroupName, setIpGroupName]);
+
 
     const inputClass =
         'h-11 rounded-xl border-slate-200 bg-white shadow-[inset_0_1px_2px_rgba(2,6,23,0.06)] ' +
@@ -570,10 +600,14 @@ export default function Register({ countries, registrantTypes, programmes, statu
                 key={formKey}
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
-                disableWhileProcessing
+
                 className="flex flex-col gap-6"
                 noValidate
                 data-test="register-form"
+                onInputCapture={(e) => {
+                    const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+                    markDirty(target?.name);
+                }}
                 onSubmitCapture={(event) => {
                     if (!canContinue) {
                         event.preventDefault();
@@ -581,11 +615,18 @@ export default function Register({ countries, registrantTypes, programmes, statu
                         toast.error('Please tick both required consent boxes.');
                         return;
                     }
+
+                    // client-side validation (all steps)
                     if (!validateForm()) {
                         event.preventDefault();
                         event.stopPropagation();
+                        return;
                     }
+
+                    // ✅ only set when we actually allow submit to go through
+                    submittedRef.current = true;
                 }}
+
                 onSuccess={() => {
                     resetFormState();
                     setSuccessOpen(true);
@@ -594,6 +635,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                 {({ processing, errors }) => {
                     const err = errors as Record<string, string | undefined>;
+                    const showIfEmpty = (msg?: string, value?: string) =>
+                        msg && !value?.trim() ? msg : undefined;
 
                     return (
                         <>
@@ -633,10 +676,10 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                                 isActive
                                                                     ? 'bg-[#0033A0] text-white'
                                                                     : isError
-                                                                      ? 'border border-red-200 bg-red-50 text-red-600 hover:border-red-300'
-                                                                      : isComplete
-                                                                        ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300'
-                                                                        : 'border border-slate-200 text-slate-500 hover:border-[#0033A0] hover:text-[#0033A0]'
+                                                                        ? 'border border-red-200 bg-red-50 text-red-600 hover:border-red-300'
+                                                                        : isComplete
+                                                                            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300'
+                                                                            : 'border border-slate-200 text-slate-500 hover:border-[#0033A0] hover:text-[#0033A0]'
                                                             )}
                                                         >
                                                             {index + 1}
@@ -705,7 +748,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     </Button>
                                                 </PopoverTrigger>
 
-                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <PopoverContent className="z-50 w-[--radix-popover-trigger-width] p-0" align="start">
+
                                                     <Command>
                                                         <CommandInput placeholder="Search country…" />
                                                         <CommandEmpty>No country found.</CommandEmpty>
@@ -747,47 +791,98 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 </PopoverContent>
                                             </Popover>
 
-                                            <InputError message={err.country_id ?? err.country} />
+                                            <InputError message={err.country_id && !country ? err.country_id : undefined} />
+
+
                                         </div>
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="honorific_title">
                                                 Honorific / Title <span className="text-[11px] font-semibold text-red-600"> *</span>
                                             </Label>
-                                            <select
-                                                id="honorific_title"
-                                                name="honorific_title"
-                                                required
-                                                tabIndex={2}
-                                                value={honorificTitle}
-                                                onChange={(event) => setHonorificTitle(event.target.value)}
-                                                className={inputClass}
-                                            >
-                                                <option value="">Select honorific…</option>
-                                                {HONORIFIC_OPTIONS.map((option) => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <InputError message={err.honorific_title} />
+
+                                            <input type="hidden" name="honorific_title" value={honorificTitle} />
+
+                                            <Popover open={honorificOpen} onOpenChange={setHonorificOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={honorificOpen}
+                                                        className={comboboxTriggerClass}
+                                                        tabIndex={2}
+                                                    >
+                                                        <span className="truncate">
+                                                            {honorificTitle
+                                                                ? (HONORIFIC_OPTIONS.find((o) => o.value === honorificTitle)?.label ?? honorificTitle)
+                                                                : <span className="text-muted-foreground">Select honorific…</span>}
+                                                        </span>
+                                                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+
+                                                <PopoverContent
+                                                    className="w-[--radix-popover-trigger-width] p-0"
+                                                    align="start"
+                                                    onCloseAutoFocus={(e) => e.preventDefault()}
+                                                >
+                                                    <Command>
+                                                        <CommandInput placeholder="Search honorific…" />
+                                                        <CommandEmpty>No honorific found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {HONORIFIC_OPTIONS.map((item) => (
+                                                                <CommandItem
+                                                                    key={item.value}
+                                                                    value={item.label}
+                                                                    onSelect={() => {
+                                                                        setHonorificOpen(false);
+                                                                        setHonorificTitle(item.value);
+
+                                                                        if (item.value !== 'other') {
+                                                                            setHonorificOther(''); // ✅ clear immediately when not other
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    {item.label}
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'ml-auto h-4 w-4',
+                                                                            honorificTitle === item.value ? 'opacity-100' : 'opacity-0'
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+
+                                            <InputError message={err.honorific_title && !honorificTitle ? err.honorific_title : undefined} />
+
                                         </div>
+
 
                                         {honorificTitle === 'other' ? (
                                             <div className="grid gap-2">
                                                 <Label htmlFor="honorific_other">Other honorific</Label>
                                                 <Input
+                                                    ref={honorificOtherRef}
                                                     id="honorific_other"
-                                                    type="text"
                                                     name="honorific_other"
+                                                    value={honorificOther}
+                                                    onChange={(e) => setHonorificOther(e.target.value)}
                                                     required
-                                                    tabIndex={3}
+                                                    maxLength={50}
                                                     placeholder="Please specify"
                                                     className={inputClass}
                                                 />
-                                                <InputError message={err.honorific_other} />
+                                                <InputError message={showIfEmpty(err.honorific_other, honorificOther)} />
                                             </div>
                                         ) : null}
+
+
+
 
                                         <div className="grid gap-4 sm:grid-cols-3">
                                             <div className="grid gap-2">
@@ -798,14 +893,15 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     id="given_name"
                                                     type="text"
                                                     required
-                                                    autoFocus
+
                                                     tabIndex={honorificTitle === 'other' ? 4 : 3}
                                                     autoComplete="given-name"
                                                     name="given_name"
                                                     placeholder="e.g. JUAN"
                                                     className={inputClass}
                                                 />
-                                                <InputError message={err.given_name} />
+
+                                                <InputError message={err.given_name && shouldShowError('given_name') ? err.given_name : undefined} />
                                             </div>
 
                                             <div className="grid gap-2">
@@ -819,7 +915,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     placeholder="e.g. SANTOS"
                                                     className={inputClass}
                                                 />
-                                                <InputError message={err.middle_name} />
+
+                                                <InputError message={err.middle_name && shouldShowError('middle_name') ? err.middle_name : undefined} />
                                             </div>
 
                                             <div className="grid gap-2">
@@ -836,7 +933,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     placeholder="e.g. DELA CRUZ"
                                                     className={inputClass}
                                                 />
-                                                <InputError message={err.family_name} />
+                                                <InputError message={err.family_name && shouldShowError('family_name') ? err.family_name : undefined} />
                                             </div>
                                         </div>
 
@@ -850,31 +947,74 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 placeholder="e.g. Jr., III"
                                                 className={inputClass}
                                             />
-                                            <InputError message={err.suffix} />
+
+                                            <InputError message={err.suffix && shouldShowError('suffix') ? err.suffix : undefined} />
                                         </div>
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="sex_assigned_at_birth">
                                                 Sex assigned at birth <span className="text-[11px] font-semibold text-red-600"> *</span>
                                             </Label>
-                                            <select
-                                                id="sex_assigned_at_birth"
-                                                name="sex_assigned_at_birth"
-                                                required
-                                                tabIndex={honorificTitle === 'other' ? 8 : 7}
-                                                value={sexAssignedAtBirth}
-                                                onChange={(event) => setSexAssignedAtBirth(event.target.value)}
-                                                className={inputClass}
-                                            >
-                                                <option value="">Select…</option>
-                                                {SEX_ASSIGNED_OPTIONS.map((option) => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <InputError message={err.sex_assigned_at_birth} />
+
+                                            <input type="hidden" name="sex_assigned_at_birth" value={sexAssignedAtBirth} />
+
+                                            <Popover open={sexOpen} onOpenChange={setSexOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={sexOpen}
+                                                        className={comboboxTriggerClass}
+                                                        tabIndex={honorificTitle === 'other' ? 8 : 7}
+                                                    >
+                                                        <span className="truncate">
+                                                            {sexAssignedAtBirth
+                                                                ? (SEX_ASSIGNED_OPTIONS.find((o) => o.value === sexAssignedAtBirth)?.label ?? sexAssignedAtBirth)
+                                                                : <span className="text-muted-foreground">Select…</span>}
+                                                        </span>
+                                                        <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search…" />
+                                                        <CommandEmpty>No option found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {SEX_ASSIGNED_OPTIONS.map((item) => (
+                                                                <CommandItem
+                                                                    key={item.value}
+                                                                    value={item.label}
+                                                                    onSelect={() => {
+                                                                        setSexAssignedAtBirth(item.value);
+                                                                        setSexOpen(false);
+                                                                    }}
+                                                                >
+                                                                    {item.label}
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'ml-auto h-4 w-4',
+                                                                            sexAssignedAtBirth === item.value ? 'opacity-100' : 'opacity-0'
+                                                                        )}
+                                                                    />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+
+                                            <InputError
+                                                message={
+                                                    err.sex_assigned_at_birth && !sexAssignedAtBirth
+
+                                                        ? err.sex_assigned_at_birth
+                                                        : undefined
+                                                }
+                                            />
                                         </div>
+
                                     </fieldset>
 
                                     <fieldset
@@ -894,30 +1034,72 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 placeholder="email@example.com"
                                                 className={inputClass}
                                             />
-                                            <InputError message={err.email} />
+
+                                            <InputError message={err.email && shouldShowError('email') ? err.email : undefined} />
+
                                         </div>
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="contact_number">
-                                                Contact number  <span className="text-[11px] font-semibold text-red-600"> *</span>
+                                                Contact number <span className="text-[11px] font-semibold text-red-600"> *</span>
                                             </Label>
+
                                             <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
-                                                <select
-                                                    id="contact_country_code"
-                                                    name="contact_country_code"
-                                                    required
-                                                    tabIndex={honorificTitle === 'other' ? 10 : 9}
-                                                    value={contactCountryCode}
-                                                    onChange={(event) => setContactCountryCode(event.target.value)}
-                                                    className={inputClass}
-                                                >
-                                                    <option value="">Country code…</option>
-                                                    {PHONE_CODE_OPTIONS.map((option) => (
-                                                        <option key={option.value} value={option.value}>
-                                                            {option.label}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                {/* ✅ Country code combobox */}
+                                                <div className="grid gap-2">
+                                                    <input type="hidden" name="contact_country_code" value={contactCountryCode} />
+
+                                                    <Popover open={phoneCodeOpen} onOpenChange={setPhoneCodeOpen}>
+                                                        <PopoverTrigger asChild>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                role="combobox"
+                                                                aria-expanded={phoneCodeOpen}
+                                                                className={comboboxTriggerClass}
+                                                                tabIndex={honorificTitle === 'other' ? 10 : 9}
+                                                            >
+                                                                <span className="truncate">
+                                                                    {contactCountryCode
+                                                                        ? (PHONE_CODE_OPTIONS.find((o) => o.value === contactCountryCode)?.label ?? contactCountryCode)
+                                                                        : <span className="text-muted-foreground">Country code…</span>}
+                                                                </span>
+                                                                <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                                                            </Button>
+                                                        </PopoverTrigger>
+
+                                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                            <Command>
+                                                                <CommandInput placeholder="Search country code…" />
+                                                                <CommandEmpty>No country code found.</CommandEmpty>
+
+                                                                <CommandGroup>
+                                                                    {PHONE_CODE_OPTIONS.map((item) => (
+                                                                        <CommandItem
+                                                                            key={item.value}
+                                                                            value={item.value} // ✅ important
+                                                                            onSelect={() => {
+                                                                                setContactCountryCode(item.value); // ✅ store +63 etc
+                                                                                setPhoneCodeOpen(false);
+                                                                            }}
+                                                                        >
+                                                                            {item.label}
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    'ml-auto h-4 w-4',
+                                                                                    contactCountryCode === item.value ? 'opacity-100' : 'opacity-0'
+                                                                                )}
+                                                                            />
+                                                                        </CommandItem>
+                                                                    ))}
+                                                                </CommandGroup>
+                                                            </Command>
+                                                        </PopoverContent>
+                                                    </Popover>
+
+                                                </div>
+
+                                                {/* ✅ Contact number input (THIS is what was missing) */}
                                                 <Input
                                                     id="contact_number"
                                                     type="tel"
@@ -929,15 +1111,23 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     placeholder="e.g. 9123456789"
                                                     className={inputClass}
                                                     onInput={(event) => {
-                                                        event.currentTarget.value = event.currentTarget.value.replace(
-                                                            /[^0-9]/g,
-                                                            ''
-                                                        );
+                                                        event.currentTarget.value = event.currentTarget.value.replace(/[^0-9]/g, '');
                                                     }}
                                                 />
                                             </div>
-                                            <InputError message={err.contact_country_code ?? err.contact_number} />
+
+                                            <InputError
+                                                message={
+                                                    err.contact_country_code && !contactCountryCode
+
+                                                        ? err.contact_country_code
+                                                        : err.contact_number && shouldShowError('contact_number')
+                                                            ? err.contact_number
+                                                            : undefined
+                                                }
+                                            />
                                         </div>
+
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="organization_name">
@@ -952,7 +1142,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 placeholder="Name of organization"
                                                 className={inputClass}
                                             />
-                                            <InputError message={err.organization_name} />
+                                            <InputError message={err.organization_name && shouldShowError('organization_name') ? err.organization_name : undefined} />
+
                                         </div>
 
                                         <div className="grid gap-2">
@@ -969,6 +1160,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 className={inputClass}
                                             />
                                             <InputError message={err.position_title} />
+
+
                                         </div>
 
                                         <div className="grid gap-2">
@@ -1011,8 +1204,16 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                                     key={item.id}
                                                                     value={item.name}
                                                                     onSelect={() => {
-                                                                        setRegistrantType(String(item.id));
                                                                         setTypeOpen(false);
+                                                                        setRegistrantType(String(item.id));
+
+                                                                        const isOther =
+                                                                            (item.slug ?? '').trim().toLowerCase() === 'other' ||
+                                                                            (item.name ?? '').trim().toLowerCase() === 'other';
+
+                                                                        if (!isOther) {
+                                                                            setOtherRegistrantType(''); // ✅ clear immediately if not other
+                                                                        }
                                                                     }}
                                                                 >
                                                                     {item.name}
@@ -1031,24 +1232,35 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                 </PopoverContent>
                                             </Popover>
 
-                                            <InputError message={err.user_type_id ?? err.registrant_type} />
+                                            <InputError
+                                                message={
+                                                    (err.user_type_id || err.registrant_type) && registrantType === ''
+                                                        ? (err.user_type_id ?? err.registrant_type)
+                                                        : undefined
+                                                }
+                                            />
+
                                         </div>
 
                                         {isOtherRegistrantType ? (
                                             <div className="grid gap-2">
                                                 <Label htmlFor="other_user_type">Please specify</Label>
                                                 <Input
+                                                    ref={otherUserTypeRef}
                                                     id="other_user_type"
                                                     name="other_user_type"
                                                     value={otherRegistrantType}
-                                                    onChange={(event) => setOtherRegistrantType(event.target.value)}
+                                                    onChange={(e) => setOtherRegistrantType(e.target.value)}
                                                     required
+                                                    maxLength={120}
                                                     placeholder="Enter your role"
                                                     className={inputClass}
                                                 />
-                                                <InputError message={err.other_user_type} />
+                                                <InputError message={showIfEmpty(err.other_user_type, otherRegistrantType)} />
                                             </div>
                                         ) : null}
+
+
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="programme_ids">Select events to join</Label>
@@ -1080,8 +1292,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     align="start"
                                                     sideOffset={8}
                                                     className={cn(
-                                                        'p-0',
-                                                        // ✅ responsive width: never exceed viewport, and keep it compact on desktop
+                                                        'z-50 p-0',
                                                         'w-[min(calc(100vw-1.5rem),var(--radix-popover-trigger-width))]',
                                                         'sm:w-[520px]'
                                                     )}
@@ -1174,7 +1385,14 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                             </Popover>
 
-                                            <InputError message={err.programme_ids ?? err['programme_ids.0']} />
+                                            <InputError
+                                                message={
+                                                    (err.programme_ids ?? err['programme_ids.0']) && programmeIds.length === 0
+                                                        ? (err.programme_ids ?? err['programme_ids.0'])
+                                                        : undefined
+                                                }
+                                            />
+
                                             {selectedProgrammes.length > 0 && (
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedProgrammes.map((programme) => (
@@ -1222,7 +1440,10 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     )}
                                                 </button>
                                             </div>
-                                            <InputError message={err.password} />
+
+
+                                            <InputError message={err.password && shouldShowError('password') ? err.password : undefined} />
+
                                         </div>
 
                                         <div className="grid gap-2">
@@ -1255,7 +1476,9 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     )}
                                                 </button>
                                             </div>
+
                                             <InputError message={err.password_confirmation} />
+
                                         </div>
                                     </fieldset>
 
@@ -1314,7 +1537,8 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                         placeholder="e.g. Nuts, seafood"
                                                         className={inputClass}
                                                     />
-                                                    <InputError message={err.dietary_allergies} />
+                                                    <InputError message={err.dietary_allergies && shouldShowError('dietary_allergies') ? err.dietary_allergies : undefined} />
+
                                                 </div>
                                             ) : null}
 
@@ -1330,6 +1554,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                         className={inputClass}
                                                     />
                                                     <InputError message={err.dietary_other} />
+
                                                 </div>
                                             ) : null}
                                         </div>
@@ -1369,21 +1594,30 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                     No
                                                 </label>
                                             </div>
-
                                             {ipAffiliation === 'yes' ? (
-                                                <div className="mt-3 grid gap-2">
+                                                <div
+                                                    className={cn('mt-3 grid gap-2', ipAffiliation === 'yes' ? '' : 'hidden')}
+                                                    aria-hidden={ipAffiliation !== 'yes'}
+                                                >
                                                     <Label htmlFor="ip_group_name">If yes, please specify</Label>
                                                     <Input
+                                                        ref={ipGroupNameRef}
                                                         id="ip_group_name"
+                                                        type="text"
                                                         name="ip_group_name"
                                                         value={ipGroupName}
-                                                        onChange={(event) => setIpGroupName(event.target.value)}
+                                                        onChange={(e) => setIpGroupName(e.target.value)}
+                                                        disabled={ipAffiliation !== 'yes'}
+                                                        required={ipAffiliation === 'yes'}
+                                                        maxLength={150}
                                                         placeholder="Name of IP group"
                                                         className={inputClass}
                                                     />
-                                                    <InputError message={err.ip_group_name} />
+                                                    <InputError message={err.ip_group_name && shouldShowError('ip_group_name') ? err.ip_group_name : undefined} />
                                                 </div>
+
                                             ) : null}
+
                                         </div>
 
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
@@ -1408,14 +1642,23 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                                 checked={checked}
                                                                 onCheckedChange={(value) => {
                                                                     setAccessibilityNeeds((prev) => {
-                                                                        if (value) {
-                                                                            return prev.includes(option.value) ? prev : [...prev, option.value];
+                                                                        const next = new Set(prev);
+
+                                                                        if (value) next.add(option.value);
+                                                                        else next.delete(option.value);
+
+                                                                        const arr = Array.from(next);
+
+                                                                        // ✅ clear immediately when "other" is removed
+                                                                        if (option.value === 'other' && !arr.includes('other')) {
+                                                                            setAccessibilityOther('');
                                                                         }
 
-                                                                        return prev.filter((item) => item !== option.value);
+                                                                        return arr;
                                                                     });
                                                                 }}
                                                             />
+
                                                             <span>{option.label}</span>
                                                         </label>
                                                     );
@@ -1429,13 +1672,14 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                         id="accessibility_other"
                                                         name="accessibility_other"
                                                         value={accessibilityOther}
-                                                        onChange={(event) => setAccessibilityOther(event.target.value)}
+                                                        onChange={(e) => setAccessibilityOther(e.target.value)}
                                                         placeholder="Please specify"
                                                         className={inputClass}
                                                     />
-                                                    <InputError message={err.accessibility_other} />
+                                                    <InputError message={showIfEmpty(err.accessibility_other, accessibilityOther)} />
                                                 </div>
                                             ) : null}
+
                                         </div>
 
 
