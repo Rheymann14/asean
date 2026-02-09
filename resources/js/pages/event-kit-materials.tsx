@@ -189,7 +189,7 @@ export default function EventKitMaterials() {
     );
     const venue = programme.location || '—';
 
-    const handlePrint = () => {
+    const handleDownload = () => {
         if (!hasAttendance) return;
 
         const html = buildCertificatePrintBody({
@@ -212,7 +212,7 @@ export default function EventKitMaterials() {
             printable: html,
             type: 'raw-html',
             style: CERTIFICATE_PRINT_STYLES,
-            documentTitle: 'Certificate',
+            documentTitle: 'Certificates',
         });
     };
 
@@ -533,8 +533,8 @@ export default function EventKitMaterials() {
                                         <div className="flex min-w-0 items-center gap-2">
                                             <Medal className="h-4 w-4 shrink-0" />
                                             <span className="min-w-0 font-semibold break-words">
-                                                Print certificates (appearance &
-                                                participation)
+                                                Download certificates (appearance
+                                                & participation)
                                             </span>
                                         </div>
 
@@ -543,9 +543,9 @@ export default function EventKitMaterials() {
                                                 size="sm"
                                                 variant="outline"
                                                 className="h-9 w-full rounded-xl sm:h-8 sm:w-auto"
-                                                onClick={handlePrint}
+                                                onClick={handleDownload}
                                             >
-                                                Print
+                                                Download PDF
                                             </Button>
                                         ) : (
                                             <span className="text-[11px]">
