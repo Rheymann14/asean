@@ -1,7 +1,7 @@
 import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
-import { cn } from '@/lib/utils';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 import QRCode from 'qrcode';
 
@@ -150,14 +150,12 @@ function resolveEventPhase(event: EventRow, now: number) {
     if (Number.isNaN(startDate.getTime())) return 'ongoing';
 
     const nowDate = new Date(now);
-    if (nowDate.getTime() < startDate.getTime()) return 'upcoming';
+    const nowDateTs = toDateOnlyTimestamp(nowDate);
+    const startDateTs = toDateOnlyTimestamp(startDate);
 
-    const sameDay =
-        nowDate.getFullYear() === startDate.getFullYear() &&
-        nowDate.getMonth() === startDate.getMonth() &&
-        nowDate.getDate() === startDate.getDate();
-
-    return sameDay ? 'ongoing' : 'closed';
+    if (nowDateTs < startDateTs) return 'upcoming';
+    if (nowDateTs === startDateTs) return 'ongoing';
+    return 'closed';
 }
 
 function phaseLabel(phase?: EventRow['phase']) {

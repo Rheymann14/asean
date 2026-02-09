@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { participant } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { cn } from '@/lib/utils';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { toast } from 'sonner';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -321,25 +321,20 @@ function formatEventWindow(startsAt: string, endsAt?: string) {
 
 function getEventPhase(startsAt: string, endsAt: string | undefined, nowTs: number): EventPhase {
     const start = new Date(startsAt);
-    const startTs = start.getTime();
     const end = endsAt ? new Date(endsAt) : null;
-    const endTs = end ? end.getTime() : null;
+    const nowDateTs = toDateOnlyTimestamp(new Date(nowTs));
+    const startDateTs = toDateOnlyTimestamp(start);
+    const endDateTs = end ? toDateOnlyTimestamp(end) : null;
 
-    if (endTs !== null) {
-        if (nowTs < startTs) return 'upcoming';
-        if (nowTs <= endTs) return 'ongoing';
+    if (endDateTs !== null) {
+        if (nowDateTs < startDateTs) return 'upcoming';
+        if (nowDateTs <= endDateTs) return 'ongoing';
         return 'closed';
     }
 
-    if (nowTs < startTs) return 'upcoming';
-
-    const now = new Date(nowTs);
-    const sameDay =
-        now.getFullYear() === start.getFullYear() &&
-        now.getMonth() === start.getMonth() &&
-        now.getDate() === start.getDate();
-
-    return sameDay ? 'ongoing' : 'closed';
+    if (nowDateTs < startDateTs) return 'upcoming';
+    if (nowDateTs === startDateTs) return 'ongoing';
+    return 'closed';
 }
 
 function phaseBadgeClass(phase: EventPhase) {

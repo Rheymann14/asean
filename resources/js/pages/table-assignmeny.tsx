@@ -2,7 +2,7 @@ import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,11 +134,14 @@ type EventPhase = 'ongoing' | 'upcoming' | 'closed';
 
 function resolveEventPhase(event: EventRow, now: number): EventPhase {
     if (!event.is_active) return 'closed';
-    const startsAt = event.starts_at ? new Date(event.starts_at).getTime() : null;
-    const endsAt = event.ends_at ? new Date(event.ends_at).getTime() : null;
+    const startDate = event.starts_at ? new Date(event.starts_at) : null;
+    const endDate = event.ends_at ? new Date(event.ends_at) : null;
+    const nowDateTs = toDateOnlyTimestamp(new Date(now));
+    const startDateTs = startDate ? toDateOnlyTimestamp(startDate) : null;
+    const endDateTs = endDate ? toDateOnlyTimestamp(endDate) : null;
 
-    if (startsAt && now < startsAt) return 'upcoming';
-    if (endsAt && now > endsAt) return 'closed';
+    if (startDateTs !== null && nowDateTs < startDateTs) return 'upcoming';
+    if (endDateTs !== null && nowDateTs > endDateTs) return 'closed';
     return 'ongoing';
 }
 

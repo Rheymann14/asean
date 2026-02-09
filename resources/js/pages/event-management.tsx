@@ -2,7 +2,7 @@ import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,9 +182,12 @@ function getEventStatus(starts_at?: string | null, ends_at?: string | null) {
 
     const end = ends_at ? new Date(ends_at) : null;
     const now = new Date();
+    const nowDateTs = toDateOnlyTimestamp(now);
+    const startDateTs = toDateOnlyTimestamp(start);
+    const endDateTs = end && !Number.isNaN(end.getTime()) ? toDateOnlyTimestamp(end) : null;
 
-    if (end && !Number.isNaN(end.getTime()) && now > end) return 'closed';
-    if (now < start) return 'upcoming';
+    if (endDateTs !== null && nowDateTs > endDateTs) return 'closed';
+    if (nowDateTs < startDateTs) return 'upcoming';
     return 'ongoing';
 }
 

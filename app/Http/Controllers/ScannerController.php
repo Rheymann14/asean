@@ -166,16 +166,20 @@ class ScannerController extends Controller
         $start = $programme->starts_at ?? $programme->ends_at ?? $now;
         $end = $programme->ends_at;
 
-        if ($end && $now->greaterThan($end)) {
+        $nowDate = $now->copy()->startOfDay();
+        $startDate = $start->copy()->startOfDay();
+        $endDate = $end ? $end->copy()->startOfDay() : null;
+
+        if ($endDate && $nowDate->greaterThan($endDate)) {
             return 'closed';
         }
 
-        if ($now->lessThan($start)) {
+        if ($nowDate->lessThan($startDate)) {
             return 'upcoming';
         }
 
-        $sameDay = $now->isSameDay($start);
-
-        return $sameDay ? 'ongoing' : 'closed';
+        return $nowDate->equalTo($startDate) || ($endDate && $nowDate->betweenIncluded($startDate, $endDate))
+            ? 'ongoing'
+            : 'closed';
     }
 }

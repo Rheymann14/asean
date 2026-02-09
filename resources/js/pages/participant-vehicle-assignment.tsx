@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { Bus, CalendarDays, Check, ChevronsUpDown, MapPin, Phone, User2 } from 'lucide-react';
 
 type VehicleAssignment = {
@@ -62,25 +62,20 @@ function getEventPhase(startsAt: string | null | undefined, endsAt: string | nul
     if (!startsAt) return 'upcoming';
 
     const start = new Date(startsAt);
-    const startTs = start.getTime();
     const end = endsAt ? new Date(endsAt) : null;
-    const endTs = end ? end.getTime() : null;
+    const nowDateTs = toDateOnlyTimestamp(new Date(nowTs));
+    const startDateTs = toDateOnlyTimestamp(start);
+    const endDateTs = end ? toDateOnlyTimestamp(end) : null;
 
-    if (endTs !== null) {
-        if (nowTs < startTs) return 'upcoming';
-        if (nowTs <= endTs) return 'ongoing';
+    if (endDateTs !== null) {
+        if (nowDateTs < startDateTs) return 'upcoming';
+        if (nowDateTs <= endDateTs) return 'ongoing';
         return 'closed';
     }
 
-    if (nowTs < startTs) return 'upcoming';
-
-    const now = new Date(nowTs);
-    const sameDay =
-        now.getFullYear() === start.getFullYear() &&
-        now.getMonth() === start.getMonth() &&
-        now.getDate() === start.getDate();
-
-    return sameDay ? 'ongoing' : 'closed';
+    if (nowDateTs < startDateTs) return 'upcoming';
+    if (nowDateTs === startDateTs) return 'ongoing';
+    return 'closed';
 }
 
 function phaseLabel(phase: EventPhase) {
