@@ -62,15 +62,9 @@ type RegisterProps = {
 
 const FOOD_RESTRICTION_OPTIONS = [
     { value: 'vegetarian', label: 'Vegetarian' },
-    { value: 'vegan', label: 'Vegan' },
     { value: 'halal', label: 'Halal' },
-    { value: 'kosher', label: 'Kosher' },
-    { value: 'gluten_free', label: 'Gluten-free' },
-    { value: 'lactose_intolerant', label: 'Lactose intolerant' },
-    { value: 'nut_allergy', label: 'Nut allergy' },
-    { value: 'seafood_allergy', label: 'Seafood allergy' },
-    { value: 'allergies', label: 'Allergies' },
-    { value: 'other', label: 'Other' },
+    { value: 'allergies', label: 'Allergies (please specify)' },
+    { value: 'other', label: 'Other (please specify)' },
 ] as const;
 
 const ACCESSIBILITY_NEEDS_OPTIONS = [
@@ -1494,7 +1488,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
                                                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                                                        Food Restrictions
+                                                        Dietary Preferences
                                                     </p>
                                                     <p className="mt-1 text-sm leading-snug text-slate-600">
                                                         Select all that apply.
@@ -1534,7 +1528,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
                                                         name="dietary_allergies"
                                                         value={dietaryAllergies}
                                                         onChange={(event) => setDietaryAllergies(event.target.value)}
-                                                        placeholder="e.g. Nuts, seafood"
+                                                        placeholder="Please specify"
                                                         className={inputClass}
                                                     />
                                                     <InputError message={err.dietary_allergies && shouldShowError('dietary_allergies') ? err.dietary_allergies : undefined} />
@@ -1544,7 +1538,7 @@ export default function Register({ countries, registrantTypes, programmes, statu
 
                                             {foodRestrictions.includes('other') ? (
                                                 <div className="mt-3 grid gap-2">
-                                                    <Label htmlFor="dietary_other">Other dietary needs</Label>
+                                                    <Label htmlFor="dietary_other">Other (please specify)</Label>
                                                     <Input
                                                         id="dietary_other"
                                                         name="dietary_other"
