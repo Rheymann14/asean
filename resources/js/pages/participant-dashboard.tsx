@@ -74,7 +74,7 @@ const FOOD_RESTRICTION_LABELS: Record<string, string> = {
     other: 'Other',
 };
 
-const FOOD_RESTRICTION_OPTIONS = [
+const DIETARY_PREFERENCE_OPTIONS = [
     { value: 'vegetarian', label: 'Vegetarian' },
     { value: 'vegan', label: 'Vegan' },
     { value: 'halal', label: 'Halal' },
@@ -411,7 +411,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
         accessibility_other: participant.accessibility_other ?? '',
     });
 
-    const foodRestrictionLabels = React.useMemo(
+    const dietaryPreferenceLabels = React.useMemo(
         () =>
             (participant.food_restrictions ?? []).map(
                 (value) => FOOD_RESTRICTION_LABELS[value] ?? value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
@@ -782,9 +782,9 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 </h4>
                                                 <dl className="grid gap-2 text-sm sm:grid-cols-2">
                                                     <div className="flex items-center justify-between gap-4">
-                                                        <dt className="text-slate-500 dark:text-slate-400">Food restrictions</dt>
+                                                        <dt className="text-slate-500 dark:text-slate-400">Dietary preferences</dt>
                                                         <dd className="font-medium text-slate-900 dark:text-slate-100">
-                                                            {foodRestrictionLabels.length ? foodRestrictionLabels.join(', ') : 'None'}
+                                                            {dietaryPreferenceLabels.length ? dietaryPreferenceLabels.join(', ') : 'None'}
                                                         </dd>
                                                     </div>
                                                     <div className="flex items-center justify-between gap-4">
@@ -836,7 +836,7 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                                 </dl>
                                             </div>
                                         </div>
-                                    </div>
+                                    </form>
 
                                     <form onSubmit={handleDietarySubmit} className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/30">
                                         <div className="flex flex-col gap-1">
@@ -846,84 +846,112 @@ export default function ParticipantDashboard({ participant }: PageProps) {
                                             </div>
                                         </div>
 
-                                        <div className="mt-4 grid gap-4">
-                                            <div className="grid gap-2">
-                                                <Label className="text-sm font-medium">Food restrictions</Label>
-                                                <div className="grid gap-3 sm:grid-cols-2">
-                                                    {FOOD_RESTRICTION_OPTIONS.map((option) => (
-                                                        <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
-                                                            <Checkbox
-                                                                checked={form.data.food_restrictions.includes(option.value)}
-                                                                onCheckedChange={() => toggleFoodRestriction(option.value)}
-                                                            />
-                                                            <span>{option.label}</span>
-                                                        </label>
-                                                    ))}
+                                        <div className="mt-4 space-y-4">
+                                            <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/40">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00359c]/10 text-[#00359c]">
+                                                        1
+                                                    </span>
+                                                    Dietary preferences
                                                 </div>
-                                                {form.errors.food_restrictions || form.errors['food_restrictions.0'] ? (
-                                                    <p className="text-xs text-rose-500">
-                                                        {form.errors.food_restrictions || form.errors['food_restrictions.0']}
-                                                    </p>
-                                                ) : null}
-                                            </div>
+                                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                    Select all that apply.
+                                                </p>
 
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
-                                                <Input
-                                                    id="dietary_allergies"
-                                                    value={form.data.dietary_allergies}
-                                                    onChange={(event) => form.setData('dietary_allergies', event.target.value)}
-                                                    placeholder="List any allergies"
-                                                />
-                                                {form.errors.dietary_allergies ? (
-                                                    <p className="text-xs text-rose-500">{form.errors.dietary_allergies}</p>
-                                                ) : null}
-                                            </div>
+                                                <div className="mt-4 grid gap-4">
+                                                    <div className="grid gap-2">
+                                                        <Label className="text-sm font-medium">Dietary preferences</Label>
+                                                        <div className="grid gap-3 sm:grid-cols-2">
+                                                            {DIETARY_PREFERENCE_OPTIONS.map((option) => (
+                                                                <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                                                                    <Checkbox
+                                                                        checked={form.data.food_restrictions.includes(option.value)}
+                                                                        onCheckedChange={() => toggleFoodRestriction(option.value)}
+                                                                    />
+                                                                    <span>{option.label}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                        {form.errors.food_restrictions || form.errors['food_restrictions.0'] ? (
+                                                            <p className="text-xs text-rose-500">
+                                                                {form.errors.food_restrictions || form.errors['food_restrictions.0']}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
 
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="dietary_other">Dietary notes (optional)</Label>
-                                                <Input
-                                                    id="dietary_other"
-                                                    value={form.data.dietary_other}
-                                                    onChange={(event) => form.setData('dietary_other', event.target.value)}
-                                                    placeholder="Other dietary requests"
-                                                />
-                                                {form.errors.dietary_other ? (
-                                                    <p className="text-xs text-rose-500">{form.errors.dietary_other}</p>
-                                                ) : null}
-                                            </div>
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="dietary_allergies">Allergies (please specify)</Label>
+                                                        <Input
+                                                            id="dietary_allergies"
+                                                            value={form.data.dietary_allergies}
+                                                            onChange={(event) => form.setData('dietary_allergies', event.target.value)}
+                                                            placeholder="List any allergies"
+                                                        />
+                                                        {form.errors.dietary_allergies ? (
+                                                            <p className="text-xs text-rose-500">{form.errors.dietary_allergies}</p>
+                                                        ) : null}
+                                                    </div>
 
-                                            <div className="grid gap-2">
-                                                <Label className="text-sm font-medium">Accessibility needs</Label>
-                                                <div className="grid gap-3 sm:grid-cols-2">
-                                                    {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => (
-                                                        <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
-                                                            <Checkbox
-                                                                checked={form.data.accessibility_needs.includes(option.value)}
-                                                                onCheckedChange={() => toggleAccessibilityNeed(option.value)}
-                                                            />
-                                                            <span>{option.label}</span>
-                                                        </label>
-                                                    ))}
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="dietary_other">Other (please specify)</Label>
+                                                        <Input
+                                                            id="dietary_other"
+                                                            value={form.data.dietary_other}
+                                                            onChange={(event) => form.setData('dietary_other', event.target.value)}
+                                                            placeholder="Other dietary requests"
+                                                        />
+                                                        {form.errors.dietary_other ? (
+                                                            <p className="text-xs text-rose-500">{form.errors.dietary_other}</p>
+                                                        ) : null}
+                                                    </div>
                                                 </div>
-                                                {form.errors.accessibility_needs || form.errors['accessibility_needs.0'] ? (
-                                                    <p className="text-xs text-rose-500">
-                                                        {form.errors.accessibility_needs || form.errors['accessibility_needs.0']}
-                                                    </p>
-                                                ) : null}
                                             </div>
 
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
-                                                <Input
-                                                    id="accessibility_other"
-                                                    value={form.data.accessibility_other}
-                                                    onChange={(event) => form.setData('accessibility_other', event.target.value)}
-                                                    placeholder="Other accommodations"
-                                                />
-                                                {form.errors.accessibility_other ? (
-                                                    <p className="text-xs text-rose-500">{form.errors.accessibility_other}</p>
-                                                ) : null}
+                                            <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/40">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00359c]/10 text-[#00359c]">
+                                                        2
+                                                    </span>
+                                                    Accessibility needs
+                                                </div>
+                                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                    Tell us what accommodations you need.
+                                                </p>
+
+                                                <div className="mt-4 grid gap-4">
+                                                    <div className="grid gap-2">
+                                                        <Label className="text-sm font-medium">Accessibility needs</Label>
+                                                        <div className="grid gap-3 sm:grid-cols-2">
+                                                            {ACCESSIBILITY_NEEDS_OPTIONS.map((option) => (
+                                                                <label key={option.value} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                                                                    <Checkbox
+                                                                        checked={form.data.accessibility_needs.includes(option.value)}
+                                                                        onCheckedChange={() => toggleAccessibilityNeed(option.value)}
+                                                                    />
+                                                                    <span>{option.label}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                        {form.errors.accessibility_needs || form.errors['accessibility_needs.0'] ? (
+                                                            <p className="text-xs text-rose-500">
+                                                                {form.errors.accessibility_needs || form.errors['accessibility_needs.0']}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="accessibility_other">Accessibility notes (optional)</Label>
+                                                        <Input
+                                                            id="accessibility_other"
+                                                            value={form.data.accessibility_other}
+                                                            onChange={(event) => form.setData('accessibility_other', event.target.value)}
+                                                            placeholder="Other accommodations"
+                                                        />
+                                                        {form.errors.accessibility_other ? (
+                                                            <p className="text-xs text-rose-500">{form.errors.accessibility_other}</p>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div className="flex justify-end">
