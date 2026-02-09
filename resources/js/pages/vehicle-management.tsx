@@ -40,6 +40,11 @@ type VehicleRow = {
     plate_number: string | null;
     driver_contact_number: string | null;
     assignments_count: number;
+    participants: Array<{
+        id: number;
+        full_name: string | null;
+        email: string | null;
+    }>;
     incharge: {
         id: number;
         full_name: string;
@@ -131,6 +136,7 @@ function showToastError(errors: Record<string, string | string[]>) {
 
 export default function VehicleManagementPage({ events, selected_event_id, ched_lo_users, vehicles }: PageProps) {
     const selectedEventId = selected_event_id ? String(selected_event_id) : events[0] ? String(events[0].id) : '';
+    const [vehicleFilter, setVehicleFilter] = React.useState('');
 
     const form = useForm({
         programme_id: selectedEventId,
@@ -158,6 +164,25 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
             onError: (errors) => showToastError(errors as Record<string, string | string[]>),
         });
     };
+
+    const filteredVehicles = React.useMemo(() => {
+        if (!vehicleFilter.trim()) return vehicles;
+
+        const query = vehicleFilter.trim().toLowerCase();
+        return vehicles.filter((vehicle) => {
+            const participantMatch = vehicle.participants.some((participant) =>
+                [participant.full_name, participant.email].filter(Boolean).some((value) => value!.toLowerCase().includes(query)),
+            );
+            return (
+                vehicle.label.toLowerCase().includes(query) ||
+                (vehicle.driver_name ?? '').toLowerCase().includes(query) ||
+                (vehicle.plate_number ?? '').toLowerCase().includes(query) ||
+                (vehicle.driver_contact_number ?? '').toLowerCase().includes(query) ||
+                (vehicle.incharge?.full_name ?? '').toLowerCase().includes(query) ||
+                participantMatch
+            );
+        });
+    }, [vehicleFilter, vehicles]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -272,8 +297,21 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                         <CardTitle className="text-base">Vehicle List</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="overflow-hidden rounded-xl border">
-                            <Table>
+                        <div className="space-y-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="space-y-1">
+                                    <Label htmlFor="vehicle-filter">Filter vehicles</Label>
+                                    <Input
+                                        id="vehicle-filter"
+                                        placeholder="Search by vehicle, driver, participant..."
+                                        value={vehicleFilter}
+                                        onChange={(e) => setVehicleFilter(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="hidden overflow-hidden rounded-xl border md:block">
+                                <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Vehicle</TableHead>
@@ -281,18 +319,35 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                         <TableHead>Plate #</TableHead>
                                         <TableHead>Contact</TableHead>
                                         <TableHead>CHED LO In Charge</TableHead>
+                                        <TableHead>Participants</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {vehicles.length > 0 ? (
-                                        vehicles.map((vehicle) => (
+                                    {filteredVehicles.length > 0 ? (
+                                        filteredVehicles.map((vehicle) => (
                                             <TableRow key={vehicle.id}>
                                                 <TableCell className="font-medium">{vehicle.label}</TableCell>
                                                 <TableCell>{vehicle.driver_name || '—'}</TableCell>
                                                 <TableCell>{vehicle.plate_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.driver_contact_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.incharge?.full_name || '—'}</TableCell>
+                                                <TableCell>
+                                                    {vehicle.participants.length ? (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {vehicle.participants.map((participant) => (
+                                                                <span
+                                                                    key={participant.id}
+                                                                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                                                >
+                                                                    {participant.full_name || participant.email || 'Participant'}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-sm text-slate-500">—</span>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button
                                                         type="button"
@@ -314,13 +369,89 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="py-6 text-center text-slate-500">
+                                            <TableCell colSpan={7} className="py-6 text-center text-slate-500">
                                                 No vehicles yet for this event.
                                             </TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
-                            </Table>
+                                </Table>
+                            </div>
+
+                            <div className="grid gap-4 md:hidden">
+                                {filteredVehicles.length > 0 ? (
+                                    filteredVehicles.map((vehicle) => (
+                                        <Card key={vehicle.id} className="border-slate-200/80 p-4 shadow-sm dark:border-slate-800">
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Vehicle</p>
+                                                    <p className="text-base font-semibold text-slate-900 dark:text-slate-100">{vehicle.label}</p>
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                        {vehicle.plate_number || '—'}
+                                                    </p>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Driver</p>
+                                                        <p className="text-sm text-slate-700 dark:text-slate-200">{vehicle.driver_name || '—'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Contact</p>
+                                                        <p className="text-sm text-slate-700 dark:text-slate-200">
+                                                            {vehicle.driver_contact_number || '—'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">CHED LO</p>
+                                                        <p className="text-sm text-slate-700 dark:text-slate-200">
+                                                            {vehicle.incharge?.full_name || '—'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Participants</p>
+                                                    {vehicle.participants.length ? (
+                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                            {vehicle.participants.map((participant) => (
+                                                                <span
+                                                                    key={participant.id}
+                                                                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                                                >
+                                                                    {participant.full_name || participant.email || 'Participant'}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-slate-500">—</p>
+                                                    )}
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full"
+                                                    disabled={vehicle.assignments_count > 0}
+                                                    onClick={() => {
+                                                        router.delete(`/transport-vehicles/${vehicle.id}`, {
+                                                            preserveScroll: true,
+                                                            onSuccess: () => toast.success('Vehicle removed.'),
+                                                            onError: (errors) => showToastError(errors as Record<string, string | string[]>),
+                                                        });
+                                                    }}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                        </Card>
+                                    ))
+                                ) : (
+                                    <Card className="border-dashed">
+                                        <div className="px-5 py-6 text-center text-sm text-slate-500">
+                                            No vehicles yet for this event.
+                                        </div>
+                                    </Card>
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
