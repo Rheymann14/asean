@@ -32,6 +32,10 @@ type ProgrammeRow = {
 type PageProps = {
     programmes?: ProgrammeRow[];
     joined_programme_ids?: number[];
+    welcome_dinner_preferences?: {
+        attend_welcome_dinner: boolean | null;
+        avail_transport_from_makati_to_peninsula: boolean | null;
+    };
     checked_in_programmes?: {
         programme_id: number;
         scanned_at: string | null;
@@ -462,15 +466,28 @@ function AttendanceGrid({
 }
 
 
-export default function EventList({ programmes = [], joined_programme_ids = [], checked_in_programmes = [] }: PageProps) {
+export default function EventList({
+    programmes = [],
+    joined_programme_ids = [],
+    welcome_dinner_preferences,
+    checked_in_programmes = [],
+}: PageProps) {
     const nowTs = useNowTs();
     const [selectedIds, setSelectedIds] = React.useState<number[]>(() => joined_programme_ids);
 
     const [tab, setTab] = React.useState<TabKey>('ongoing');
     const [search, setSearch] = React.useState('');
 
-    const [attendWelcomeDinner, setAttendWelcomeDinner] = React.useState<'yes' | 'no' | ''>('');
-    const [availTransport, setAvailTransport] = React.useState<'yes' | 'no' | ''>('');
+    const [attendWelcomeDinner, setAttendWelcomeDinner] = React.useState<'yes' | 'no' | ''>(() => {
+        if (welcome_dinner_preferences?.attend_welcome_dinner === true) return 'yes';
+        if (welcome_dinner_preferences?.attend_welcome_dinner === false) return 'no';
+        return '';
+    });
+    const [availTransport, setAvailTransport] = React.useState<'yes' | 'no' | ''>(() => {
+        if (welcome_dinner_preferences?.avail_transport_from_makati_to_peninsula === true) return 'yes';
+        if (welcome_dinner_preferences?.avail_transport_from_makati_to_peninsula === false) return 'no';
+        return '';
+    });
 
     React.useEffect(() => {
         if (attendWelcomeDinner !== 'yes' && availTransport) {

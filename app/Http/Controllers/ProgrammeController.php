@@ -216,6 +216,10 @@ class ProgrammeController extends Controller
             'joined_programme_ids' => $request->user()
                 ->joinedProgrammes()
                 ->pluck('programmes.id'),
+            'welcome_dinner_preferences' => [
+                'attend_welcome_dinner' => $request->user()->attend_welcome_dinner,
+                'avail_transport_from_makati_to_peninsula' => $request->user()->avail_transport_from_makati_to_peninsula,
+            ],
             'checked_in_programmes' => $attendanceEntries
                 ->map(fn (ParticipantAttendance $attendance) => [
                     'programme_id' => $attendance->programme_id,

@@ -79,6 +79,8 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
                 ->name('participant.dashboard');
             Route::patch('/participant-dashboard/preferences', [ParticipantDashboardController::class, 'updatePreferences'])
                 ->name('participant-dashboard.preferences.update');
+            Route::post('/participant-dashboard/welcome-dinner', [ParticipantDashboardController::class, 'updateWelcomeDinner'])
+                ->name('participant-dashboard.welcome-dinner.update');
             Route::post('/participant-dashboard/photo', [ParticipantDashboardController::class, 'updatePhoto'])
                 ->name('participant-dashboard.photo.update');
             Route::delete('/participant-dashboard/photo', [ParticipantDashboardController::class, 'destroyPhoto'])
