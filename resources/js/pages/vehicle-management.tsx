@@ -136,7 +136,7 @@ function showToastError(errors: Record<string, string | string[]>) {
 
 export default function VehicleManagementPage({ events, selected_event_id, ched_lo_users, vehicles }: PageProps) {
     const selectedEventId = selected_event_id ? String(selected_event_id) : events[0] ? String(events[0].id) : '';
-    const [vehicleFilter, setVehicleFilter] = React.useState('');
+    const [vehicleFilter, setVehicleFilter] = React.useState('all');
 
     const form = useForm({
         programme_id: selectedEventId,
@@ -166,22 +166,12 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
     };
 
     const filteredVehicles = React.useMemo(() => {
-        if (!vehicleFilter.trim()) return vehicles;
+        if (vehicleFilter === 'all') return vehicles;
 
-        const query = vehicleFilter.trim().toLowerCase();
-        return vehicles.filter((vehicle) => {
-            const participantMatch = vehicle.participants.some((participant) =>
-                [participant.full_name, participant.email].filter(Boolean).some((value) => value!.toLowerCase().includes(query)),
-            );
-            return (
-                vehicle.label.toLowerCase().includes(query) ||
-                (vehicle.driver_name ?? '').toLowerCase().includes(query) ||
-                (vehicle.plate_number ?? '').toLowerCase().includes(query) ||
-                (vehicle.driver_contact_number ?? '').toLowerCase().includes(query) ||
-                (vehicle.incharge?.full_name ?? '').toLowerCase().includes(query) ||
-                participantMatch
-            );
-        });
+        const selectedId = Number(vehicleFilter);
+        if (Number.isNaN(selectedId)) return vehicles;
+
+        return vehicles.filter((vehicle) => vehicle.id === selectedId);
     }, [vehicleFilter, vehicles]);
 
     return (
@@ -301,12 +291,19 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="space-y-1">
                                     <Label htmlFor="vehicle-filter">Filter vehicles</Label>
-                                    <Input
+                                    <select
                                         id="vehicle-filter"
-                                        placeholder="Search by vehicle, driver, participant..."
+                                        className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:focus-visible:ring-slate-300"
                                         value={vehicleFilter}
                                         onChange={(e) => setVehicleFilter(e.target.value)}
-                                    />
+                                    >
+                                        <option value="all">All vehicles</option>
+                                        {vehicles.map((vehicle) => (
+                                            <option key={vehicle.id} value={String(vehicle.id)}>
+                                                {vehicle.label}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
@@ -332,21 +329,12 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                                 <TableCell>{vehicle.plate_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.driver_contact_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.incharge?.full_name || '—'}</TableCell>
-                                                <TableCell>
-                                                    {vehicle.participants.length ? (
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {vehicle.participants.map((participant) => (
-                                                                <span
-                                                                    key={participant.id}
-                                                                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                                                                >
-                                                                    {participant.full_name || participant.email || 'Participant'}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-sm text-slate-500">—</span>
-                                                    )}
+                                                <TableCell className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-200">
+                                                    {vehicle.participants.length
+                                                        ? vehicle.participants
+                                                              .map((participant) => participant.full_name || participant.email || 'Participant')
+                                                              .join('\n')
+                                                        : '—'}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button
@@ -410,20 +398,13 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                                 </div>
                                                 <div>
                                                     <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Participants</p>
-                                                    {vehicle.participants.length ? (
-                                                        <div className="mt-2 flex flex-wrap gap-2">
-                                                            {vehicle.participants.map((participant) => (
-                                                                <span
-                                                                    key={participant.id}
-                                                                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                                                                >
-                                                                    {participant.full_name || participant.email || 'Participant'}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-sm text-slate-500">—</p>
-                                                    )}
+                                                    <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-200">
+                                                        {vehicle.participants.length
+                                                            ? vehicle.participants
+                                                                  .map((participant) => participant.full_name || participant.email || 'Participant')
+                                                                  .join('\n')
+                                                            : '—'}
+                                                    </p>
                                                 </div>
                                                 <Button
                                                     type="button"
