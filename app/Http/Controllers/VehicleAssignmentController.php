@@ -343,10 +343,11 @@ class VehicleAssignmentController extends Controller
         $roleName = Str::upper((string) ($user->userType?->name ?? ''));
         $roleSlug = Str::upper((string) ($user->userType?->slug ?? ''));
 
+        $isAdmin = in_array('ADMIN', [$roleName, $roleSlug], true);
         $isChed = in_array('CHED', [$roleName, $roleSlug], true);
         $isChedLo = in_array('CHED LO', [$roleName, $roleSlug], true)
             || in_array('CHED-LO', [$roleSlug], true);
 
-        return $isChed || $isChedLo;
+        return $isAdmin || $isChed || $isChedLo;
     }
 }
