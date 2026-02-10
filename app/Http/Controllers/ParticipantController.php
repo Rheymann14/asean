@@ -73,6 +73,8 @@ class ParticipantController extends Controller
                     'display_id' => $user->display_id,
                     'qr_payload' => $user->qr_payload,
                     'profile_image_url' => $user->profile_photo_path ? asset($user->profile_photo_path) : null,
+                    'profile_photo_url' => $user->profile_photo_path ? asset($user->profile_photo_path) : null,
+                    'profile_photo_path' => $user->profile_photo_path,
                     'email' => $user->email,
                     'contact_number' => $user->contact_number,
                     'contact_country_code' => $user->contact_country_code,

@@ -135,6 +135,10 @@ type ParticipantRow = {
     display_id?: string | null;
     qr_payload?: string | null;
     profile_image_url?: string | null;
+    profile_photo_url?: string | null;
+    profile_photo_path?: string | null;
+    profile_image_path?: string | null;
+    profile_image?: string | null;
     full_name: string;
     email: string;
     contact_number?: string | null;
@@ -578,6 +582,29 @@ function getFlagSrc(country?: Country | null) {
     if (!code) return null;
 
     return `/asean/${code}.png`;
+}
+
+function resolveParticipantProfileImage(participant?: ParticipantRow | null) {
+    if (!participant) return null;
+
+    const candidate =
+        participant.profile_image_url ??
+        participant.profile_photo_url ??
+        participant.profile_photo_path ??
+        participant.profile_image_path ??
+        participant.profile_image ??
+        null;
+
+    if (!candidate) return null;
+    if (
+        candidate.startsWith('http://') ||
+        candidate.startsWith('https://') ||
+        candidate.startsWith('/')
+    ) {
+        return candidate;
+    }
+
+    return `/${candidate}`;
 }
 
 function isChedUserType(userType?: UserType | null) {
@@ -1686,7 +1713,7 @@ export default function ParticipantPage(props: PageProps) {
 
         if (!file) {
             resetParticipantProfilePreview(
-                editingParticipant?.profile_image_url ?? null,
+                resolveParticipantProfileImage(editingParticipant),
             );
             return;
         }
@@ -1756,7 +1783,7 @@ export default function ParticipantPage(props: PageProps) {
         if (participantProfileInputRef.current) {
             participantProfileInputRef.current.value = '';
         }
-        resetParticipantProfilePreview(p.profile_image_url ?? null);
+        resetParticipantProfilePreview(resolveParticipantProfileImage(p));
         participantForm.clearErrors();
         setParticipantFormStep(1);
         setParticipantDialogOpen(true);
