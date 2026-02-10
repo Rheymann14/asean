@@ -163,6 +163,9 @@ class VehicleAssignmentController extends Controller
 
                 return [
                     'id' => $participant->id,
+                    'display_id' => $participant->display_id,
+                    'qr_payload' => $participant->qr_payload,
+                    'profile_photo_url' => $participant->profile_photo_url,
                     'full_name' => $participant->name,
                     'email' => $participant->email,
                     'country' => $participant->country
@@ -310,6 +313,9 @@ class VehicleAssignmentController extends Controller
 
                 return [
                     'id' => $participant->id,
+                    'display_id' => $participant->display_id,
+                    'qr_payload' => $participant->qr_payload,
+                    'profile_photo_url' => $participant->profile_photo_url,
                     'full_name' => $participant->name,
                     'email' => $participant->email,
                     'country' => $participant->country

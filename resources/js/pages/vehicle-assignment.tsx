@@ -10,8 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Bus, Check, CheckCircle2, ChevronsUpDown } from 'lucide-react';
+import { Bus, Check, CheckCircle2, ChevronsUpDown, QrCodeIcon } from 'lucide-react';
+import QRCode from 'qrcode';
 import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Assignment', href: '/vehicle-assignment' }];
@@ -32,14 +34,19 @@ type Assignment = {
 };
 type Participant = {
     id: number;
+    display_id?: string | null;
+    qr_payload?: string | null;
+    profile_photo_url?: string | null;
     full_name: string;
     email: string | null;
+    country?: {
+        code?: string | null;
+        name?: string | null;
+        flag_url?: string | null;
+    } | null;
     table_assignment?: {
         table_number: string;
         seat_number?: number | null;
-    } | null;
-    attendance?: {
-        scanned_at?: string | null;
     } | null;
     dietary?: {
         has_food_restrictions?: boolean;
@@ -67,21 +74,15 @@ type SearchItem = {
     description?: string;
 };
 
-function SearchableDropdown({
-    value,
-    onValueChange,
-    items,
-    placeholder,
-    searchPlaceholder,
-    emptyText,
-}: {
-    value: string;
-    onValueChange: (value: string) => void;
-    items: SearchItem[];
-    placeholder: string;
-    searchPlaceholder: string;
-    emptyText: string;
-}) {
+function getFlagSrc(country?: Participant['country']) {
+    if (!country) return null;
+    if (country.flag_url) return country.flag_url;
+    const code = (country.code ?? '').trim().toLowerCase();
+    if (!code) return null;
+    return `https://flagcdn.com/w80/${code}.png`;
+}
+
+function SearchableDropdown({ value, onValueChange, items, placeholder, searchPlaceholder, emptyText }: { value: string; onValueChange: (value: string) => void; items: SearchItem[]; placeholder: string; searchPlaceholder: string; emptyText: string; }) {
     const [open, setOpen] = React.useState(false);
     const selected = items.find((item) => item.value === value) ?? null;
 
@@ -89,9 +90,7 @@ function SearchableDropdown({
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" className="w-full justify-between" type="button">
-                    <span className={cn('truncate', !selected && 'text-slate-500')}>
-                        {selected ? selected.label : placeholder}
-                    </span>
+                    <span className={cn('truncate', !selected && 'text-slate-500')}>{selected ? selected.label : placeholder}</span>
                     <ChevronsUpDown className="h-4 w-4 opacity-60" />
                 </Button>
             </PopoverTrigger>
@@ -131,6 +130,85 @@ function showToastError(errors: Record<string, string | string[]>) {
     toast.error(Array.isArray(first) ? first[0] : first || 'Please review the form and try again.');
 }
 
+function VirtualLandscapeId({ participant }: { participant: Participant }) {
+    const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
+    const flagSrc = getFlagSrc(participant.country);
+
+    React.useEffect(() => {
+        let active = true;
+        const run = async () => {
+            const value = participant.qr_payload?.trim() ?? '';
+            if (!value) {
+                setQrDataUrl(null);
+                return;
+            }
+            try {
+                const url = await QRCode.toDataURL(value, { margin: 1, width: 240, errorCorrectionLevel: 'M' });
+                if (active) setQrDataUrl(url);
+            } catch {
+                if (active) setQrDataUrl(null);
+            }
+        };
+
+        run();
+        return () => {
+            active = false;
+        };
+    }, [participant.qr_payload]);
+
+    return (
+        <div className="mx-auto w-full max-w-[760px] overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <div className="relative">
+                <img src="/img/bg.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" draggable={false} />
+                <div className="absolute inset-0 bg-white/40" />
+
+                <div className="relative grid gap-3 p-3 sm:grid-cols-[1fr_180px] sm:p-4">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <img src="/img/asean_logo.png" alt="ASEAN" className="h-8 w-8 object-contain" draggable={false} />
+                            <div className="min-w-0">
+                                <p className="truncate text-xs font-semibold text-slate-700">ASEAN Philippines 2026</p>
+                                <p className="truncate text-[11px] text-slate-500">Participant Identification</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-3">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-500">Participant</p>
+                            <p className="line-clamp-2 text-base font-semibold text-slate-900">{participant.full_name}</p>
+                        </div>
+
+                        <div className="mt-2 flex items-center gap-2">
+                            <div className="h-8 w-8 overflow-hidden rounded-lg border bg-white">
+                                {flagSrc ? <img src={flagSrc} alt={participant.country?.name ?? 'Country flag'} className="h-full w-full object-cover" /> : null}
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-slate-800">{participant.country?.name || '—'}</p>
+                                <p className="text-[11px] text-slate-500">{participant.country?.code?.toUpperCase() || ''}</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-2">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-500">Participant ID</p>
+                            <p className="inline-flex rounded-md border bg-white/80 px-2 py-1 font-mono text-xs">{participant.display_id || '—'}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center rounded-xl border bg-white/80 p-2">
+                        <div className="mb-1 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700">
+                            <QrCodeIcon className="h-3.5 w-3.5" /> QR Code
+                        </div>
+                        {qrDataUrl ? (
+                            <img src={qrDataUrl} alt="Participant QR" className="h-28 w-28 rounded-lg bg-white p-1 object-contain" draggable={false} />
+                        ) : (
+                            <div className="flex h-28 w-28 items-center justify-center rounded-lg border text-[11px] text-slate-500">QR unavailable</div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function VehicleAssignmentPage({ events, selected_event_id, vehicles, participants }: PageProps) {
     const { auth } = usePage<SharedData>().props;
     const userType = auth.user?.user_type ?? auth.user?.userType;
@@ -146,6 +224,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
     const [assignedPage, setAssignedPage] = React.useState(1);
     const [unassignedPage, setUnassignedPage] = React.useState(1);
     const [presenceOverrides, setPresenceOverrides] = React.useState<Record<number, boolean>>({});
+    const [idPreviewParticipant, setIdPreviewParticipant] = React.useState<Participant | null>(null);
     const perPage = 10;
 
     const assignmentForm = useForm({
@@ -302,20 +381,6 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
         );
     };
 
-    const formatAttendance = (scannedAt?: string | null) => {
-        if (!scannedAt) return 'No event attendance';
-        const date = new Date(scannedAt);
-        if (Number.isNaN(date.getTime())) return 'Checked in';
-
-        return new Intl.DateTimeFormat('en-PH', {
-            year: 'numeric',
-            month: 'short',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(date);
-    };
-
     const formatList = (items?: string[] | null) => {
         if (!items?.length) return '—';
         return items.map((value) => value.replaceAll('_', ' ')).join(', ');
@@ -325,7 +390,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Vehicle Assignment" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-2 sm:p-4">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
                         <Bus className="h-5 w-5 text-[#00359c]" />
@@ -333,7 +398,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                         {isChedLo
-                            ? 'Monitor assigned participants per event, including vehicle presence, table/seat, and participant support preferences.'
+                            ? 'Monitor assigned participants per event, including vehicle presence, table/seat, support preferences, and virtual ID.'
                             : 'Assign participants to vehicles per event.'}
                     </p>
                 </div>
@@ -342,7 +407,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Event Filter</CardTitle>
-                        <CardDescription>{isChedLo ? 'Choose an event to monitor your assigned vehicles and participants.' : 'Choose an event to manage assignments.'}</CardDescription>
+                        <CardDescription>{isChedLo ? 'Choose an event to monitor assigned vehicles and participants.' : 'Choose an event to manage assignments.'}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid gap-4 md:grid-cols-2">
@@ -359,17 +424,12 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="participant-search">Search participant</Label>
-                                <Input
-                                    id="participant-search"
-                                    placeholder="Search participants..."
-                                    value={participantSearch}
-                                    onChange={(event) => setParticipantSearch(event.target.value)}
-                                />
+                                <Input id="participant-search" placeholder="Search participants..." value={participantSearch} onChange={(event) => setParticipantSearch(event.target.value)} />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
-                ) : null}
+
                 {isChedLo ? (
                     <Card>
                         <CardHeader>
@@ -377,7 +437,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                             <CardDescription>Vehicles assigned under your supervision for the selected event.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                 {vehicles.length === 0 ? <p className="text-sm text-slate-500">No vehicles assigned to you for this event.</p> : null}
                                 {vehicles.map((vehicle) => (
                                     <div key={vehicle.id} className="rounded-lg border p-3">
@@ -420,7 +480,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                             <CardTitle className="text-base">Assigned Participants</CardTitle>
                             <CardDescription>
                                 {isChedLo
-                                    ? 'Check participants present in your vehicle, and review table/seat and support preferences.'
+                                    ? 'Check participants present in your vehicle and review table/seat, support preferences, and virtual ID.'
                                     : 'Remove assignments from participants already assigned to a vehicle.'}
                             </CardDescription>
                         </CardHeader>
@@ -433,24 +493,56 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                 </div>
                             ) : null}
 
-                            <div className="overflow-hidden rounded-xl border">
+                            {isChedLo ? (
+                                <div className="space-y-3 md:hidden">
+                                    {assignedPageItems.length === 0 ? <p className="rounded-lg border p-4 text-center text-sm text-slate-500">No assigned participants found.</p> : null}
+                                    {assignedPageItems.map((participant) => {
+                                        const assignmentId = participant.assignment?.id;
+                                        const isPresent = assignmentId ? presenceOverrides[assignmentId] ?? false : false;
+                                        return (
+                                            <div key={participant.id} className="space-y-2 rounded-xl border p-3">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <p className="font-semibold">{participant.full_name}</p>
+                                                        <p className="text-xs text-slate-500">{participant.email || '—'}</p>
+                                                    </div>
+                                                    <Checkbox checked={isPresent} disabled={!assignmentId} onCheckedChange={(checked) => assignmentId && togglePresence(assignmentId, Boolean(checked))} />
+                                                </div>
+                                                <p className="text-xs text-slate-600">Vehicle: {participant.assignment?.vehicle_label || '—'}</p>
+                                                <p className="text-xs text-slate-600">Table/Seat: {participant.table_assignment ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}` : '—'}</p>
+                                                <p className="text-xs text-slate-600">Dietary: {formatList(participant.dietary?.food_restrictions)}</p>
+                                                <p className="text-xs text-slate-600">Accessibility: {formatList(participant.accessibility?.needs)}</p>
+                                                <div className="flex justify-end">
+                                                    <Button size="sm" variant="outline" type="button" onClick={() => setIdPreviewParticipant(participant)}>
+                                                        View ID
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : null}
+
+                            <div className={cn('overflow-x-auto rounded-xl border', isChedLo ? 'hidden md:block' : 'block')}>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-10">{isChedLo ? 'Present' : <Checkbox checked={assignedPageItems.length > 0 && selectedAssignedIds.length === assignedPageItems.length} onCheckedChange={(checked) => toggleAllAssigned(Boolean(checked))} />}</TableHead>
+                                            <TableHead className="w-10">
+                                                {isChedLo ? 'Present' : <Checkbox checked={assignedPageItems.length > 0 && selectedAssignedIds.length === assignedPageItems.length} onCheckedChange={(checked) => toggleAllAssigned(Boolean(checked))} />}
+                                            </TableHead>
                                             <TableHead>Participant</TableHead>
                                             <TableHead>Vehicle</TableHead>
                                             <TableHead>Table / Seat</TableHead>
                                             <TableHead>Dietary</TableHead>
                                             <TableHead>Accessibility</TableHead>
-                                            <TableHead>Event Attendance</TableHead>
+                                            {isChedLo ? <TableHead className="text-right">Virtual ID</TableHead> : null}
                                             {!isChedLo ? <TableHead className="text-right">Action</TableHead> : null}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {assignedPageItems.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={isChedLo ? 7 : 8} className="py-6 text-center text-sm text-slate-500">
+                                                <TableCell colSpan={isChedLo ? 7 : 7} className="py-6 text-center text-sm text-slate-500">
                                                     No assigned participants found.
                                                 </TableCell>
                                             </TableRow>
@@ -463,16 +555,9 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                                     <TableRow key={participant.id}>
                                                         <TableCell>
                                                             {isChedLo ? (
-                                                                <Checkbox
-                                                                    checked={isPresent}
-                                                                    disabled={!assignmentId}
-                                                                    onCheckedChange={(checked) => assignmentId && togglePresence(assignmentId, Boolean(checked))}
-                                                                />
+                                                                <Checkbox checked={isPresent} disabled={!assignmentId} onCheckedChange={(checked) => assignmentId && togglePresence(assignmentId, Boolean(checked))} />
                                                             ) : (
-                                                                <Checkbox
-                                                                    checked={selectedAssignedIds.includes(participant.id)}
-                                                                    onCheckedChange={(checked) => toggleAssignedParticipant(participant.id, Boolean(checked))}
-                                                                />
+                                                                <Checkbox checked={selectedAssignedIds.includes(participant.id)} onCheckedChange={(checked) => toggleAssignedParticipant(participant.id, Boolean(checked))} />
                                                             )}
                                                         </TableCell>
                                                         <TableCell>
@@ -480,11 +565,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                                             <div className="text-xs text-slate-500">{participant.email || '—'}</div>
                                                         </TableCell>
                                                         <TableCell>{participant.assignment?.vehicle_label || '—'}</TableCell>
-                                                        <TableCell>
-                                                            {participant.table_assignment
-                                                                ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}`
-                                                                : '—'}
-                                                        </TableCell>
+                                                        <TableCell>{participant.table_assignment ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}` : '—'}</TableCell>
                                                         <TableCell>
                                                             <div className="text-xs">
                                                                 <p>{formatList(participant.dietary?.food_restrictions)}</p>
@@ -498,7 +579,13 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                                                 {participant.accessibility?.other ? <p>Other: {participant.accessibility.other}</p> : null}
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>{formatAttendance(participant.attendance?.scanned_at)}</TableCell>
+                                                        {isChedLo ? (
+                                                            <TableCell className="text-right">
+                                                                <Button type="button" size="sm" variant="outline" onClick={() => setIdPreviewParticipant(participant)}>
+                                                                    View ID
+                                                                </Button>
+                                                            </TableCell>
+                                                        ) : null}
                                                         {!isChedLo ? (
                                                             <TableCell className="text-right">
                                                                 <Button type="button" size="sm" variant="outline" onClick={() => removeAssignment(participant.assignment!.id)}>
@@ -545,15 +632,12 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                 </div>
                                 {assignmentForm.errors.participant_ids ? <p className="text-xs text-rose-500">{assignmentForm.errors.participant_ids}</p> : null}
 
-                                <div className="overflow-hidden rounded-xl border">
+                                <div className="overflow-x-auto rounded-xl border">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead className="w-10">
-                                                    <Checkbox
-                                                        checked={unassignedPageItems.length > 0 && selectedIds.length === unassignedPageItems.length}
-                                                        onCheckedChange={(checked) => toggleAllUnassigned(Boolean(checked))}
-                                                    />
+                                                    <Checkbox checked={unassignedPageItems.length > 0 && selectedIds.length === unassignedPageItems.length} onCheckedChange={(checked) => toggleAllUnassigned(Boolean(checked))} />
                                                 </TableHead>
                                                 <TableHead>Participant</TableHead>
                                                 <TableHead className="text-right">Action</TableHead>
@@ -570,10 +654,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                                 unassignedPageItems.map((participant) => (
                                                     <TableRow key={participant.id}>
                                                         <TableCell>
-                                                            <Checkbox
-                                                                checked={selectedIds.includes(participant.id)}
-                                                                onCheckedChange={(checked) => toggleUnassignedParticipant(participant.id, Boolean(checked))}
-                                                            />
+                                                            <Checkbox checked={selectedIds.includes(participant.id)} onCheckedChange={(checked) => toggleUnassignedParticipant(participant.id, Boolean(checked))} />
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="font-medium">{participant.full_name}</div>
@@ -599,13 +680,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                         <Button type="button" size="sm" variant="outline" disabled={unassignedPage <= 1} onClick={() => setUnassignedPage((page) => Math.max(1, page - 1))}>
                                             Previous
                                         </Button>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            disabled={unassignedPage >= unassignedTotalPages}
-                                            onClick={() => setUnassignedPage((page) => Math.min(unassignedTotalPages, page + 1))}
-                                        >
+                                        <Button type="button" size="sm" variant="outline" disabled={unassignedPage >= unassignedTotalPages} onClick={() => setUnassignedPage((page) => Math.min(unassignedTotalPages, page + 1))}>
                                             Next
                                         </Button>
                                     </div>
@@ -615,6 +690,15 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                     ) : null}
                 </div>
             </div>
+
+            <Dialog open={Boolean(idPreviewParticipant)} onOpenChange={(open) => !open && setIdPreviewParticipant(null)}>
+                <DialogContent className="max-w-[900px]">
+                    <DialogHeader>
+                        <DialogTitle>Participant Virtual ID (Landscape)</DialogTitle>
+                    </DialogHeader>
+                    {idPreviewParticipant ? <VirtualLandscapeId participant={idPreviewParticipant} /> : null}
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }
