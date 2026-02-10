@@ -3,7 +3,6 @@ import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
 import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
-import QRCode from 'qrcode';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
 
 import {
     ScanLine,
@@ -118,20 +116,6 @@ function fmtDateTime(dateStr?: string | null) {
     }).format(d);
 }
 
-function normalizePngDataUrl(v?: string | null) {
-    if (!v) return null;
-    const s = String(v).trim();
-    if (!s) return null;
-    if (s.startsWith('data:image/')) return s;
-
-    // handle base64-only png
-    if (/^[A-Za-z0-9+/=]+$/.test(s) && s.length > 100) {
-        return `data:image/png;base64,${s}`;
-    }
-
-    return null;
-}
-
 function getFlagSrc(countryCode?: string | null, countryFlagUrl?: string | null) {
     if (countryFlagUrl) return countryFlagUrl;
     const code = (countryCode || '').toLowerCase().trim();
@@ -208,18 +192,16 @@ function Pill({ children, tone = 'default' }: { children: React.ReactNode; tone?
 function ScannerIdCardPreview({
     participant,
     flagSrc,
-    qrDataUrl,
-    loading,
     orientation,
 }: {
     participant: {
         name: string;
         display_id: string;
+        profile_image_url?: string | null;
+        is_verified?: boolean;
         country?: { name?: string | null; code?: string | null } | null;
     };
     flagSrc: string | null;
-    qrDataUrl: string | null;
-    loading: boolean;
     orientation: 'portrait' | 'landscape';
 }) {
     const isLandscape = orientation === 'landscape';
@@ -385,7 +367,7 @@ function ScannerIdCardPreview({
                         </div>
                     </div>
 
-                    {/* RIGHT QR */}
+                    {/* RIGHT PHOTO / VERIFIED */}
                     <div
                         className={cn(
                             'flex flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45',
@@ -394,37 +376,31 @@ function ScannerIdCardPreview({
                             !isLandscape && 'mt-auto',
                         )}
                     >
-                        <div
-                            className={cn(
-                                'inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200',
-                                isLandscape ? 'mb-1 text-[10px]' : 'mb-1.5 text-[11px]',
-                            )}
-                        >
-                            <QrCodeIcon className={cn(isLandscape ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
-                            QR Code
-                        </div>
-
-                        {loading ? (
-                            <Skeleton className="rounded-2xl" style={{ width: qrSize, height: qrSize }} />
-                        ) : qrDataUrl ? (
+                        {participant.profile_image_url ? (
                             <img
-                                src={qrDataUrl}
-                                alt="Participant QR code"
-                                className="rounded-2xl bg-white p-2 object-contain"
+                                src={participant.profile_image_url}
+                                alt={participant.name}
+                                className="rounded-2xl object-cover"
                                 style={{ width: qrSize, height: qrSize }}
                                 draggable={false}
+                                loading="lazy"
                             />
                         ) : (
                             <div
                                 className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30"
                                 style={{ width: qrSize, height: qrSize }}
                             >
-                                <QrCodeIcon className="h-7 w-7 text-slate-400" />
-                                <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
-                                    QR unavailable
-                                </div>
+                                <ShieldCheck className="h-7 w-7 text-emerald-600" />
+                                <div className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300">Verified</div>
                             </div>
                         )}
+
+                        {participant.is_verified !== false ? (
+                            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
+                                <ShieldCheck className="h-3 w-3" />
+                                Verified
+                            </span>
+                        ) : null}
 
                         <div className="mt-2 w-full text-center">
                             <div
@@ -691,59 +667,7 @@ export default function Scanner(props: PageProps) {
     // ✅ dialog for BOTH success and error
     const [resultOpen, setResultOpen] = React.useState(false);
 
-    const [imagePreviewOpen, setImagePreviewOpen] = React.useState(false);
-    const [imagePreviewParticipant, setImagePreviewParticipant] = React.useState<ParticipantInfo | null>(null);
-    const imagePreviewTimerRef = React.useRef<number | null>(null);
-    const pendingResultRef = React.useRef<ScanResponse | null>(null);
-
-    React.useEffect(() => {
-        return () => {
-            if (imagePreviewTimerRef.current) {
-                window.clearTimeout(imagePreviewTimerRef.current);
-                imagePreviewTimerRef.current = null;
-            }
-        };
-    }, []);
-
-    async function openImagePreviewThenResult(data: ScanResponse) {
-        const p = data.participant ?? null;
-        const img = p?.profile_image_url ? String(p.profile_image_url) : '';
-
-        // Only preview on success + has image
-        if (data.ok && p && img) {
-            pendingResultRef.current = data;
-            setImagePreviewParticipant(p);
-            setImagePreviewOpen(true);
-            setStatus('success');
-
-            if (imagePreviewTimerRef.current) {
-                window.clearTimeout(imagePreviewTimerRef.current);
-                imagePreviewTimerRef.current = null;
-            }
-
-            imagePreviewTimerRef.current = window.setTimeout(() => {
-                setImagePreviewOpen(false);
-                setImagePreviewParticipant(null);
-
-                const pending = pendingResultRef.current;
-                pendingResultRef.current = null;
-
-                if (pending) void openResultDialog(pending);
-            }, 3000);
-
-            return;
-        }
-
-        // If no image uploaded (or error), go straight to result dialog
-        await openResultDialog(data);
-    }
-
-
     const resultOpenRef = React.useRef(false);
-
-    // ✅ QR preview that never becomes "undefined"
-    const [qrPreview, setQrPreview] = React.useState<string | null>(null);
-    const [qrPreviewLoading, setQrPreviewLoading] = React.useState(false);
 
     const nowTs = Date.now();
 
@@ -803,52 +727,6 @@ export default function Scanner(props: PageProps) {
         resultOpenRef.current = resultOpen;
     }, [resultOpen]);
 
-    // ✅ Build QR image for ID card:
-    // 1) use backend qr_data_url if provided
-    // 2) else generate from participant.qr_payload / participant.qr_token
-    React.useEffect(() => {
-        let alive = true;
-
-        (async () => {
-            const p = result?.participant;
-
-            const fromServer = normalizePngDataUrl(result?.qr_data_url);
-            if (fromServer) {
-                setQrPreview(fromServer);
-                setQrPreviewLoading(false);
-                return;
-            }
-
-            const payload = (p?.qr_payload ?? '').trim() || (p?.qr_token ?? '').trim();
-
-            if (!payload) {
-                setQrPreview(null);
-                setQrPreviewLoading(false);
-                return;
-            }
-
-            try {
-                setQrPreviewLoading(true);
-                const dataUrl = await QRCode.toDataURL(payload, {
-                    errorCorrectionLevel: 'M',
-                    margin: 1,
-                    width: 320,
-                });
-                if (!alive) return;
-                setQrPreview(dataUrl);
-            } catch {
-                if (!alive) return;
-                setQrPreview(null);
-            } finally {
-                if (!alive) return;
-                setQrPreviewLoading(false);
-            }
-        })();
-
-        return () => {
-            alive = false;
-        };
-    }, [result?.qr_data_url, result?.participant?.qr_payload, result?.participant?.qr_token]);
 
     // ✅ keep overlay canvas crisp
     React.useEffect(() => {
@@ -1226,7 +1104,7 @@ export default function Scanner(props: PageProps) {
 
             const data = (await res.json()) as ScanResponse;
 
-            await openImagePreviewThenResult(data); // ✅ plays sound + vibrates
+            await openResultDialog(data); // ✅ plays sound + vibrates
         } catch {
             const data = { ok: false, message: 'Network/server error. Please try again.' } as ScanResponse;
             await openResultDialog(data); // ✅ error sound + vibrate
@@ -1236,8 +1114,6 @@ export default function Scanner(props: PageProps) {
     function scanAgain() {
         setResult(null);
         setStatus('idle');
-        setQrPreview(null);
-        setQrPreviewLoading(false);
         setQrAim('idle');
 
         setResultOpen(false);
@@ -1268,78 +1144,18 @@ export default function Scanner(props: PageProps) {
                 name: p.country ?? null,
                 code: p.country_code ?? null,
             },
+            profile_image_url: p.profile_image_url ?? null,
+            is_verified: p.is_verified ?? true,
         };
     }, [participantDisplayId, result?.participant]);
 
     const flagSrc = getFlagSrc(result?.participant?.country_code, result?.participant?.country_flag_url);
-    const qrDataUrl = qrPreview;
 
     const dialogTone = result?.ok ? 'success' : 'danger';
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Scanner" />
-
-            {/* ✅ IMAGE PREVIEW (2 seconds), then opens RESULT DIALOG */}
-            <Dialog
-                open={imagePreviewOpen}
-                onOpenChange={(open) => {
-                    if (open) {
-                        setImagePreviewOpen(true);
-                        return;
-                    }
-
-                    // If user closes early, immediately show result dialog
-                    setImagePreviewOpen(false);
-                    setImagePreviewParticipant(null);
-
-                    if (imagePreviewTimerRef.current) {
-                        window.clearTimeout(imagePreviewTimerRef.current);
-                        imagePreviewTimerRef.current = null;
-                    }
-
-                    const pending = pendingResultRef.current;
-                    pendingResultRef.current = null;
-                    if (pending) void openResultDialog(pending);
-                }}
-            >
-                <DialogContent className="max-w-sm overflow-hidden rounded-3xl bg-white p-0 dark:bg-slate-950">
-                    <div className="p-6 text-center">
-                        <div className="mx-auto flex flex-col items-center">
-                            <div className="relative">
-                                <div className="size-56 overflow-hidden rounded-full border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                                    {imagePreviewParticipant?.profile_image_url ? (
-                                        <img
-                                            src={imagePreviewParticipant.profile_image_url}
-                                            alt={imagePreviewParticipant.full_name}
-                                            className="h-full w-full object-cover"
-                                            loading="eager"
-                                            draggable={false}
-                                        />
-                                    ) : (
-                                        <div className="grid h-full w-full place-items-center text-slate-500">
-                                            <UserRound className="h-10 w-10" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow">
-                                    <span className="inline-flex items-center gap-1">
-                                        <ShieldCheck className="h-3.5 w-3.5" />
-                                        Verified
-                                    </span>
-                                </span>
-                            </div>
-
-                            <div className="mt-6 text-base font-semibold text-slate-900 dark:text-slate-100">
-                                {imagePreviewParticipant?.full_name ?? 'Participant'}
-                            </div>
-                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">Opening result…</div>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
 
             {/* ✅ RESULT DIALOG (Success + Error) */}
             <Dialog open={resultOpen} onOpenChange={setResultOpen}>
@@ -1362,8 +1178,6 @@ export default function Scanner(props: PageProps) {
                                 <ScannerIdCardPreview
                                     participant={cardParticipant}
                                     flagSrc={flagSrc}
-                                    qrDataUrl={qrDataUrl}
-                                    loading={qrPreviewLoading}
                                     orientation="landscape"
                                 />
                             </div>
