@@ -53,6 +53,7 @@ class VehicleAssignmentController extends Controller
                         'id' => $assignment->user_id,
                         'full_name' => $assignment->user?->name,
                         'email' => $assignment->user?->email,
+                        'is_checked' => $assignment->pickup_status !== 'pending',
                     ])
                     ->values(),
                 'incharge' => $vehicle->incharge
@@ -64,6 +65,9 @@ class VehicleAssignmentController extends Controller
                     : null,
                 'created_at' => $vehicle->created_at?->toISOString(),
                 'assignments_count' => $vehicle->assignments_count,
+                'pickup_sent_at' => $vehicle->assignments
+                    ->where('notify_admin', true)
+                    ->max('pickup_at')?->toISOString(),
             ]);
 
         $chedLoTypeIds = UserType::query()
@@ -266,6 +270,9 @@ class VehicleAssignmentController extends Controller
         $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
 
         $vehicles = TransportVehicle::query()
+            ->with(['assignments' => fn ($query) => $query
+                ->when($selectedEventId, fn ($q) => $q->where('programme_id', $selectedEventId))
+                ->where('driver_user_id', $user->id)])
             ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
             ->where('incharge_user_id', $user->id)
             ->orderBy('label')
@@ -276,6 +283,9 @@ class VehicleAssignmentController extends Controller
                 'plate_number' => $vehicle->plate_number,
                 'driver_name' => $vehicle->driver_name,
                 'driver_contact_number' => $vehicle->driver_contact_number,
+                'pickup_sent_at' => $vehicle->assignments
+                    ->where('notify_admin', true)
+                    ->max('pickup_at')?->toISOString(),
             ]);
 
         $assignmentsByUser = VehicleAssignment::query()
@@ -401,6 +411,84 @@ class VehicleAssignmentController extends Controller
             'pickup_at' => $isPresent ? ($vehicleAssignment->pickup_at ?? now()) : null,
             'dropoff_at' => $isPresent ? $vehicleAssignment->dropoff_at : null,
         ]);
+
+        return back();
+    }
+
+
+    public function sendPickupNotification(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user || ! $this->isChedLoType($user)) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'programme_id' => ['required', 'integer', 'exists:programmes,id'],
+            'vehicle_id' => ['required', 'integer', 'exists:transport_vehicles,id'],
+        ]);
+
+        $vehicle = TransportVehicle::query()
+            ->where('id', $validated['vehicle_id'])
+            ->where('programme_id', $validated['programme_id'])
+            ->where('incharge_user_id', $user->id)
+            ->firstOrFail();
+
+        $assignments = VehicleAssignment::query()
+            ->where('programme_id', $validated['programme_id'])
+            ->where('vehicle_id', $vehicle->id)
+            ->where('driver_user_id', $user->id)
+            ->where('pickup_status', '!=', 'pending')
+            ->get();
+
+        if ($assignments->isEmpty()) {
+            return back()->withErrors([
+                'pickup' => 'No checked passengers found for this vehicle.',
+            ]);
+        }
+
+        $pickupAt = now();
+
+        VehicleAssignment::query()
+            ->whereIn('id', $assignments->pluck('id'))
+            ->update([
+                'notify_admin' => true,
+                'pickup_at' => $pickupAt,
+            ]);
+
+        return back();
+    }
+
+
+    public function removePickupNotification(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user || ! $this->isChedLoType($user)) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'programme_id' => ['required', 'integer', 'exists:programmes,id'],
+            'vehicle_id' => ['required', 'integer', 'exists:transport_vehicles,id'],
+        ]);
+
+        $vehicle = TransportVehicle::query()
+            ->where('id', $validated['vehicle_id'])
+            ->where('programme_id', $validated['programme_id'])
+            ->where('incharge_user_id', $user->id)
+            ->firstOrFail();
+
+        VehicleAssignment::query()
+            ->where('programme_id', $validated['programme_id'])
+            ->where('vehicle_id', $vehicle->id)
+            ->where('driver_user_id', $user->id)
+            ->where('notify_admin', true)
+            ->update([
+                'notify_admin' => false,
+                'pickup_at' => null,
+            ]);
 
         return back();
     }

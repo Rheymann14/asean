@@ -10,13 +10,17 @@ import {
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { resolveUrl } from '@/lib/utils';
-import { type NavItem } from '@/types';
+import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import * as React from 'react';
 
 export function NavMain({ items = [] }: { items: NavItem[] }) {
-    const page = usePage();
+    const page = usePage<SharedData>();
+    const userType = page.props.auth.user?.user_type ?? page.props.auth.user?.userType;
+    const roleName = (userType?.name ?? '').toUpperCase();
+    const roleSlug = (userType?.slug ?? '').toUpperCase();
+    const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
 
     // ✅ Start "Page Settings" group from Venue (i.e., after Event List)
     const pageSettingsStartIndex = items.findIndex(
@@ -96,7 +100,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
     return (
         <>
             <SidebarGroup className="px-2 py-0">
-                <SidebarGroupLabel>Registration</SidebarGroupLabel>
+                {!isChedLo ? <SidebarGroupLabel>Registration</SidebarGroupLabel> : null}
                 {renderMenu(registrationItems)}
             </SidebarGroup>
 
