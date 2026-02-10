@@ -1312,7 +1312,7 @@ export default function Scanner(props: PageProps) {
         if (
             isScanning ||
             resultOpen ||
-            status === 'verifying' ||
+            status !== 'idle' ||
             isEventBlocked ||
             !selectedEventId ||
             cameraError
@@ -1375,7 +1375,12 @@ export default function Scanner(props: PageProps) {
             <Head title="Scanner" />
 
             {/* ✅ RESULT DIALOG (Success + Error) */}
-            <Dialog open={resultOpen} onOpenChange={setResultOpen}>
+            <Dialog
+                open={resultOpen}
+                onOpenChange={(open) => {
+                    setResultOpen(open);
+                }}
+            >
                 <DialogContent className="max-w-md overflow-hidden rounded-3xl bg-white p-0 dark:bg-slate-950">
                     <div className="max-h-[85vh] overflow-y-auto p-5">
                         <DialogHeader className="space-y-1">
@@ -1569,10 +1574,7 @@ export default function Scanner(props: PageProps) {
 
                     <DialogFooter className="border-t border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950">
                         <Button
-                            onClick={() => {
-                                setResultOpen(false);
-                                scanAgain();
-                            }}
+                            onClick={scanAgain}
                             className={cn(
                                 'h-11 w-full rounded-2xl',
                                 dialogTone === 'success'
