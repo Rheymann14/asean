@@ -82,7 +82,7 @@ const LEADERSHIP_ITEMS: LeadershipItem[] = [
         title: 'Michelle A. Ong, DPA',
         description:
             'Commission on Higher Education Commissioner',
-        src: '/img/leaders/ched-commissioner-ong.jpg',
+        src: '/img/leaders/ched-commissioner-ong.png',
     },
     // {
     //     id: 7,
