@@ -144,6 +144,21 @@ class VehicleAssignmentController extends Controller
             ->get()
             ->keyBy('user_id');
 
+        $participantIds = $assignmentsByUser->keys()->values();
+
+        $tableAssignments = ParticipantTableAssignment::query()
+            ->with('participantTable')
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->when($participantIds->isNotEmpty(), fn ($query) => $query->whereIn('user_id', $participantIds))
+            ->get()
+            ->keyBy('user_id');
+
+        $attendanceByUser = ParticipantAttendance::query()
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->when($participantIds->isNotEmpty(), fn ($query) => $query->whereIn('user_id', $participantIds))
+            ->get()
+            ->keyBy('user_id');
+
         $participants = User::query()
             ->with(['country', 'userType'])
             ->when(
@@ -162,8 +177,11 @@ class VehicleAssignmentController extends Controller
             })
             ->orderBy('name')
             ->get()
-            ->map(function (User $participant) use ($assignmentsByUser, $selectedEventId) {
+            ->map(function (User $participant) use ($assignmentsByUser, $tableAssignments, $attendanceByUser) {
                 $assignment = $assignmentsByUser->get($participant->id);
+                $tableAssignment = $tableAssignments->get($participant->id);
+                $table = $tableAssignment?->participantTable;
+                $attendance = $attendanceByUser->get($participant->id);
 
                 return [
                     'id' => $participant->id,
@@ -187,6 +205,25 @@ class VehicleAssignmentController extends Controller
                             'slug' => $participant->userType->slug,
                         ]
                         : null,
+                    'table_assignment' => $table
+                        ? [
+                            'table_number' => $table->table_number,
+                            'seat_number' => $tableAssignment?->seat_number,
+                        ]
+                        : null,
+                    'attendance' => [
+                        'scanned_at' => $attendance?->scanned_at?->toISOString(),
+                    ],
+                    'dietary' => [
+                        'has_food_restrictions' => (bool) ($participant->has_food_restrictions ?? false),
+                        'food_restrictions' => $participant->food_restrictions ?? [],
+                        'dietary_allergies' => $participant->dietary_allergies,
+                        'dietary_other' => $participant->dietary_other,
+                    ],
+                    'accessibility' => [
+                        'needs' => $participant->accessibility_needs ?? [],
+                        'other' => $participant->accessibility_other,
+                    ],
                     'assignment' => $assignment
                         ? [
                             'id' => $assignment->id,
