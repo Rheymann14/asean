@@ -906,7 +906,7 @@ export default function VehicleAssignmentPage({
                                                 <p className="text-xs text-slate-600">
                                                     Table/Seat:{' '}
                                                     {participant.table_assignment
-                                                        ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}`
+                                                        ? `${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}`
                                                         : '—'}
                                                 </p>
                                                 <p className="text-xs text-slate-600">
@@ -955,7 +955,7 @@ export default function VehicleAssignmentPage({
                                         <TableRow>
                                             <TableHead className="w-10">
                                                 {isChedLo ? (
-                                                    'Present'
+                                                    'Attendance'
                                                 ) : (
                                                     <Checkbox
                                                         checked={
@@ -1085,7 +1085,7 @@ export default function VehicleAssignmentPage({
                                                             </TableCell>
                                                             <TableCell>
                                                                 {participant.table_assignment
-                                                                    ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}`
+                                                                    ? ` ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}`
                                                                     : '—'}
                                                             </TableCell>
                                                             <TableCell>

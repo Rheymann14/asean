@@ -85,7 +85,7 @@
                         <tr>
                             <td style="padding: 0 28px 24px;">
                                 <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e293b; font-weight: 600;">
-                                    Welcome to ASEAN PH 2026 â€” thank you for registering!
+                                    Welcome to ASEAN PH 2026 thank you for registering!
                                 </p>
                             </td>
                         </tr>
