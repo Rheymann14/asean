@@ -1,7 +1,7 @@
 import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head, router, useForm } from '@inertiajs/react';
-import { type BreadcrumbItem } from '@/types';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +24,13 @@ import { toast } from 'sonner';
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Assignment', href: '/vehicle-assignment' }];
 
 type EventRow = { id: number; title: string };
-type VehicleRow = { id: number; label: string; plate_number?: string | null };
+type VehicleRow = {
+    id: number;
+    label: string;
+    plate_number?: string | null;
+    driver_name?: string | null;
+    driver_contact_number?: string | null;
+};
 type Assignment = {
     id: number;
     vehicle_id: number | null;
@@ -35,6 +41,13 @@ type Participant = {
     id: number;
     full_name: string;
     email: string | null;
+    table_assignment?: {
+        table_number: string;
+        seat_number?: number | null;
+    } | null;
+    attendance?: {
+        scanned_at?: string | null;
+    } | null;
     assignment: Assignment | null;
 };
 
@@ -121,6 +134,11 @@ function showToastError(errors: Record<string, string | string[]>) {
 }
 
 export default function VehicleAssignmentPage({ events, selected_event_id, vehicles, participants }: PageProps) {
+    const { auth } = usePage<SharedData>().props;
+    const userType = auth.user?.user_type ?? auth.user?.userType;
+    const roleName = (userType?.name ?? '').toUpperCase();
+    const roleSlug = (userType?.slug ?? '').toUpperCase();
+    const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
     const selectedEventId = selected_event_id ? String(selected_event_id) : events[0] ? String(events[0].id) : '';
     const [selectedIds, setSelectedIds] = React.useState<number[]>([]);
     const [selectedAssignedIds, setSelectedAssignedIds] = React.useState<number[]>([]);
@@ -236,6 +254,20 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
     };
 
     const assignBulk = () => doAssign(selectedIds, 'Participants assigned to vehicle.');
+
+    const formatAttendance = (scannedAt?: string | null) => {
+        if (!scannedAt) return 'Not checked in';
+        const date = new Date(scannedAt);
+        if (Number.isNaN(date.getTime())) return 'Checked in';
+
+        return new Intl.DateTimeFormat('en-PH', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(date);
+    };
     const assignSingle = (participantId: number) => doAssign([participantId], 'Participant assigned to vehicle.');
 
     const removeAssignment = (assignmentId: number) => {
@@ -271,10 +303,13 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Vehicle Assignment</h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Assign participants to vehicles per event.
+                        {isChedLo
+                            ? 'View your participants, their table/seat assignment, and attendance per event.'
+                            : 'Assign participants to vehicles per event.'}
                     </p>
                 </div>
 
+                {!isChedLo ? (
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Assign Participants</CardTitle>
@@ -331,8 +366,9 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                         ) : null}
                     </CardContent>
                 </Card>
+                ) : null}
 
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className={cn('grid gap-4', isChedLo ? 'lg:grid-cols-1' : 'lg:grid-cols-2')}>
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">Assigned Participants</CardTitle>
@@ -340,9 +376,11 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <Button type="button" variant="outline" onClick={removeBulkAssignments} disabled={!selectedAssignedIds.length}>
-                                    Remove Selected
-                                </Button>
+                                {!isChedLo ? (
+                                    <Button type="button" variant="outline" onClick={removeBulkAssignments} disabled={!selectedAssignedIds.length}>
+                                        Remove Selected
+                                    </Button>
+                                ) : null}
                             </div>
                             <div className="overflow-hidden rounded-xl border">
                                 <Table>
@@ -356,13 +394,15 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                             </TableHead>
                                             <TableHead>Participant</TableHead>
                                             <TableHead>Assigned Vehicle</TableHead>
-                                            <TableHead className="text-right">Action</TableHead>
+                                            <TableHead>Table / Seat</TableHead>
+                                            <TableHead>Attendance</TableHead>
+                                            {!isChedLo ? <TableHead className="text-right">Action</TableHead> : null}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {assignedPageItems.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="py-6 text-center text-sm text-slate-500">
+                                                <TableCell colSpan={isChedLo ? 5 : 6} className="py-6 text-center text-sm text-slate-500">
                                                     No assigned participants found.
                                                 </TableCell>
                                             </TableRow>
@@ -382,16 +422,24 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                                         <div className="text-xs text-slate-500">{participant.email || '—'}</div>
                                                     </TableCell>
                                                     <TableCell>{participant.assignment?.vehicle_label || '—'}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => removeAssignment(participant.assignment!.id)}
-                                                        >
-                                                            Remove Assignment
-                                                        </Button>
+                                                    <TableCell>
+                                                        {participant.table_assignment
+                                                            ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}`
+                                                            : '—'}
                                                     </TableCell>
+                                                    <TableCell>{formatAttendance(participant.attendance?.scanned_at)}</TableCell>
+                                                    {!isChedLo ? (
+                                                        <TableCell className="text-right">
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => removeAssignment(participant.assignment!.id)}
+                                                            >
+                                                                Remove Assignment
+                                                            </Button>
+                                                        </TableCell>
+                                                    ) : null}
                                                 </TableRow>
                                             ))
                                         )}
@@ -426,6 +474,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                         </CardContent>
                     </Card>
 
+                    {!isChedLo ? (
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">Unassigned Participants</CardTitle>
@@ -525,6 +574,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                             </div>
                         </CardContent>
                     </Card>
+                    ) : null}
                 </div>
             </div>
         </AppLayout>
