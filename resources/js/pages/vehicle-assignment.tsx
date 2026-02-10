@@ -258,6 +258,20 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
     };
 
     const assignBulk = () => doAssign(selectedIds, 'Participants assigned to vehicle.');
+
+    const formatAttendance = (scannedAt?: string | null) => {
+        if (!scannedAt) return 'Not checked in';
+        const date = new Date(scannedAt);
+        if (Number.isNaN(date.getTime())) return 'Checked in';
+
+        return new Intl.DateTimeFormat('en-PH', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(date);
+    };
     const assignSingle = (participantId: number) => doAssign([participantId], 'Participant assigned to vehicle.');
 
     const removeAssignment = (assignmentId: number) => {
@@ -336,6 +350,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                     </p>
                 </div>
 
+                {!isChedLo ? (
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Event Filter</CardTitle>
