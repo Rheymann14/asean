@@ -63,7 +63,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const roleName = (userType?.name ?? '').toUpperCase();
     const roleSlug = (userType?.slug ?? '').toUpperCase();
     const roleValue = `${roleSlug || roleName}`.replace(/[_-]+/g, ' ').trim();
-    const homeHref = roleValue === 'ADMIN' ? '/dashboard' : roleValue.startsWith('CHED ') ? '/table-assignment/create' : '/participant-dashboard';
+    const homeHref = roleValue === 'ADMIN' ? '/dashboard' : roleValue === 'CHED LO' ? '/vehicle-assignment' : roleValue.startsWith('CHED ') ? '/table-assignment/create' : '/participant-dashboard';
 
     const mainNavItems: NavItem[] = [
         {

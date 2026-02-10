@@ -113,7 +113,11 @@ export function AppSidebar() {
           ]
         : isChedLo
           ? [
-              ...managementNavItems,
+              {
+                  title: 'Vehicle Assignment',
+                  href: '/vehicle-assignment',
+                  icon: Bus,
+              },
           ]
         : [
               {
@@ -148,7 +152,7 @@ export function AppSidebar() {
           ]
         : [];
 
-    const homeHref = isAdmin ? dashboard() : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
+    const homeHref = isAdmin ? dashboard() : isChedLo ? '/vehicle-assignment' : '/participant-dashboard';
 
     return (
         <Sidebar collapsible="icon" variant="inset">

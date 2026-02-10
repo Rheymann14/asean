@@ -336,6 +336,16 @@ class VehicleAssignmentController extends Controller
                     'attendance' => [
                         'scanned_at' => $attendance?->scanned_at?->toISOString(),
                     ],
+                    'dietary' => [
+                        'has_food_restrictions' => (bool) ($participant->has_food_restrictions ?? false),
+                        'food_restrictions' => $participant->food_restrictions ?? [],
+                        'dietary_allergies' => $participant->dietary_allergies,
+                        'dietary_other' => $participant->dietary_other,
+                    ],
+                    'accessibility' => [
+                        'needs' => $participant->accessibility_needs ?? [],
+                        'other' => $participant->accessibility_other,
+                    ],
                     'assignment' => $assignment
                         ? [
                             'id' => $assignment->id,
@@ -363,6 +373,30 @@ class VehicleAssignmentController extends Controller
             'vehicles' => $vehicles,
             'participants' => $participants,
         ]);
+    }
+
+
+    public function updatePresence(Request $request, VehicleAssignment $vehicleAssignment)
+    {
+        $user = $request->user();
+
+        if (! $this->isAdmin($user) && $vehicleAssignment->driver_user_id !== $user?->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'is_present' => ['required', 'boolean'],
+        ]);
+
+        $isPresent = (bool) $validated['is_present'];
+
+        $vehicleAssignment->update([
+            'pickup_status' => $isPresent ? 'picked_up' : 'pending',
+            'pickup_at' => $isPresent ? ($vehicleAssignment->pickup_at ?? now()) : null,
+            'dropoff_at' => $isPresent ? $vehicleAssignment->dropoff_at : null,
+        ]);
+
+        return back();
     }
 
     public function store(Request $request)

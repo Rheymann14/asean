@@ -105,6 +105,8 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
             ->name('vehicle-assignments.pickup');
         Route::patch('vehicle-assignments/{vehicleAssignment}/dropoff', [VehicleAssignmentController::class, 'storeDropoff'])
             ->name('vehicle-assignments.dropoff');
+        Route::patch('vehicle-assignments/{vehicleAssignment}/presence', [VehicleAssignmentController::class, 'updatePresence'])
+            ->name('vehicle-assignments.presence');
         Route::post('transport-vehicles', [TransportVehicleController::class, 'store'])
             ->name('transport-vehicles.store');
         Route::delete('transport-vehicles/{transportVehicle}', [TransportVehicleController::class, 'destroy'])
