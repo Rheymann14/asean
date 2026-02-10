@@ -212,6 +212,8 @@ function showToastError(errors: Record<string, string | string[]>) {
 function VirtualLandscapeId({ participant }: { participant: Participant }) {
     const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
     const flagSrc = getFlagSrc(participant.country);
+    const name = participant.full_name || '—';
+    const displayId = participant.display_id || '—';
 
     React.useEffect(() => {
         let active = true;
@@ -240,94 +242,161 @@ function VirtualLandscapeId({ participant }: { participant: Participant }) {
     }, [participant.qr_payload]);
 
     return (
-        <div className="mx-auto w-full max-w-[760px] overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="relative">
-                <img
-                    src="/img/bg.png"
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover opacity-60"
-                    draggable={false}
-                />
-                <div className="absolute inset-0 bg-white/40" />
-
-                <div className="relative grid gap-3 p-3 sm:grid-cols-[1fr_180px] sm:p-4">
-                    <div>
-                        <div className="flex items-center gap-2">
+        <div className="mx-auto w-full max-w-[540px]">
+            <div
+                className="id-print-card relative overflow-hidden"
+                style={{
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact',
+                }}
+            >
+                <div className="id-print-card-inner relative aspect-[3.37/2.125] w-[520px]">
+                    <div className="relative h-full w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
+                        <div aria-hidden className="absolute inset-0">
                             <img
-                                src="/img/asean_logo.png"
-                                alt="ASEAN"
-                                className="h-8 w-8 object-contain"
+                                src="/img/bg.png"
+                                alt=""
+                                className="absolute inset-0 h-full w-full object-cover opacity-100 brightness-80 contrast-150 saturate-200 filter dark:opacity-35 dark:brightness-80 dark:contrast-110"
                                 draggable={false}
+                                loading="eager"
+                                decoding="async"
                             />
-                            <div className="min-w-0">
-                                <p className="truncate text-xs font-semibold text-slate-700">
-                                    ASEAN Philippines 2026
-                                </p>
-                                <p className="truncate text-[11px] text-slate-500">
-                                    Participant Identification
-                                </p>
-                            </div>
+                            <div className="absolute inset-0 bg-black/10 dark:bg-black/15" />
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
+                            <div className="pointer-events-none absolute -top-10 -right-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
                         </div>
 
-                        <div className="mt-3">
-                            <p className="text-[10px] tracking-wide text-slate-500 uppercase">
-                                Participant
-                            </p>
-                            <p className="line-clamp-2 text-base font-semibold text-slate-900">
-                                {participant.full_name}
-                            </p>
-                        </div>
-
-                        <div className="mt-2 flex items-center gap-2">
-                            <div className="h-8 w-8 overflow-hidden rounded-lg border bg-white">
-                                {flagSrc ? (
+                        <div className="relative flex h-full flex-col px-4 pt-3 pb-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex min-w-0 items-center gap-2.5">
                                     <img
-                                        src={flagSrc}
-                                        alt={
-                                            participant.country?.name ??
-                                            'Country flag'
-                                        }
-                                        className="h-full w-full object-cover"
+                                        src="/img/asean_logo.svg"
+                                        alt="ASEAN"
+                                        className="h-8 w-8 object-contain drop-shadow-sm"
+                                        draggable={false}
+                                        loading="eager"
+                                        decoding="async"
                                     />
-                                ) : null}
+                                    <img
+                                        src="/img/bagong_pilipinas.svg"
+                                        alt="Bagong Pilipinas"
+                                        className="h-8 w-8 object-contain drop-shadow-sm"
+                                        draggable={false}
+                                        loading="eager"
+                                        decoding="async"
+                                    />
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[13px] leading-4 font-semibold text-slate-900 dark:text-slate-100">
+                                            ASEAN Philippines 2026
+                                        </p>
+                                        <p className="truncate text-[11px] leading-4 text-slate-600 dark:text-slate-300">
+                                            Participant Identification
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs font-semibold text-slate-800">
-                                    {participant.country?.name || '—'}
-                                </p>
-                                <p className="text-[11px] text-slate-500">
-                                    {participant.country?.code?.toUpperCase() ||
-                                        ''}
-                                </p>
-                            </div>
-                        </div>
 
-                        <div className="mt-2">
-                            <p className="text-[10px] tracking-wide text-slate-500 uppercase">
-                                Participant ID
-                            </p>
-                            <p className="inline-flex rounded-md border bg-white/80 px-2 py-1 font-mono text-xs">
-                                {participant.display_id || '—'}
-                            </p>
-                        </div>
-                    </div>
+                            <div className="my-2 h-px w-full bg-slate-200/80 dark:bg-white/10" />
 
-                    <div className="flex flex-col items-center justify-center rounded-xl border bg-white/80 p-2">
-                        <div className="mb-1 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700">
-                            <QrCodeIcon className="h-3.5 w-3.5" /> QR Code
-                        </div>
-                        {qrDataUrl ? (
-                            <img
-                                src={qrDataUrl}
-                                alt="Participant QR"
-                                className="h-28 w-28 rounded-lg bg-white object-contain p-1"
-                                draggable={false}
-                            />
-                        ) : (
-                            <div className="flex h-28 w-28 items-center justify-center rounded-lg border text-[11px] text-slate-500">
-                                QR unavailable
+                            <div className="flex min-h-0 flex-1 gap-3">
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-[13px] font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                                        Participant
+                                    </div>
+                                    <p className="mt-1 line-clamp-2 text-[19px] leading-6 font-semibold text-slate-900 dark:text-slate-100">
+                                        {name}
+                                    </p>
+
+                                    <div className="mt-2 flex items-center gap-2.5">
+                                        <div className="h-9 w-9 overflow-hidden rounded-lg border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
+                                            {flagSrc ? (
+                                                <img
+                                                    src={flagSrc}
+                                                    alt={
+                                                        participant.country
+                                                            ?.name ??
+                                                        'Country flag'
+                                                    }
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : null}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="truncate text-[14px] leading-4 font-semibold text-slate-900 dark:text-slate-100">
+                                                {participant.country?.name ||
+                                                    '—'}
+                                            </div>
+                                            {participant.country?.code ? (
+                                                <div className="mt-0.5 text-[12px] leading-4 text-slate-500 dark:text-slate-300">
+                                                    {String(
+                                                        participant.country
+                                                            .code,
+                                                    ).toUpperCase()}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-2">
+                                        <div className="text-[13px] font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                                            Participant ID
+                                        </div>
+                                        <div className="mt-1 inline-flex max-w-full rounded-2xl border border-slate-200/70 bg-white/80 px-3 py-1.5 font-mono text-[16px] leading-4 break-words whitespace-normal text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100">
+                                            {displayId}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-auto pt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                        Scan QR for attendance verification.
+                                    </div>
+                                </div>
+
+                                <div className="flex h-full w-[200px] flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45">
+                                    <div className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                                        <QrCodeIcon className="h-3.5 w-3.5" />
+                                        QR Code
+                                    </div>
+
+                                    {qrDataUrl ? (
+                                        <img
+                                            src={qrDataUrl}
+                                            alt="Participant QR code"
+                                            className="rounded-2xl bg-white object-contain p-1.5"
+                                            style={{ width: 160, height: 160 }}
+                                            draggable={false}
+                                        />
+                                    ) : (
+                                        <div
+                                            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30"
+                                            style={{ width: 160, height: 160 }}
+                                        >
+                                            <QrCodeIcon className="h-7 w-7 text-slate-400" />
+                                            <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                                                QR unavailable
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="mt-2 w-full text-center">
+                                        <div
+                                            className="line-clamp-2 text-[10px] font-semibold text-slate-900 dark:text-slate-100"
+                                            title={`${String(participant.country?.code ?? '').toUpperCase()} • ${name}`}
+                                        >
+                                            {String(
+                                                participant.country?.code ?? '',
+                                            ).toUpperCase()}
+                                            {participant.country?.code
+                                                ? ' • '
+                                                : ''}
+                                            {name}
+                                        </div>
+                                        <div className="mt-1 font-mono text-[10px] break-words text-slate-500 dark:text-slate-400">
+                                            {displayId}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>
