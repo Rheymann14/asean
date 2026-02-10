@@ -134,6 +134,7 @@ type ParticipantRow = {
     id: number;
     display_id?: string | null;
     qr_payload?: string | null;
+    profile_image_url?: string | null;
     full_name: string;
     email: string;
     contact_number?: string | null;
@@ -1202,6 +1203,12 @@ export default function ParticipantPage(props: PageProps) {
     const [editingUserType, setEditingUserType] =
         React.useState<UserType | null>(null);
 
+    const [participantProfilePreview, setParticipantProfilePreview] =
+        React.useState<string | null>(null);
+    const participantProfileInputRef = React.useRef<HTMLInputElement | null>(
+        null,
+    );
+
     async function openVirtualIdDialog(participant: ParticipantRow) {
         setVirtualIdParticipant(participant);
         setVirtualIdDialogOpen(true);
@@ -1219,6 +1226,14 @@ export default function ParticipantPage(props: PageProps) {
                 URL.revokeObjectURL(countryFlagPreview);
         };
     }, [countryFlagPreview]);
+
+    React.useEffect(() => {
+        return () => {
+            if (participantProfilePreview?.startsWith('blob:')) {
+                URL.revokeObjectURL(participantProfilePreview);
+            }
+        };
+    }, [participantProfilePreview]);
 
     // ---------------------------------------
     // Forms (Inertia)
@@ -1254,6 +1269,8 @@ export default function ParticipantPage(props: PageProps) {
         emergency_contact_relationship: string;
         emergency_contact_phone: string;
         emergency_contact_email: string;
+        profile_image: File | null;
+        remove_profile_image: boolean;
     }>({
         full_name: '',
         email: '',
@@ -1285,6 +1302,8 @@ export default function ParticipantPage(props: PageProps) {
         emergency_contact_relationship: '',
         emergency_contact_phone: '',
         emergency_contact_email: '',
+        profile_image: null,
+        remove_profile_image: false,
     });
 
     const countryForm = useForm<{
@@ -1651,9 +1670,48 @@ export default function ParticipantPage(props: PageProps) {
     // ---------------------------------------
     // Actions (CRUD)
     // ---------------------------------------
+    function resetParticipantProfilePreview(next: string | null) {
+        setParticipantProfilePreview((prev) => {
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return next;
+        });
+    }
+
+    function handleParticipantProfileChange(
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) {
+        const file = e.target.files?.[0] ?? null;
+        participantForm.setData('profile_image', file);
+        participantForm.setData('remove_profile_image', false);
+
+        if (!file) {
+            resetParticipantProfilePreview(
+                editingParticipant?.profile_image_url ?? null,
+            );
+            return;
+        }
+
+        resetParticipantProfilePreview(URL.createObjectURL(file));
+    }
+
+    function removeParticipantProfileImage() {
+        participantForm.setData('profile_image', null);
+        participantForm.setData('remove_profile_image', true);
+        if (participantProfileInputRef.current) {
+            participantProfileInputRef.current.value = '';
+        }
+        resetParticipantProfilePreview(null);
+    }
+
     function openAddParticipant() {
         setEditingParticipant(null);
         participantForm.reset();
+        participantForm.setData('profile_image', null);
+        participantForm.setData('remove_profile_image', false);
+        if (participantProfileInputRef.current) {
+            participantProfileInputRef.current.value = '';
+        }
+        resetParticipantProfilePreview(null);
         participantForm.clearErrors();
         setParticipantFormStep(1);
         setParticipantDialogOpen(true);
@@ -1692,7 +1750,13 @@ export default function ParticipantPage(props: PageProps) {
                 p.emergency_contact_relationship ?? '',
             emergency_contact_phone: p.emergency_contact_phone ?? '',
             emergency_contact_email: p.emergency_contact_email ?? '',
+            profile_image: null,
+            remove_profile_image: false,
         });
+        if (participantProfileInputRef.current) {
+            participantProfileInputRef.current.value = '';
+        }
+        resetParticipantProfilePreview(p.profile_image_url ?? null);
         participantForm.clearErrors();
         setParticipantFormStep(1);
         setParticipantDialogOpen(true);
@@ -1747,6 +1811,10 @@ export default function ParticipantPage(props: PageProps) {
                 data.emergency_contact_phone.trim() || null,
             emergency_contact_email:
                 data.emergency_contact_email.trim() || null,
+            remove_profile_image: data.remove_profile_image,
+            ...(data.profile_image
+                ? { profile_image: data.profile_image }
+                : {}),
             ...(editingParticipant ? {} : { password: data.password }),
         }));
 
@@ -1767,6 +1835,7 @@ export default function ParticipantPage(props: PageProps) {
                 ENDPOINTS.participants.update(editingParticipant.id),
                 {
                     preserveScroll: true,
+                    forceFormData: true,
                     onSuccess: () => {
                         setParticipantDialogOpen(false);
                         setEditingParticipant(null);
@@ -1778,6 +1847,7 @@ export default function ParticipantPage(props: PageProps) {
         } else {
             participantForm.post(ENDPOINTS.participants.store, {
                 preserveScroll: true,
+                forceFormData: true,
                 onSuccess: () => {
                     setParticipantDialogOpen(false);
                     toast.success('Participant added.');
@@ -4051,7 +4121,15 @@ export default function ParticipantPage(props: PageProps) {
                 open={participantDialogOpen}
                 onOpenChange={(open) => {
                     setParticipantDialogOpen(open);
-                    if (!open) setParticipantFormStep(1);
+                    if (!open) {
+                        setParticipantFormStep(1);
+                        if (participantProfileInputRef.current) {
+                            participantProfileInputRef.current.value = '';
+                        }
+                        resetParticipantProfilePreview(null);
+                        participantForm.setData('profile_image', null);
+                        participantForm.setData('remove_profile_image', false);
+                    }
                 }}
             >
                 <DialogContent
@@ -4173,6 +4251,76 @@ export default function ParticipantPage(props: PageProps) {
                                                     }
                                                 </div>
                                             ) : null}
+                                        </div>
+
+                                        <div className="space-y-2 sm:col-span-2">
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-sm font-medium">
+                                                    Profile image
+                                                </div>
+                                                <div className="text-xs text-slate-600 dark:text-slate-400">
+                                                    Saved to
+                                                    public/profile-image
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                                <div className="grid h-20 w-full place-items-center overflow-hidden rounded-xl border border-slate-200 bg-white sm:w-[140px] dark:border-slate-800 dark:bg-slate-950">
+                                                    {participantProfilePreview ? (
+                                                        <img
+                                                            src={
+                                                                participantProfilePreview
+                                                            }
+                                                            alt="Profile preview"
+                                                            className="h-full w-full object-cover"
+                                                            draggable={false}
+                                                        />
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                                            <ImageUp className="h-4 w-4" />
+                                                            No image
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="w-full space-y-2">
+                                                    <Input
+                                                        ref={
+                                                            participantProfileInputRef
+                                                        }
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={
+                                                            handleParticipantProfileChange
+                                                        }
+                                                    />
+                                                    {participantForm.errors
+                                                        .profile_image ? (
+                                                        <div className="text-xs text-red-600">
+                                                            {
+                                                                participantForm
+                                                                    .errors
+                                                                    .profile_image
+                                                            }
+                                                        </div>
+                                                    ) : null}
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={
+                                                                !participantProfilePreview
+                                                            }
+                                                            onClick={
+                                                                removeParticipantProfileImage
+                                                            }
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <div className="space-y-1.5">
