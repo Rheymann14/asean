@@ -96,6 +96,10 @@ class FortifyServiceProvider extends ServiceProvider
                             return redirect('/dashboard');
                         }
 
+                        if ($roleValue === 'CHED LO') {
+                            return redirect('/vehicle-assignment');
+                        }
+
                         if (Str::startsWith($roleValue, 'CHED ')) {
                             return redirect('/table-assignment/create');
                         }
