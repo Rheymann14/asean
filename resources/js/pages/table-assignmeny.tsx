@@ -303,6 +303,7 @@ export default function TableAssignmenyPage(props: PageProps) {
     const [tableNumberDrafts, setTableNumberDrafts] = React.useState<Record<number, string>>({});
     const [seatNumberDrafts, setSeatNumberDrafts] = React.useState<Record<number, string>>({});
     const [expandedRowIds, setExpandedRowIds] = React.useState<Set<string>>(new Set());
+    const [removingAssignmentIds, setRemovingAssignmentIds] = React.useState<number[]>([]);
     const hasHydrated = React.useRef(false);
     const selectedEvent = selectedEventId ? events.find((event) => String(event.id) === selectedEventId) : null;
     const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, Date.now()) : null;
@@ -392,10 +393,19 @@ export default function TableAssignmenyPage(props: PageProps) {
     }
 
     function removeAssignment(id: number) {
+        if (removingAssignmentIds.includes(id)) {
+            return;
+        }
+
+        setRemovingAssignmentIds((prev) => [...prev, id]);
+
         router.delete(ENDPOINTS.assignments.destroy(id), {
             preserveScroll: true,
             onSuccess: () => toast.success('Participant removed from table.'),
             onError: () => toast.error('Unable to remove participant.'),
+            onFinish: () => {
+                setRemovingAssignmentIds((prev) => prev.filter((assignmentId) => assignmentId !== id));
+            },
         });
     }
 
@@ -1155,7 +1165,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                                                     variant="ghost"
                                                     onClick={(e) => { e.stopPropagation(); removeAssignment(assignment.id); }}
                                                     aria-label="Remove participant"
-                                                    disabled={isEventClosed}
+                                                    disabled={isEventClosed || removingAssignmentIds.includes(assignment.id)}
                                                 >
                                                     <XCircle className="h-4 w-4 text-rose-500" />
                                                 </Button>
