@@ -1217,7 +1217,8 @@ export default function Scanner(props: PageProps) {
                         if (lockRef.current) return;
                         lockRef.current = true;
 
-                        stopScan();
+                        pauseScanForVerification();
+                        setStatus('verifying');
                         await verifyCode(text);
 
                         lockRef.current = false;
@@ -1256,12 +1257,15 @@ export default function Scanner(props: PageProps) {
         }
     }
 
-    function stopScan() {
+    function pauseScanForVerification() {
         teardownScanSession();
-
         setIsScanning(false);
         isScanningRef.current = false;
         setQrAim('idle');
+    }
+
+    function stopScan() {
+        pauseScanForVerification();
         setStatus((s) => (s === 'scanning' ? 'idle' : s));
     }
 
