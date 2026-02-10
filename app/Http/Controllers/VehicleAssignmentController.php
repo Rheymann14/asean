@@ -270,6 +270,9 @@ class VehicleAssignmentController extends Controller
         $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
 
         $vehicles = TransportVehicle::query()
+            ->with(['assignments' => fn ($query) => $query
+                ->when($selectedEventId, fn ($q) => $q->where('programme_id', $selectedEventId))
+                ->where('driver_user_id', $user->id)])
             ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
             ->where('incharge_user_id', $user->id)
             ->orderBy('label')
@@ -280,6 +283,9 @@ class VehicleAssignmentController extends Controller
                 'plate_number' => $vehicle->plate_number,
                 'driver_name' => $vehicle->driver_name,
                 'driver_contact_number' => $vehicle->driver_contact_number,
+                'pickup_sent_at' => $vehicle->assignments
+                    ->where('notify_admin', true)
+                    ->max('pickup_at')?->toISOString(),
             ]);
 
         $assignmentsByUser = VehicleAssignment::query()
@@ -449,6 +455,39 @@ class VehicleAssignmentController extends Controller
             ->update([
                 'notify_admin' => true,
                 'pickup_at' => $pickupAt,
+            ]);
+
+        return back();
+    }
+
+
+    public function removePickupNotification(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user || ! $this->isChedLoType($user)) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'programme_id' => ['required', 'integer', 'exists:programmes,id'],
+            'vehicle_id' => ['required', 'integer', 'exists:transport_vehicles,id'],
+        ]);
+
+        $vehicle = TransportVehicle::query()
+            ->where('id', $validated['vehicle_id'])
+            ->where('programme_id', $validated['programme_id'])
+            ->where('incharge_user_id', $user->id)
+            ->firstOrFail();
+
+        VehicleAssignment::query()
+            ->where('programme_id', $validated['programme_id'])
+            ->where('vehicle_id', $vehicle->id)
+            ->where('driver_user_id', $user->id)
+            ->where('notify_admin', true)
+            ->update([
+                'notify_admin' => false,
+                'pickup_at' => null,
             ]);
 
         return back();

@@ -58,6 +58,7 @@ type VehicleRow = {
     plate_number?: string | null;
     driver_name?: string | null;
     driver_contact_number?: string | null;
+    pickup_sent_at?: string | null;
 };
 type Assignment = {
     id: number;
@@ -680,6 +681,27 @@ export default function VehicleAssignmentPage({
         );
     };
 
+    const removePickup = (vehicleId: number) => {
+        setSendingPickupVehicleId(vehicleId);
+        router.post(
+            '/vehicle-assignments/remove-pickup',
+            {
+                programme_id: assignmentForm.data.programme_id,
+                vehicle_id: vehicleId,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Pickup details removed.');
+                },
+                onError: (errors) => {
+                    showToastError(errors as Record<string, string | string[]>);
+                },
+                onFinish: () => setSendingPickupVehicleId(null),
+            },
+        );
+    };
+
     const checkedPassengersByVehicle = React.useMemo(() => {
         const counts: Record<number, number> = {};
 
@@ -813,16 +835,30 @@ export default function VehicleAssignmentPage({
                                         <Button
                                             type="button"
                                             size="sm"
-                                            className="mt-3 w-full bg-[#00359c] text-white hover:bg-[#00359c]/90"
+                                            className={cn(
+                                                'mt-3 w-full text-white',
+                                                vehicle.pickup_sent_at
+                                                    ? 'bg-red-600 hover:bg-red-600/90'
+                                                    : 'bg-[#00359c] hover:bg-[#00359c]/90',
+                                            )}
                                             disabled={
-                                                (checkedPassengersByVehicle[vehicle.id] ?? 0) === 0 ||
+                                                (!vehicle.pickup_sent_at &&
+                                                    (checkedPassengersByVehicle[vehicle.id] ?? 0) === 0) ||
                                                 sendingPickupVehicleId === vehicle.id
                                             }
-                                            onClick={() => sendPickup(vehicle.id)}
+                                            onClick={() =>
+                                                vehicle.pickup_sent_at
+                                                    ? removePickup(vehicle.id)
+                                                    : sendPickup(vehicle.id)
+                                            }
                                         >
                                             {sendingPickupVehicleId === vehicle.id
-                                                ? 'Sending...'
-                                                : 'Send Pickup'}
+                                                ? vehicle.pickup_sent_at
+                                                    ? 'Removing...'
+                                                    : 'Sending...'
+                                                : vehicle.pickup_sent_at
+                                                  ? 'Remove Pickup'
+                                                  : 'Send Pickup'}
                                         </Button>
                                     </div>
                                 ))}

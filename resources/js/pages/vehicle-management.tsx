@@ -360,12 +360,6 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                                         '—'
                                                     )}
                                                 </TableCell>
-                                                <TableCell>{vehicle.checked_passengers_count}</TableCell>
-                                                <TableCell>
-                                                    {vehicle.pickup_sent_at
-                                                        ? new Date(vehicle.pickup_sent_at).toLocaleString()
-                                                        : '—'}
-                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button
                                                         type="button"
@@ -454,15 +448,6 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                                     ) : (
                                                         <p>—</p>
                                                     )}
-                                                </div>
-                                                <div className="grid gap-1 text-xs text-slate-600 dark:text-slate-300">
-                                                    <p>Checked passengers: {vehicle.checked_passengers_count}</p>
-                                                    <p>
-                                                        Picked up at:{' '}
-                                                        {vehicle.pickup_sent_at
-                                                            ? new Date(vehicle.pickup_sent_at).toLocaleString()
-                                                            : '—'}
-                                                    </p>
                                                 </div>
                                                 <Button
                                                     type="button"
