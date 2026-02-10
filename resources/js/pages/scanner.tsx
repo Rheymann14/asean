@@ -1294,18 +1294,24 @@ export default function Scanner(props: PageProps) {
 
             const data = (await res.json()) as ScanResponse;
 
-            const participantJoinedSelectedEvent =
-                !!data.registered_events?.some(
-                    (event) => String(event.id) === selectedEventId,
-                );
+            const participantJoinedSelectedEvent = Array.isArray(
+                data.registered_events,
+            )
+                ? data.registered_events.some(
+                      (event) => String(event.id) === selectedEventId,
+                  )
+                : false;
 
             if (
-                !data.ok &&
                 !!data.participant &&
-                Array.isArray(data.registered_events) &&
-                !participantJoinedSelectedEvent
+                !participantJoinedSelectedEvent &&
+                (!data.ok || Array.isArray(data.registered_events))
             ) {
+                data.ok = false;
                 data.message = 'Participant not joined to this event.';
+                data.checked_in_event = null;
+                data.already_checked_in = false;
+                data.scanned_at = null;
             }
 
             await openResultDialog(data); // ✅ plays sound + vibrates
