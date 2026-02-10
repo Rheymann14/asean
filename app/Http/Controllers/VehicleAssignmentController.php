@@ -53,6 +53,7 @@ class VehicleAssignmentController extends Controller
                         'id' => $assignment->user_id,
                         'full_name' => $assignment->user?->name,
                         'email' => $assignment->user?->email,
+                        'is_checked' => $assignment->pickup_status !== 'pending',
                     ])
                     ->values(),
                 'incharge' => $vehicle->incharge
@@ -64,9 +65,6 @@ class VehicleAssignmentController extends Controller
                     : null,
                 'created_at' => $vehicle->created_at?->toISOString(),
                 'assignments_count' => $vehicle->assignments_count,
-                'checked_passengers_count' => $vehicle->assignments
-                    ->filter(fn ($assignment) => $assignment->pickup_status !== 'pending')
-                    ->count(),
                 'pickup_sent_at' => $vehicle->assignments
                     ->where('notify_admin', true)
                     ->max('pickup_at')?->toISOString(),

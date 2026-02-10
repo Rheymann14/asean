@@ -4,6 +4,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +18,7 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import { Bus, Check, ChevronsUpDown } from 'lucide-react';
+import { Bus, Check, CheckCircle2, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Management', href: '/vehicle-management' }];
@@ -40,12 +41,12 @@ type VehicleRow = {
     plate_number: string | null;
     driver_contact_number: string | null;
     assignments_count: number;
-    checked_passengers_count: number;
     pickup_sent_at: string | null;
     participants: Array<{
         id: number;
         full_name: string | null;
         email: string | null;
+        is_checked: boolean;
     }>;
     incharge: {
         id: number;
@@ -319,7 +320,6 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                         <TableHead>Contact</TableHead>
                                         <TableHead>CHED LO In Charge</TableHead>
                                         <TableHead>Passengers</TableHead>
-                                        <TableHead>Checked Passengers</TableHead>
                                         <TableHead>Picked Up At</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
@@ -333,12 +333,32 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                                 <TableCell>{vehicle.plate_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.driver_contact_number || '—'}</TableCell>
                                                 <TableCell>{vehicle.incharge?.full_name || '—'}</TableCell>
-                                                <TableCell className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-200">
-                                                    {vehicle.participants.length
-                                                        ? vehicle.participants
-                                                              .map((participant) => participant.full_name || participant.email || 'Participant')
-                                                              .join('\n')
-                                                        : '—'}
+                                                <TableCell className="text-sm text-slate-600 dark:text-slate-200">
+                                                    {vehicle.participants.length ? (
+                                                        <div className="space-y-1">
+                                                            {vehicle.participants.map((participant) => (
+                                                                <div key={participant.id} className="flex items-center gap-2">
+                                                                    {participant.is_checked ? (
+                                                                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                                    ) : (
+                                                                        <span className="h-4 w-4" />
+                                                                    )}
+                                                                    <span>{participant.full_name || participant.email || 'Participant'}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        '—'
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {vehicle.pickup_sent_at ? (
+                                                        <Badge className="border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-900/40 dark:text-emerald-200">
+                                                            {new Date(vehicle.pickup_sent_at).toLocaleString()}
+                                                        </Badge>
+                                                    ) : (
+                                                        '—'
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>{vehicle.checked_passengers_count}</TableCell>
                                                 <TableCell>
@@ -367,7 +387,7 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="py-6 text-center text-slate-500">
+                                            <TableCell colSpan={8} className="py-6 text-center text-slate-500">
                                                 No vehicles yet for this event.
                                             </TableCell>
                                         </TableRow>
@@ -408,13 +428,32 @@ export default function VehicleManagementPage({ events, selected_event_id, ched_
                                                 </div>
                                                 <div>
                                                     <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Participants</p>
-                                                    <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-200">
-                                                        {vehicle.participants.length
-                                                            ? vehicle.participants
-                                                                  .map((participant) => participant.full_name || participant.email || 'Participant')
-                                                                  .join('\n')
-                                                            : '—'}
-                                                    </p>
+                                                    <div className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-200">
+                                                        {vehicle.participants.length ? (
+                                                            vehicle.participants.map((participant) => (
+                                                                <div key={participant.id} className="flex items-center gap-2">
+                                                                    {participant.is_checked ? (
+                                                                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                                    ) : (
+                                                                        <span className="h-4 w-4" />
+                                                                    )}
+                                                                    <span>{participant.full_name || participant.email || 'Participant'}</span>
+                                                                </div>
+                                                            ))
+                                                        ) : (
+                                                            <p>—</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="grid gap-1 text-xs text-slate-600 dark:text-slate-300">
+                                                    <p>Picked up at:</p>
+                                                    {vehicle.pickup_sent_at ? (
+                                                        <Badge className="w-fit border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-900/40 dark:text-emerald-200">
+                                                            {new Date(vehicle.pickup_sent_at).toLocaleString()}
+                                                        </Badge>
+                                                    ) : (
+                                                        <p>—</p>
+                                                    )}
                                                 </div>
                                                 <div className="grid gap-1 text-xs text-slate-600 dark:text-slate-300">
                                                     <p>Checked passengers: {vehicle.checked_passengers_count}</p>
