@@ -794,6 +794,7 @@ export default function Scanner(props: PageProps) {
     const [resultOpen, setResultOpen] = React.useState(false);
 
     const resultOpenRef = React.useRef(false);
+    const resultLatchRef = React.useRef(false);
 
     const nowTs = Date.now();
 
@@ -1100,6 +1101,9 @@ export default function Scanner(props: PageProps) {
 
     /** ✅ dialog + sound + vibration */
     async function openResultDialog(data: ScanResponse) {
+        if (resultLatchRef.current) return;
+        resultLatchRef.current = true;
+
         setResult(data);
         setStatus(data.ok ? 'success' : 'error');
         setResultOpen(true);
@@ -1318,6 +1322,7 @@ export default function Scanner(props: PageProps) {
     }
 
     function scanAgain() {
+        resultLatchRef.current = false;
         setResult(null);
         setStatus('idle');
         setQrAim('idle');
@@ -1404,7 +1409,8 @@ export default function Scanner(props: PageProps) {
             <Dialog
                 open={resultOpen}
                 onOpenChange={(open) => {
-                    setResultOpen(open);
+                    if (!open) return;
+                    setResultOpen(true);
                 }}
             >
                 <DialogContent className="max-w-md overflow-hidden rounded-3xl bg-white p-0 dark:bg-slate-950">
