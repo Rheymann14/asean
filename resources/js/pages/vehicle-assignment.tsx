@@ -482,7 +482,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                                         <TableCell>{participant.assignment?.vehicle_label || '—'}</TableCell>
                                                         <TableCell>
                                                             {participant.table_assignment
-                                                                ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}`
+                                                                ? `${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}`
                                                                 : '—'}
                                                         </TableCell>
                                                         <TableCell>
