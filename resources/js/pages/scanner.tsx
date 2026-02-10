@@ -793,7 +793,6 @@ export default function Scanner(props: PageProps) {
     // ✅ dialog for BOTH success and error
     const [resultOpen, setResultOpen] = React.useState(false);
 
-    const resultOpenRef = React.useRef(false);
     const resultLatchRef = React.useRef(false);
 
     const nowTs = Date.now();
@@ -854,10 +853,6 @@ export default function Scanner(props: PageProps) {
         return () => stopScan();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    React.useEffect(() => {
-        resultOpenRef.current = resultOpen;
-    }, [resultOpen]);
 
     // ✅ keep overlay canvas crisp
     React.useEffect(() => {
@@ -1143,7 +1138,8 @@ export default function Scanner(props: PageProps) {
                 ok: false,
                 message: 'Please select an event before scanning.',
             } as ScanResponse;
-            if (!resultOpenRef.current) void openResultDialog(data);
+            if (!resultOpen && !resultLatchRef.current)
+                void openResultDialog(data);
             return false;
         }
         if (selectedEventPhase && selectedEventPhase !== 'ongoing') {
@@ -1154,7 +1150,8 @@ export default function Scanner(props: PageProps) {
                         ? 'This event has not started yet. Scanning will open once it is ongoing.'
                         : 'This event is no longer open for scanning.',
             } as ScanResponse;
-            if (!resultOpenRef.current) void openResultDialog(data);
+            if (!resultOpen && !resultLatchRef.current)
+                void openResultDialog(data);
             return false;
         }
         return true;
@@ -1187,8 +1184,8 @@ export default function Scanner(props: PageProps) {
             teardownScanSession();
 
             const reader = new BrowserQRCodeReader(scanHints, {
-                delayBetweenScanAttempts: 80,
-                delayBetweenScanSuccess: 600,
+                delayBetweenScanAttempts: 50,
+                delayBetweenScanSuccess: 350,
             });
 
             readerRef.current = reader;
@@ -1399,6 +1396,12 @@ export default function Scanner(props: PageProps) {
         result?.participant?.country_flag_url,
     );
 
+    const dialogTitle = result?.ok
+        ? 'Verified'
+        : result?.message?.toLowerCase().includes('not joined')
+          ? 'Not Joined'
+          : 'Not Allowed';
+
     const dialogTone = result?.ok ? 'success' : 'danger';
 
     return (
@@ -1406,13 +1409,7 @@ export default function Scanner(props: PageProps) {
             <Head title="Scanner" />
 
             {/* ✅ RESULT DIALOG (Success + Error) */}
-            <Dialog
-                open={resultOpen}
-                onOpenChange={(open) => {
-                    if (!open) return;
-                    setResultOpen(true);
-                }}
-            >
+            <Dialog open={resultOpen}>
                 <DialogContent className="max-w-md overflow-hidden rounded-3xl bg-white p-0 dark:bg-slate-950">
                     <div className="max-h-[85vh] overflow-y-auto p-5">
                         <DialogHeader className="space-y-1">
@@ -1422,7 +1419,7 @@ export default function Scanner(props: PageProps) {
                                 ) : (
                                     <CircleX className="h-5 w-5 text-red-600" />
                                 )}
-                                {result?.ok ? 'Verified' : 'Not Allowed'}
+                                {dialogTitle}
                             </DialogTitle>
                         </DialogHeader>
 
@@ -1466,9 +1463,7 @@ export default function Scanner(props: PageProps) {
 
                                         <div className="min-w-0">
                                             <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                {result.ok
-                                                    ? 'Verified'
-                                                    : 'Not Allowed'}
+                                                {dialogTitle}
                                             </div>
                                             <div className="mt-0.5 text-xs text-slate-700 dark:text-slate-300">
                                                 {result.message}
