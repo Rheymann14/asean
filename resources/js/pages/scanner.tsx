@@ -794,6 +794,8 @@ export default function Scanner(props: PageProps) {
     const [resultOpen, setResultOpen] = React.useState(false);
 
     const resultLatchRef = React.useRef(false);
+    const verifyRequestSeqRef = React.useRef(0);
+    const verifyAbortRef = React.useRef<AbortController | null>(null);
 
     const nowTs = Date.now();
 
@@ -1266,6 +1268,9 @@ export default function Scanner(props: PageProps) {
     }
 
     function stopScan() {
+        verifyAbortRef.current?.abort();
+        verifyAbortRef.current = null;
+        verifyRequestSeqRef.current += 1;
         pauseScanForVerification();
         setStatus((s) => (s === 'scanning' ? 'idle' : s));
     }
@@ -1275,6 +1280,13 @@ export default function Scanner(props: PageProps) {
 
         setStatus('verifying');
         setResult(null);
+
+        const requestSeq = verifyRequestSeqRef.current + 1;
+        verifyRequestSeqRef.current = requestSeq;
+
+        verifyAbortRef.current?.abort();
+        const abortController = new AbortController();
+        verifyAbortRef.current = abortController;
 
         try {
             const csrf = getCsrfToken();
@@ -1290,35 +1302,61 @@ export default function Scanner(props: PageProps) {
                 },
                 credentials: 'include',
                 body: JSON.stringify(payload),
+                signal: abortController.signal,
             });
 
             const data = (await res.json()) as ScanResponse;
 
-            const participantJoinedSelectedEvent =
-                !!data.registered_events?.some(
-                    (event) => String(event.id) === selectedEventId,
-                );
+            if (requestSeq !== verifyRequestSeqRef.current) {
+                return;
+            }
+
+            const participantJoinedSelectedEvent = Array.isArray(
+                data.registered_events,
+            )
+                ? data.registered_events.some(
+                      (event) => String(event.id) === selectedEventId,
+                  )
+                : false;
 
             if (
-                !data.ok &&
                 !!data.participant &&
-                Array.isArray(data.registered_events) &&
-                !participantJoinedSelectedEvent
+                !participantJoinedSelectedEvent &&
+                (!data.ok || Array.isArray(data.registered_events))
             ) {
+                data.ok = false;
                 data.message = 'Participant not joined to this event.';
+                data.checked_in_event = null;
+                data.already_checked_in = false;
+                data.scanned_at = null;
             }
 
             await openResultDialog(data); // ✅ plays sound + vibrates
-        } catch {
+        } catch (error) {
+            if (error instanceof DOMException && error.name === 'AbortError') {
+                return;
+            }
+
+            if (requestSeq !== verifyRequestSeqRef.current) {
+                return;
+            }
+
             const data = {
                 ok: false,
                 message: 'Network/server error. Please try again.',
             } as ScanResponse;
             await openResultDialog(data); // ✅ error sound + vibrate
+        } finally {
+            if (verifyAbortRef.current === abortController) {
+                verifyAbortRef.current = null;
+            }
         }
     }
 
     function scanAgain() {
+        verifyAbortRef.current?.abort();
+        verifyAbortRef.current = null;
+        verifyRequestSeqRef.current += 1;
         resultLatchRef.current = false;
         setResult(null);
         setStatus('idle');
