@@ -1,35 +1,32 @@
-import * as React from 'react';
-import PublicLayout from '@/layouts/public-layout';
-import { Head } from '@inertiajs/react';
-import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import QRCode from 'qrcode';
+import PublicLayout from '@/layouts/public-layout';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
+import { Head } from '@inertiajs/react';
 import {
     ArrowRight,
     CalendarClock,
-    Search,
-    Timer,
-    CircleCheck,
-    CircleX,
-    Sparkles,
-    ZoomIn,
-    ImageOff,
     ChevronDown,
     ChevronUp,
-    QrCode,
+    CircleCheck,
+    CircleX,
+    ImageOff,
+    Search,
+    Sparkles,
+    Timer,
+    ZoomIn,
 } from 'lucide-react';
-
+import * as React from 'react';
 
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-    DialogFooter,
-    DialogClose,
 } from '@/components/ui/dialog';
 
 type ProgrammeRow = {
@@ -66,14 +63,12 @@ const TINTS = [
     'bg-gradient-to-br from-[#ffedd5] via-white to-[#e2e8f0]',
 ];
 
-
-
 function resolveImageUrl(imageUrl?: string | null) {
     if (!imageUrl) return null; // ✅ no image -> null
-    if (imageUrl.startsWith('http') || imageUrl.startsWith('/')) return imageUrl;
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('/'))
+        return imageUrl;
     return `/event-images/${imageUrl}`;
 }
-
 
 function resolvePdfUrl(pdfUrl?: string | null) {
     if (!pdfUrl) return null;
@@ -94,8 +89,15 @@ function formatEventWindow(startsAt: string, endsAt?: string) {
     const start = new Date(startsAt);
     const end = endsAt ? new Date(endsAt) : null;
 
-    const dateFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
-    const timeFmt = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' });
+    const dateFmt = new Intl.DateTimeFormat('en-PH', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    });
+    const timeFmt = new Intl.DateTimeFormat('en-PH', {
+        hour: 'numeric',
+        minute: '2-digit',
+    });
 
     const date = dateFmt.format(start);
     const startTime = timeFmt.format(start);
@@ -121,8 +123,16 @@ function daysUntil(startsAt: string, nowTs: number) {
     const start = new Date(startsAt);
     const now = new Date(nowTs);
 
-    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
-    const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startDay = new Date(
+        start.getFullYear(),
+        start.getMonth(),
+        start.getDate(),
+    ).getTime();
+    const nowDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+    ).getTime();
 
     const diffDays = Math.floor((startDay - nowDay) / 86_400_000);
     return diffDays <= 0 ? 0 : diffDays;
@@ -135,7 +145,11 @@ function daysToGoLabel(d: number) {
 
 type EventPhase = 'ongoing' | 'upcoming' | 'closed';
 
-function getEventPhase(startsAt: string, endsAt: string | undefined, nowTs: number): EventPhase {
+function getEventPhase(
+    startsAt: string,
+    endsAt: string | undefined,
+    nowTs: number,
+): EventPhase {
     const start = new Date(startsAt);
     const end = endsAt ? new Date(endsAt) : null;
     const nowDateTs = toDateOnlyTimestamp(new Date(nowTs));
@@ -166,10 +180,10 @@ function BadgePill({
         tone === 'success'
             ? 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-500/30'
             : tone === 'danger'
-                ? 'bg-rose-50 text-rose-800 ring-rose-200 dark:bg-rose-900/30 dark:text-rose-200 dark:ring-rose-500/30'
-                : tone === 'info'
-                    ? 'bg-blue-50 text-blue-800 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-500/30'
-                    : 'bg-white/70 text-slate-700 ring-slate-200 dark:bg-slate-900/40 dark:text-slate-200 dark:ring-slate-700';
+              ? 'bg-rose-50 text-rose-800 ring-rose-200 dark:bg-rose-900/30 dark:text-rose-200 dark:ring-rose-500/30'
+              : tone === 'info'
+                ? 'bg-blue-50 text-blue-800 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-500/30'
+                : 'bg-white/70 text-slate-700 ring-slate-200 dark:bg-slate-900/40 dark:text-slate-200 dark:ring-slate-700';
 
     return (
         <span
@@ -202,25 +216,28 @@ function SectionTitle({
     const meta =
         tone === 'ongoing'
             ? {
-                icon: <CircleCheck className="h-4 w-4" />,
-                iconWrap: 'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200',
-                titleAccent: 'text-emerald-800 dark:text-emerald-200',
-                line: 'from-emerald-500/35 via-emerald-500/10 to-transparent',
-                countPill:
-                    'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-500/30',
-            }
+                  icon: <CircleCheck className="h-4 w-4" />,
+                  iconWrap:
+                      'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200',
+                  titleAccent: 'text-emerald-800 dark:text-emerald-200',
+                  line: 'from-emerald-500/35 via-emerald-500/10 to-transparent',
+                  countPill:
+                      'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-500/30',
+              }
             : tone === 'upcoming'
-                ? {
+              ? {
                     icon: <CalendarClock className="h-4 w-4" />,
-                    iconWrap: 'bg-[#0033A0]/10 text-[#0033A0] dark:bg-[#7aa2ff]/15 dark:text-[#b9ccff]',
+                    iconWrap:
+                        'bg-[#0033A0]/10 text-[#0033A0] dark:bg-[#7aa2ff]/15 dark:text-[#b9ccff]',
                     titleAccent: 'text-[#0033A0] dark:text-[#b9ccff]',
                     line: 'from-[#0033A0]/35 via-[#0033A0]/10 to-transparent',
                     countPill:
                         'bg-blue-50 text-blue-800 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-500/30',
                 }
-                : {
+              : {
                     icon: <CircleX className="h-4 w-4" />,
-                    iconWrap: 'bg-rose-600/10 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200',
+                    iconWrap:
+                        'bg-rose-600/10 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200',
                     titleAccent: 'text-rose-800 dark:text-rose-200',
                     line: 'from-rose-500/35 via-rose-500/10 to-transparent',
                     countPill:
@@ -265,7 +282,7 @@ function SectionTitle({
                             </div>
 
                             {subtitle ? (
-                                <div className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300 sm:text-sm">
+                                <div className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-300">
                                     {subtitle}
                                 </div>
                             ) : null}
@@ -321,7 +338,9 @@ function ImagePreviewDialog({
 
                 <div className="p-4 sm:p-5">
                     <DialogHeader>
-                        <DialogTitle className="text-slate-900 dark:text-slate-100">{title}</DialogTitle>
+                        <DialogTitle className="text-slate-900 dark:text-slate-100">
+                            {title}
+                        </DialogTitle>
                         {subtitle ? (
                             <DialogDescription className="text-slate-600 dark:text-slate-300">
                                 {subtitle}
@@ -415,7 +434,7 @@ function ExpandableText({
                         aria-controls={id}
                         className={cn(
                             'inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-semibold',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/30',
+                            'focus-visible:ring-2 focus-visible:ring-[#0033A0]/30 focus-visible:outline-none',
                             btnTone,
                         )}
                     >
@@ -430,7 +449,10 @@ function ExpandableText({
             ) : null}
 
             {/* hidden measurement nodes (do not affect layout) */}
-            <div aria-hidden className="pointer-events-none absolute left-0 top-0 -z-10 w-full opacity-0">
+            <div
+                aria-hidden
+                className="pointer-events-none absolute top-0 left-0 -z-10 w-full opacity-0"
+            >
                 <p ref={clampRef} className={cn(className, clampClass)}>
                     {text}
                 </p>
@@ -441,7 +463,6 @@ function ExpandableText({
         </div>
     );
 }
-
 
 /** ✅ Compact grid tile: good for up to 20 events, responsive */
 function EventTile({
@@ -474,19 +495,35 @@ function EventTile({
                 'transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_60px_-52px_rgba(2,6,23,0.34)]',
                 'dark:border-slate-700 dark:bg-slate-900/40',
                 isClosed && 'bg-slate-50/70 dark:bg-slate-950/30',
-                featured && !isClosed && 'ring-1 ring-emerald-300/40 dark:ring-emerald-500/25',
+                featured &&
+                    !isClosed &&
+                    'ring-1 ring-emerald-300/40 dark:ring-emerald-500/25',
             )}
         >
-            <div className={cn('absolute inset-0', item.tint, isClosed && 'opacity-30')} />
+            <div
+                className={cn(
+                    'absolute inset-0',
+                    item.tint,
+                    isClosed && 'opacity-30',
+                )}
+            />
             <div
                 className={cn(
                     'absolute inset-0 bg-gradient-to-b from-white/55 via-white/20 to-white/70 dark:from-slate-900/30 dark:via-slate-900/10 dark:to-slate-900/55',
                     isClosed && 'opacity-70',
                 )}
             />
-            <div aria-hidden className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/5 dark:ring-white/10" />
+            <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/5 dark:ring-white/10"
+            />
 
-            <div className={cn('relative p-3.5 sm:p-4', isClosed && 'opacity-90')}>
+            <div
+                className={cn(
+                    'relative p-3.5 sm:p-4',
+                    isClosed && 'opacity-90',
+                )}
+            >
                 {/* image (click to preview) */}
 
                 {imgOk && item.image ? (
@@ -499,7 +536,7 @@ function EventTile({
                             type="button"
                             className={cn(
                                 'relative w-full overflow-hidden rounded-xl ring-1 ring-slate-200 dark:ring-slate-700',
-                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0]/35',
+                                'focus-visible:ring-2 focus-visible:ring-[#0033A0]/35 focus-visible:outline-none',
                             )}
                             aria-label={`View image for ${item.title}`}
                         >
@@ -519,13 +556,13 @@ function EventTile({
                             <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/25" />
 
                             {/* top-right zoom hint */}
-                            <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                            <div className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
                                 <ZoomIn className="h-3.5 w-3.5" />
                                 View
                             </div>
 
                             {/* top-left status chip */}
-                            <div className="absolute left-2 top-2 flex items-center gap-2">
+                            <div className="absolute top-2 left-2 flex items-center gap-2">
                                 {featured && !isClosed ? (
                                     <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-600/90 px-2 py-1 text-[11px] font-semibold text-white shadow">
                                         <Sparkles className="h-3.5 w-3.5" />
@@ -569,7 +606,9 @@ function EventTile({
                         >
                             <div className="flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400">
                                 <ImageOff className="h-8 w-8" />
-                                <span className="text-[11px] font-semibold">No image found</span>
+                                <span className="text-[11px] font-semibold">
+                                    No image found
+                                </span>
                             </div>
                         </div>
 
@@ -577,13 +616,13 @@ function EventTile({
                         <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/25" />
 
                         {/* top-right label */}
-                        <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                        <div className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-lg bg-black/40 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
                             <ImageOff className="h-3.5 w-3.5" />
                             No image
                         </div>
 
                         {/* top-left status chip (same as before) */}
-                        <div className="absolute left-2 top-2 flex items-center gap-2">
+                        <div className="absolute top-2 left-2 flex items-center gap-2">
                             {featured && !isClosed ? (
                                 <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-600/90 px-2 py-1 text-[11px] font-semibold text-white shadow">
                                     <Sparkles className="h-3.5 w-3.5" />
@@ -611,30 +650,40 @@ function EventTile({
                     </div>
                 )}
 
-
                 {/* pills */}
                 <div className="mt-3 flex flex-wrap gap-2">
-                    <BadgePill tone="info" icon={<CalendarClock className="h-3.5 w-3.5" />}>
+                    <BadgePill
+                        tone="info"
+                        icon={<CalendarClock className="h-3.5 w-3.5" />}
+                    >
                         {formatEventWindow(item.startsAt, item.endsAt)}
                     </BadgePill>
 
                     {isClosed ? (
-                        <BadgePill tone="danger" icon={<CircleX className="h-3.5 w-3.5" />}>
+                        <BadgePill
+                            tone="danger"
+                            icon={<CircleX className="h-3.5 w-3.5" />}
+                        >
                             Closed
                         </BadgePill>
                     ) : isOngoing ? (
-                        <BadgePill tone="success" icon={<CircleCheck className="h-3.5 w-3.5" />}>
+                        <BadgePill
+                            tone="success"
+                            icon={<CircleCheck className="h-3.5 w-3.5" />}
+                        >
                             Ongoing Today
                         </BadgePill>
                     ) : (
-                        <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>{daysToGoLabel(d)}</BadgePill>
+                        <BadgePill icon={<Timer className="h-3.5 w-3.5" />}>
+                            {daysToGoLabel(d)}
+                        </BadgePill>
                     )}
                 </div>
 
                 {/* ✅ nicer typography for item */}
                 <div
                     className={cn(
-                        'mt-2 text-[15px] font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-100',
+                        'mt-2 text-[15px] leading-snug font-semibold tracking-tight text-slate-900 dark:text-slate-100',
                         'line-clamp-2',
                         isClosed && 'text-slate-700 dark:text-slate-200',
                     )}
@@ -655,7 +704,6 @@ function EventTile({
                     />
                 </div>
 
-
                 {item.cta ? (
                     <div className="mt-4 flex justify-end">
                         <Button
@@ -668,7 +716,11 @@ function EventTile({
                                     : 'bg-[#0033A0] text-white shadow hover:bg-[#0033A0]/95 focus-visible:ring-2 focus-visible:ring-[#0033A0]/30',
                             )}
                         >
-                            <a href={item.cta.href} target="_blank" rel="noreferrer">
+                            <a
+                                href={item.cta.href}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
                                 {item.cta.label ?? 'View details'}
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </a>
@@ -680,7 +732,13 @@ function EventTile({
     );
 }
 
-function ProgrammeGroups({ items, query }: { items: FlexHoverItem[]; query: string }) {
+function ProgrammeGroups({
+    items,
+    query,
+}: {
+    items: FlexHoverItem[];
+    query: string;
+}) {
     const nowTs = useNowTs(60_000);
     const normalizedQuery = query.trim().toLowerCase();
     const filteredItems = React.useMemo(() => {
@@ -702,26 +760,48 @@ function ProgrammeGroups({ items, query }: { items: FlexHoverItem[]; query: stri
             .sort((a, b) => a._startTs - b._startTs);
     }, [filteredItems, nowTs]);
 
-    const ongoing = enriched.filter((x) => x._phase === 'ongoing').sort((a, b) => a._startTs - b._startTs);
-    const upcoming = enriched.filter((x) => x._phase === 'upcoming').sort((a, b) => a._startTs - b._startTs);
-    const closed = enriched.filter((x) => x._phase === 'closed').sort((a, b) => b._endOrStartTs - a._endOrStartTs);
+    const ongoing = enriched
+        .filter((x) => x._phase === 'ongoing')
+        .sort((a, b) => a._startTs - b._startTs);
+    const upcoming = enriched
+        .filter((x) => x._phase === 'upcoming')
+        .sort((a, b) => a._startTs - b._startTs);
+    const closed = enriched
+        .filter((x) => x._phase === 'closed')
+        .sort((a, b) => b._endOrStartTs - a._endOrStartTs);
 
     return (
         <div className="mt-3">
             {/* ONGOING (CENTERED) */}
-            <SectionTitle tone="ongoing" title="Ongoing Today" count={ongoing.length} subtitle="Happening today." />
+            <SectionTitle
+                tone="ongoing"
+                title="Ongoing Today"
+                count={ongoing.length}
+                subtitle="Happening today."
+            />
 
             {ongoing.length ? (
                 ongoing.length === 1 ? (
                     <div className="mt-4 flex justify-center">
                         <div className="w-full max-w-md">
-                            <EventTile item={ongoing[0]} phase="ongoing" nowTs={nowTs} featured />
+                            <EventTile
+                                item={ongoing[0]}
+                                phase="ongoing"
+                                nowTs={nowTs}
+                                featured
+                            />
                         </div>
                     </div>
                 ) : (
                     <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {ongoing.map((it) => (
-                            <EventTile key={it.id} item={it} phase="ongoing" nowTs={nowTs} featured />
+                            <EventTile
+                                key={it.id}
+                                item={it}
+                                phase="ongoing"
+                                nowTs={nowTs}
+                                featured
+                            />
                         ))}
                     </div>
                 )
@@ -730,11 +810,21 @@ function ProgrammeGroups({ items, query }: { items: FlexHoverItem[]; query: stri
             )}
 
             {/* UPCOMING */}
-            <SectionTitle tone="upcoming" title="Upcoming Events" count={upcoming.length} subtitle="Plan ahead—see what’s next." />
+            <SectionTitle
+                tone="upcoming"
+                title="Upcoming Events"
+                count={upcoming.length}
+                subtitle="Plan ahead—see what’s next."
+            />
             {upcoming.length ? (
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {upcoming.map((it) => (
-                        <EventTile key={it.id} item={it} phase="upcoming" nowTs={nowTs} />
+                        <EventTile
+                            key={it.id}
+                            item={it}
+                            phase="upcoming"
+                            nowTs={nowTs}
+                        />
                     ))}
                 </div>
             ) : (
@@ -742,11 +832,21 @@ function ProgrammeGroups({ items, query }: { items: FlexHoverItem[]; query: stri
             )}
 
             {/* CLOSED */}
-            <SectionTitle tone="closed" title="Closed Events" count={closed.length} subtitle="Past activities." />
+            <SectionTitle
+                tone="closed"
+                title="Closed Events"
+                count={closed.length}
+                subtitle="Past activities."
+            />
             {closed.length ? (
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {closed.map((it) => (
-                        <EventTile key={it.id} item={it} phase="closed" nowTs={nowTs} />
+                        <EventTile
+                            key={it.id}
+                            item={it}
+                            phase="closed"
+                            nowTs={nowTs}
+                        />
                     ))}
                 </div>
             ) : (
@@ -758,8 +858,6 @@ function ProgrammeGroups({ items, query }: { items: FlexHoverItem[]; query: stri
 
 export default function Programme({ programmes = [] }: PageProps) {
     const [query, setQuery] = React.useState('');
-    const [kitQr, setKitQr] = React.useState<string | null>(null);
-    const [kitUrl, setKitUrl] = React.useState('/event-kit');
     const items = React.useMemo<FlexHoverItem[]>(() => {
         return programmes.map((programme, index) => {
             const pdfUrl = resolvePdfUrl(programme.pdf_url);
@@ -777,22 +875,6 @@ export default function Programme({ programmes = [] }: PageProps) {
             };
         });
     }, [programmes]);
-
-    React.useEffect(() => {
-        const url = `${window.location.origin}/event-kit`;
-        setKitUrl(url);
-
-        QRCode.toDataURL(url, {
-            width: 200,
-            margin: 1,
-            color: {
-                dark: '#0033A0',
-                light: '#ffffff',
-            },
-        })
-            .then((dataUrl) => setKitQr(dataUrl))
-            .catch(() => setKitQr(null));
-    }, []);
 
     return (
         <>
@@ -820,9 +902,11 @@ export default function Programme({ programmes = [] }: PageProps) {
 
                     {/* header */}
                     <div className="mx-auto max-w-3xl text-center">
-                        <h2 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 dark:text-slate-100 sm:text-5xl">
+                        <h2 className="text-3xl leading-tight font-semibold tracking-tight text-balance text-slate-900 sm:text-5xl dark:text-slate-100">
                             <span className="relative inline-block">
-                                <span className="relative z-10 text-[#0033A0] dark:text-[#7aa2ff]">Event</span>
+                                <span className="relative z-10 text-[#0033A0] dark:text-[#7aa2ff]">
+                                    Event
+                                </span>
                                 <span className="pointer-events-none absolute inset-x-0 bottom-1 -z-0 h-2 rounded-full bg-[#0033A0]/15 blur-[1px] dark:bg-[#7aa2ff]/20" />
                             </span>
                         </h2>
@@ -833,72 +917,15 @@ export default function Programme({ programmes = [] }: PageProps) {
                             <span className="h-px w-10 bg-slate-200 dark:bg-slate-700" />
                         </div>
                     </div>
-
-             <div className="mx-auto mt-4 w-full max-w-2xl px-4 sm:px-6">
-  <div className="rounded-xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/40">
-    <div className="p-3 sm:p-4">
-      <div className="grid items-center gap-3 sm:grid-cols-[auto_110px] sm:gap-4">
-        {/* LEFT (compact, does NOT stretch) */}
-        <div className="flex min-w-0 items-start gap-2.5 sm:max-w-xl">
-          <div className="mt-0.5 shrink-0 rounded-lg bg-[#0033A0]/10 p-1.5 text-[#0033A0]">
-            <QrCode className="h-4 w-4" />
-          </div>
-
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Event Kit & Certificates
-            </h3>
-
-            <p className="mt-1 text-xs leading-snug text-slate-600 dark:text-slate-300">
-              Scan the QR or click the link to access materials and claim certificates.
-            </p>
-
-            <div className="mt-2.5">
-              <Button
-                asChild
-                size="sm"
-                className="h-8 bg-[#0033A0] px-3 text-white hover:bg-[#0033A0]/90"
-              >
-                <a href="/event-kit" className="inline-flex items-center">
-                  Access event kit
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT (fixed QR size, close to content) */}
-        <div className="flex justify-center sm:justify-end">
-          {kitQr ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-950">
-              <img
-                src={kitQr}
-                alt="Event kit QR code"
-                className="h-24 w-24 rounded-lg"
-                loading="lazy"
-                draggable={false}
-              />
-            </div>
-          ) : (
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
-              QR unavailable
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
                     {/* list area */}
                     <div className="mx-auto mt-6 max-w-5xl">
                         <div className="relative mx-auto mb-6 max-w-xl">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <Input
                                 value={query}
-                                onChange={(event) => setQuery(event.target.value)}
+                                onChange={(event) =>
+                                    setQuery(event.target.value)
+                                }
                                 placeholder="Search ongoing, upcoming, or closed events..."
                                 className="h-11 rounded-2xl border-slate-200 bg-white/80 pl-9 text-sm shadow-sm focus-visible:ring-[#0033A0]/30 dark:border-slate-700 dark:bg-slate-900/60"
                             />
