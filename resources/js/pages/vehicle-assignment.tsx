@@ -403,33 +403,35 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                     </p>
                 </div>
 
-                {!isChedLo ? (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Event Filter</CardTitle>
-                        <CardDescription>{isChedLo ? 'Choose an event to monitor assigned vehicles and participants.' : 'Choose an event to manage assignments.'}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-1">
-                                <Label>Event</Label>
-                                <SearchableDropdown
-                                    value={assignmentForm.data.programme_id}
-                                    onValueChange={onChangeEvent}
-                                    placeholder="Select event"
-                                    searchPlaceholder="Search events..."
-                                    emptyText="No events found."
-                                    items={events.map((event) => ({ value: String(event.id), label: event.title }))}
-                                />
+                {!isChedLo && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Event Filter</CardTitle>
+                            <CardDescription>
+                                Choose an event to manage assignments.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-1">
+                                    <Label>Event</Label>
+                                    <SearchableDropdown
+                                        value={assignmentForm.data.programme_id}
+                                        onValueChange={onChangeEvent}
+                                        placeholder="Select event"
+                                        searchPlaceholder="Search events..."
+                                        emptyText="No events found."
+                                        items={events.map((event) => ({ value: String(event.id), label: event.title }))}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="participant-search">Search participant</Label>
+                                    <Input id="participant-search" placeholder="Search participants..." value={participantSearch} onChange={(event) => setParticipantSearch(event.target.value)} />
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                                <Label htmlFor="participant-search">Search participant</Label>
-                                <Input id="participant-search" placeholder="Search participants..." value={participantSearch} onChange={(event) => setParticipantSearch(event.target.value)} />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
+                        </CardContent>
+                    </Card>
+                )}
                 {isChedLo ? (
                     <Card>
                         <CardHeader>
