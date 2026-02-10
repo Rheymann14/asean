@@ -1289,6 +1289,20 @@ export default function Scanner(props: PageProps) {
 
             const data = (await res.json()) as ScanResponse;
 
+            const participantJoinedSelectedEvent =
+                !!data.registered_events?.some(
+                    (event) => String(event.id) === selectedEventId,
+                );
+
+            if (
+                !data.ok &&
+                !!data.participant &&
+                Array.isArray(data.registered_events) &&
+                !participantJoinedSelectedEvent
+            ) {
+                data.message = 'Participant not joined to this event.';
+            }
+
             await openResultDialog(data); // ✅ plays sound + vibrates
         } catch {
             const data = {
@@ -1331,6 +1345,14 @@ export default function Scanner(props: PageProps) {
         status,
         cameraError,
     ]);
+
+    React.useEffect(() => {
+        if (!isScanning) return;
+        if (!selectedEventId || isEventBlocked) {
+            stopScan();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEventId, isEventBlocked, isScanning]);
 
     const filteredEvents = React.useMemo(() => {
         return events.map((event) => ({
