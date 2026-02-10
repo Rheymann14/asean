@@ -242,7 +242,7 @@ function VirtualLandscapeId({ participant }: { participant: Participant }) {
     }, [participant.qr_payload]);
 
     return (
-        <div className="mx-auto w-full max-w-[540px]">
+        <div className="mx-auto w-full max-w-[520px]">
             <div
                 className="id-print-card relative overflow-hidden"
                 style={{
@@ -250,7 +250,7 @@ function VirtualLandscapeId({ participant }: { participant: Participant }) {
                     printColorAdjust: 'exact',
                 }}
             >
-                <div className="id-print-card-inner relative aspect-[3.37/2.125] w-[520px]">
+                <div className="id-print-card-inner relative aspect-[3.37/2.125] w-full">
                     <div className="relative h-full w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
                         <div aria-hidden className="absolute inset-0">
                             <img
@@ -298,7 +298,7 @@ function VirtualLandscapeId({ participant }: { participant: Participant }) {
 
                             <div className="my-2 h-px w-full bg-slate-200/80 dark:bg-white/10" />
 
-                            <div className="flex min-h-0 flex-1 gap-3">
+                            <div className="flex min-h-0 flex-1 gap-2 sm:gap-3">
                                 <div className="min-w-0 flex-1">
                                     <div className="text-[13px] font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
                                         Participant
@@ -351,7 +351,7 @@ function VirtualLandscapeId({ participant }: { participant: Participant }) {
                                     </div>
                                 </div>
 
-                                <div className="flex h-full w-[200px] flex-col items-center justify-center rounded-3xl border border-slate-200/70 bg-white/80 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45">
+                                <div className="flex h-full w-[38%] max-w-[200px] min-w-[130px] flex-col items-center justify-center rounded-2xl border border-slate-200/70 bg-white/80 p-1 shadow-sm backdrop-blur sm:rounded-3xl dark:border-white/10 dark:bg-slate-950/45">
                                     <div className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
                                         <QrCodeIcon className="h-3.5 w-3.5" />
                                         QR Code
@@ -361,14 +361,17 @@ function VirtualLandscapeId({ participant }: { participant: Participant }) {
                                         <img
                                             src={qrDataUrl}
                                             alt="Participant QR code"
-                                            className="rounded-2xl bg-white object-contain p-1.5"
-                                            style={{ width: 160, height: 160 }}
+                                            className="aspect-square w-full max-w-[160px] rounded-xl bg-white object-contain p-1 sm:rounded-2xl sm:p-1.5"
                                             draggable={false}
                                         />
                                     ) : (
                                         <div
                                             className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30"
-                                            style={{ width: 160, height: 160 }}
+                                            style={{
+                                                width: '100%',
+                                                maxWidth: 160,
+                                                aspectRatio: '1 / 1',
+                                            }}
                                         >
                                             <QrCodeIcon className="h-7 w-7 text-slate-400" />
                                             <div className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
@@ -1409,7 +1412,7 @@ export default function VehicleAssignmentPage({
                 open={Boolean(idPreviewParticipant)}
                 onOpenChange={(open) => !open && setIdPreviewParticipant(null)}
             >
-                <DialogContent className="max-w-[900px]">
+                <DialogContent className="w-[calc(100vw-1rem)] max-w-[900px] p-3 sm:p-6">
                     <DialogHeader>
                         <DialogTitle>
                             Participant Virtual ID (Landscape)
