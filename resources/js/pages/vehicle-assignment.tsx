@@ -337,6 +337,8 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
     };
 
     const assignBulk = () => doAssign(selectedIds, 'Participants assigned to vehicle.');
+
+
     const assignSingle = (participantId: number) => doAssign([participantId], 'Participant assigned to vehicle.');
 
     const removeAssignment = (assignmentId: number) => {
@@ -401,6 +403,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                     </p>
                 </div>
 
+                {!isChedLo ? (
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Event Filter</CardTitle>

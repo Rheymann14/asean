@@ -266,9 +266,9 @@ export default function Issuances(props: PageProps) {
                                         </div>
 
                                         <div className="min-w-0">
-                                            <h3 className="text-sm font-semibold text-slate-900">
+                                            <h2 className="text-sm font-semibold text-slate-900">
                                                 Event Kit & Certificates
-                                            </h3>
+                                            </h2>
 
                                             <p className="mt-1 text-xs leading-snug text-slate-600">
                                                 Scan the QR or click the link to
