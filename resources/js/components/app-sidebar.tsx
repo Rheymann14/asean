@@ -10,21 +10,28 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, participant, issuancesManagement, contactDetails, venueManagement, scanner } from '@/routes';
+import {
+    contactDetails,
+    dashboard,
+    issuancesManagement,
+    participant,
+    scanner,
+    venueManagement,
+} from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    ScrollText,
-    User,
-    Users,
     Building2,
+    Bus,
+    CalendarDays,
+    House,
+    Image,
     MapPin,
     ScanLine,
-    House,
-    CalendarDays,
+    ScrollText,
     Table,
-    Image,
-    Bus,
+    User,
+    Users,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -113,34 +120,34 @@ export function AppSidebar() {
           ]
         : isChedLo
           ? [
-              {
-                  title: 'Vehicle Assignment',
-                  href: '/vehicle-assignment',
-                  icon: Bus,
-              },
-          ]
-        : [
-              {
-                  title: 'Profile',
-                  href: '/participant-dashboard',
-                  icon: User,
-              },
-              {
-                  title: 'Event List',
-                  href: '/event-list',
-                  icon: CalendarDays,
-              },
-              {
-                  title: 'Vehicle Assignment',
-                  href: '/vehicle-assignment',
-                  icon: Bus,
-              },
-              {
-                  title: 'Table Assignment',
-                  href: '/table-assignment',
-                  icon: Table,
-              },
-          ];
+                {
+                    title: 'Participants Monitoring',
+                    href: '/vehicle-assignment',
+                    icon: Bus,
+                },
+            ]
+          : [
+                {
+                    title: 'Profile',
+                    href: '/participant-dashboard',
+                    icon: User,
+                },
+                {
+                    title: 'Event List',
+                    href: '/event-list',
+                    icon: CalendarDays,
+                },
+                {
+                    title: 'Vehicle Assignment',
+                    href: '/vehicle-assignment',
+                    icon: Bus,
+                },
+                {
+                    title: 'Table Assignment',
+                    href: '/table-assignment',
+                    icon: Table,
+                },
+            ];
 
     const footerNavItems: NavItem[] = isAdmin
         ? [
@@ -152,7 +159,11 @@ export function AppSidebar() {
           ]
         : [];
 
-    const homeHref = isAdmin ? dashboard() : isChedLo ? '/vehicle-assignment' : '/participant-dashboard';
+    const homeHref = isAdmin
+        ? dashboard()
+        : isChedLo
+          ? '/vehicle-assignment'
+          : '/participant-dashboard';
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -173,7 +184,9 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                {footerNavItems.length ? <NavFooter items={footerNavItems} className="mt-auto" /> : null}
+                {footerNavItems.length ? (
+                    <NavFooter items={footerNavItems} className="mt-auto" />
+                ) : null}
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
