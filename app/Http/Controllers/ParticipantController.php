@@ -9,7 +9,9 @@ use App\Models\User;
 use App\Models\UserType;
 use App\Services\WelcomeNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -70,6 +72,7 @@ class ParticipantController extends Controller
                     'full_name' => $user->name,
                     'display_id' => $user->display_id,
                     'qr_payload' => $user->qr_payload,
+                    'profile_image_url' => $user->profile_photo_path ? asset($user->profile_photo_path) : null,
                     'email' => $user->email,
                     'contact_number' => $user->contact_number,
                     'contact_country_code' => $user->contact_country_code,
@@ -205,6 +208,8 @@ class ParticipantController extends Controller
             'emergency_contact_relationship' => ['nullable', 'string', 'max:255'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
             'emergency_contact_email' => ['nullable', 'email', 'max:255'],
+            'profile_image' => ['nullable', 'image', 'max:5120'],
+            'remove_profile_image' => ['nullable', 'boolean'],
         ]);
 
         $userTypeId = $validated['user_type_id'] ?? null;
@@ -257,6 +262,7 @@ class ParticipantController extends Controller
             'emergency_contact_relationship' => $validated['emergency_contact_relationship'] ?? null,
             'emergency_contact_phone' => $validated['emergency_contact_phone'] ?? null,
             'emergency_contact_email' => $validated['emergency_contact_email'] ?? null,
+            'profile_photo_path' => $this->storeProfileImage($request->file('profile_image')),
         ])->refresh();
 
         app(WelcomeNotificationService::class)->dispatch($user);
@@ -299,6 +305,8 @@ class ParticipantController extends Controller
             'emergency_contact_relationship' => ['sometimes', 'nullable', 'string', 'max:255'],
             'emergency_contact_phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'emergency_contact_email' => ['sometimes', 'nullable', 'email', 'max:255'],
+            'profile_image' => ['sometimes', 'nullable', 'image', 'max:5120'],
+            'remove_profile_image' => ['sometimes', 'nullable', 'boolean'],
         ]);
 
         $wasActive = (bool) $participant->is_active;
@@ -411,6 +419,19 @@ class ParticipantController extends Controller
             $updates['has_food_restrictions'] = false;
         }
 
+        if (($validated['remove_profile_image'] ?? false) && $participant->profile_photo_path) {
+            File::delete(public_path($participant->profile_photo_path));
+            $updates['profile_photo_path'] = null;
+        }
+
+        $profileImagePath = $this->storeProfileImage($request->file('profile_image'));
+        if ($profileImagePath) {
+            if ($participant->profile_photo_path) {
+                File::delete(public_path($participant->profile_photo_path));
+            }
+            $updates['profile_photo_path'] = $profileImagePath;
+        }
+
         if (array_key_exists('password', $validated) && $validated['password'] !== null) {
             $updates['password'] = $validated['password'];
         }
@@ -491,6 +512,25 @@ class ParticipantController extends Controller
         return collect($parts)
             ->filter(fn ($value) => $value !== '')
             ->implode(' ');
+    }
+
+    private function storeProfileImage(?UploadedFile $file): ?string
+    {
+        if (! $file) {
+            return null;
+        }
+
+        $extension = $file->getClientOriginalExtension() ?: 'jpg';
+        $filename = sprintf('%s.%s', Str::uuid(), $extension);
+        $directory = public_path('profile-image');
+
+        if (! File::exists($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+
+        $file->move($directory, $filename);
+
+        return 'profile-image/' . $filename;
     }
 
     public function revertAttendance(Request $request, User $participant, Programme $programme)
