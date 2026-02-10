@@ -1142,6 +1142,17 @@ export default function Scanner(props: PageProps) {
         return true;
     }
 
+    function teardownScanSession() {
+        try {
+            controlsRef.current?.stop?.();
+        } catch {
+            // ignore
+        }
+        controlsRef.current = null;
+        hardStopVideoStream();
+        readerRef.current = null;
+    }
+
     async function startScan() {
         if (!ensureEventSelected()) return;
         if (!videoRef.current) return;
@@ -1155,7 +1166,7 @@ export default function Scanner(props: PageProps) {
         setQrAim('searching');
 
         try {
-            stopScan();
+            teardownScanSession();
 
             const reader = new BrowserQRCodeReader(scanHints, {
                 delayBetweenScanAttempts: 80,
@@ -1204,6 +1215,7 @@ export default function Scanner(props: PageProps) {
                         !isNotFoundZXingError(err) &&
                         isScanningRef.current
                     ) {
+                        teardownScanSession();
                         setCameraError('Camera scanning error. Try again.');
                         setStatus('error');
                         setIsScanning(false);
@@ -1221,6 +1233,7 @@ export default function Scanner(props: PageProps) {
                     : e?.name === 'NotFoundError'
                       ? 'No camera found on this device.'
                       : 'Unable to start camera. Try again.';
+            teardownScanSession();
             setCameraError(msg);
             setStatus('error');
             setIsScanning(false);
@@ -1229,15 +1242,7 @@ export default function Scanner(props: PageProps) {
     }
 
     function stopScan() {
-        try {
-            controlsRef.current?.stop?.();
-        } catch {
-            // ignore
-        }
-        controlsRef.current = null;
-
-        hardStopVideoStream();
-        readerRef.current = null;
+        teardownScanSession();
 
         setIsScanning(false);
         isScanningRef.current = false;
