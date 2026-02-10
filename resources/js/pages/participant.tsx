@@ -1798,6 +1798,7 @@ export default function ParticipantPage(props: PageProps) {
         }
 
         participantForm.transform((data) => ({
+            ...(editingParticipant ? { _method: 'patch' as const } : {}),
             full_name: data.full_name.trim(),
             email: data.email.trim(),
             contact_number: data.contact_number.trim() || null,
@@ -1858,7 +1859,7 @@ export default function ParticipantPage(props: PageProps) {
         };
 
         if (editingParticipant) {
-            participantForm.patch(
+            participantForm.post(
                 ENDPOINTS.participants.update(editingParticipant.id),
                 {
                     preserveScroll: true,
