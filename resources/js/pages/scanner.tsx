@@ -1,33 +1,58 @@
-import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
 import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
+import { Head } from '@inertiajs/react';
+import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 
 import {
-    ScanLine,
+    CalendarDays,
     Camera,
-    RefreshCcw,
+    Check,
+    ChevronsUpDown,
     CircleCheckBig,
     CircleX,
-    UserRound,
-    Mail,
-    MapPin,
-    ShieldCheck,
-    CalendarDays,
     ExternalLink,
     Keyboard,
-    ChevronsUpDown,
-    Check,
+    Mail,
+    MapPin,
     QrCode as QrCodeIcon,
+    RefreshCcw,
+    ScanLine,
+    ShieldCheck,
+    UserRound,
 } from 'lucide-react';
 
 import { BrowserQRCodeReader } from '@zxing/browser';
@@ -68,7 +93,11 @@ type ScanResponse = {
     // ✅ backend may or may not return this
     qr_data_url?: string | null;
 
-    registered_events?: Array<{ id: number; title: string; starts_at?: string | null }>;
+    registered_events?: Array<{
+        id: number;
+        title: string;
+        starts_at?: string | null;
+    }>;
     checked_in_event?: { id: number; title: string } | null;
     already_checked_in?: boolean;
     scanned_at?: string | null;
@@ -89,7 +118,9 @@ const ENDPOINTS = {
 };
 
 function getCsrfToken() {
-    const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+    const el = document.querySelector(
+        'meta[name="csrf-token"]',
+    ) as HTMLMetaElement | null;
     if (el?.content) return el.content;
     const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/);
     if (!match) return '';
@@ -100,7 +131,11 @@ function fmtDate(dateStr?: string | null) {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return null;
-    return new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).format(d);
+    return new Intl.DateTimeFormat('en-PH', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    }).format(d);
 }
 
 function fmtDateTime(dateStr?: string | null) {
@@ -116,7 +151,10 @@ function fmtDateTime(dateStr?: string | null) {
     }).format(d);
 }
 
-function getFlagSrc(countryCode?: string | null, countryFlagUrl?: string | null) {
+function getFlagSrc(
+    countryCode?: string | null,
+    countryFlagUrl?: string | null,
+) {
     if (countryFlagUrl) return countryFlagUrl;
     const code = (countryCode || '').toLowerCase().trim();
     if (!code) return null;
@@ -165,18 +203,45 @@ function phaseBadgeClass(phase?: EventRow['phase']) {
 }
 
 function isNotFoundZXingError(err: unknown) {
-    return !!err && typeof err === 'object' && 'name' in err && (err as any).name === 'NotFoundException';
+    return (
+        !!err &&
+        typeof err === 'object' &&
+        'name' in err &&
+        (err as any).name === 'NotFoundException'
+    );
 }
 
-function Pill({ children, tone = 'default' }: { children: React.ReactNode; tone?: 'default' | 'success' | 'danger' }) {
+function isStreamFatalScannerError(err: unknown) {
+    if (!err || typeof err !== 'object' || !('name' in err)) return false;
+
+    const errorName = String((err as { name?: unknown }).name ?? '');
+    return [
+        'NotAllowedError',
+        'NotFoundError',
+        'NotReadableError',
+        'AbortError',
+        'SecurityError',
+        'OverconstrainedError',
+    ].includes(errorName);
+}
+
+function Pill({
+    children,
+    tone = 'default',
+}: {
+    children: React.ReactNode;
+    tone?: 'default' | 'success' | 'danger';
+}) {
     return (
         <span
             className={cn(
                 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
                 tone === 'success' &&
-                'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-                tone === 'danger' && 'bg-red-600/10 text-red-700 dark:bg-red-500/15 dark:text-red-300',
-                tone === 'default' && 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+                    'bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+                tone === 'danger' &&
+                    'bg-red-600/10 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+                tone === 'default' &&
+                    'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
             )}
         >
             {children}
@@ -207,9 +272,13 @@ function ScannerIdCardPreview({
     const isLandscape = orientation === 'landscape';
 
     // ✅ keep accurate print size, but DON'T force fixed aspect height on screen
-    const printSize = isLandscape ? 'print:w-[3.37in] print:h-[2.125in]' : 'print:w-[3.46in] print:h-[5.51in]';
+    const printSize = isLandscape
+        ? 'print:w-[3.37in] print:h-[2.125in]'
+        : 'print:w-[3.46in] print:h-[5.51in]';
 
-    const maxW = isLandscape ? 'max-w-[520px]' : 'max-w-[320px] sm:max-w-[360px]';
+    const maxW = isLandscape
+        ? 'max-w-[520px]'
+        : 'max-w-[320px] sm:max-w-[360px]';
 
     const qrPanelWidth = isLandscape ? 'w-[178px]' : '';
     const qrSize = isLandscape ? 132 : 172;
@@ -234,9 +303,11 @@ function ScannerIdCardPreview({
                     alt=""
                     className={cn(
                         'absolute inset-0 h-full w-full object-cover',
-                        'filter brightness-80 contrast-150 saturate-200',
+                        'brightness-80 contrast-150 saturate-200 filter',
                         'dark:brightness-80 dark:contrast-110',
-                        isLandscape ? 'opacity-100 dark:opacity-35' : 'opacity-100 dark:opacity-30',
+                        isLandscape
+                            ? 'opacity-100 dark:opacity-35'
+                            : 'opacity-100 dark:opacity-30',
                     )}
                     draggable={false}
                     loading="lazy"
@@ -245,7 +316,7 @@ function ScannerIdCardPreview({
 
                 <div className="absolute inset-0 bg-black/10 dark:bg-black/15" />
                 <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/20 to-white/55 dark:from-slate-950/55 dark:via-slate-950/28 dark:to-slate-950/55" />
-                <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
+                <div className="pointer-events-none absolute -top-10 -right-10 h-36 w-36 rounded-full bg-slate-200/60 blur-3xl dark:bg-slate-800/60" />
             </div>
 
             <div className={cn('relative flex flex-col', pad)}>
@@ -255,14 +326,20 @@ function ScannerIdCardPreview({
                         <img
                             src="/img/asean_logo.png"
                             alt="ASEAN"
-                            className={cn('object-contain drop-shadow-sm', headerLogo)}
+                            className={cn(
+                                'object-contain drop-shadow-sm',
+                                headerLogo,
+                            )}
                             draggable={false}
                             loading="lazy"
                         />
                         <img
                             src="/img/bagong_pilipinas.png"
                             alt="Bagong Pilipinas"
-                            className={cn('object-contain drop-shadow-sm', headerLogo)}
+                            className={cn(
+                                'object-contain drop-shadow-sm',
+                                headerLogo,
+                            )}
                             draggable={false}
                             loading="lazy"
                         />
@@ -283,25 +360,34 @@ function ScannerIdCardPreview({
                     </div>
                 </div>
 
-                <Separator className={cn('bg-slate-200/70 dark:bg-white/10', isLandscape ? 'my-2' : 'my-2.5')} />
+                <Separator
+                    className={cn(
+                        'bg-slate-200/70 dark:bg-white/10',
+                        isLandscape ? 'my-2' : 'my-2.5',
+                    )}
+                />
 
                 {/* Body (✅ removed flex-1 so container height follows content) */}
                 <div
                     className={cn(
                         'min-h-0',
-                        isLandscape ? 'grid grid-cols-[1fr_178px] items-start gap-3' : 'flex flex-col gap-3',
+                        isLandscape
+                            ? 'grid grid-cols-[1fr_178px] items-start gap-3'
+                            : 'flex flex-col gap-3',
                     )}
                 >
                     {/* LEFT INFO */}
                     <div className="min-w-0">
-                        <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <div className="text-[10px] font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
                             Participant
                         </div>
 
                         <div
                             className={cn(
-                                'mt-0.5 break-words font-semibold tracking-tight text-slate-900 dark:text-slate-100',
-                                isLandscape ? 'text-sm leading-4' : 'text-lg leading-6',
+                                'mt-0.5 font-semibold tracking-tight break-words text-slate-900 dark:text-slate-100',
+                                isLandscape
+                                    ? 'text-sm leading-4'
+                                    : 'text-lg leading-6',
                                 'line-clamp-2',
                             )}
                             title={participant.name}
@@ -309,7 +395,12 @@ function ScannerIdCardPreview({
                             {participant.name}
                         </div>
 
-                        <div className={cn('flex items-center gap-2.5', isLandscape ? 'mt-2' : 'mt-2.5')}>
+                        <div
+                            className={cn(
+                                'flex items-center gap-2.5',
+                                isLandscape ? 'mt-2' : 'mt-2.5',
+                            )}
+                        >
                             <div
                                 className={cn(
                                     'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950',
@@ -319,12 +410,17 @@ function ScannerIdCardPreview({
                                 {flagSrc ? (
                                     <img
                                         src={flagSrc}
-                                        alt={participant.country?.name ?? 'Country flag'}
+                                        alt={
+                                            participant.country?.name ??
+                                            'Country flag'
+                                        }
                                         className="h-full w-full object-cover"
                                         draggable={false}
                                         loading="lazy"
                                         onError={(e) => {
-                                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                            (
+                                                e.currentTarget as HTMLImageElement
+                                            ).style.display = 'none';
                                         }}
                                     />
                                 ) : null}
@@ -343,14 +439,16 @@ function ScannerIdCardPreview({
                         </div>
 
                         <div className={cn(isLandscape ? 'mt-2' : 'mt-3')}>
-                            <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            <div className="text-[10px] font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
                                 Participant ID
                             </div>
 
                             <div
                                 className={cn(
-                                    'mt-1 inline-flex max-w-full whitespace-normal break-words rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
-                                    isLandscape ? 'text-[10px] leading-4' : 'text-[11px] leading-4',
+                                    'mt-1 inline-flex max-w-full rounded-2xl border border-slate-200/70 bg-white/80 px-2.5 py-1.5 font-mono break-words whitespace-normal text-slate-900 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100',
+                                    isLandscape
+                                        ? 'text-[10px] leading-4'
+                                        : 'text-[11px] leading-4',
                                 )}
                             >
                                 {participant.display_id}
@@ -391,7 +489,9 @@ function ScannerIdCardPreview({
                                 style={{ width: qrSize, height: qrSize }}
                             >
                                 <ShieldCheck className="h-7 w-7 text-emerald-600" />
-                                <div className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300">Verified</div>
+                                <div className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                                    Verified
+                                </div>
                             </div>
                         )}
 
@@ -413,7 +513,8 @@ function ScannerIdCardPreview({
                                     className="line-clamp-2"
                                     title={`${participant.country?.code?.toUpperCase() ?? ''} • ${participant.name}`}
                                 >
-                                    {participant.country?.code?.toUpperCase() ?? ''}
+                                    {participant.country?.code?.toUpperCase() ??
+                                        ''}
                                     {participant.country?.code ? ' • ' : ''}
                                     {participant.name}
                                 </span>
@@ -437,7 +538,10 @@ function useScanSounds() {
     const getCtx = React.useCallback(() => {
         if (typeof window === 'undefined') return null;
 
-        const AC = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined;
+        const AC = (window.AudioContext ||
+            (window as any).webkitAudioContext) as
+            | typeof AudioContext
+            | undefined;
         if (!AC) return null;
 
         if (!ctxRef.current) ctxRef.current = new AC();
@@ -498,11 +602,17 @@ function useScanSounds() {
     }, [getCtx]);
 
     // Smooth envelope (Apple-ish: soft attack + fast decay)
-    const env = React.useCallback((gain: GainNode, t0: number, dur: number, peak: number) => {
-        gain.gain.setValueAtTime(0.0001, t0);
-        gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t0 + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    }, []);
+    const env = React.useCallback(
+        (gain: GainNode, t0: number, dur: number, peak: number) => {
+            gain.gain.setValueAtTime(0.0001, t0);
+            gain.gain.exponentialRampToValueAtTime(
+                Math.max(0.0002, peak),
+                t0 + 0.01,
+            );
+            gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        },
+        [],
+    );
 
     // Tiny “tap” (subtle, makes it feel like a real scanner trigger)
     const click = React.useCallback(
@@ -516,7 +626,8 @@ function useScanSounds() {
             const length = Math.max(1, Math.floor(ctx.sampleRate * dur));
             const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
             const data = buffer.getChannelData(0);
-            for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+            for (let i = 0; i < length; i++)
+                data[i] = (Math.random() * 2 - 1) * 0.6;
 
             const src = ctx.createBufferSource();
             src.buffer = buffer;
@@ -539,7 +650,13 @@ function useScanSounds() {
     );
 
     const tone = React.useCallback(
-        (freq: number, ms: number, when = 0, peak = 0.12, type: OscillatorType = 'sine') => {
+        (
+            freq: number,
+            ms: number,
+            when = 0,
+            peak = 0.12,
+            type: OscillatorType = 'sine',
+        ) => {
             const o = out();
             if (!o) return;
             const { ctx, master } = o;
@@ -581,8 +698,8 @@ function useScanSounds() {
         // Notes: C6, E6, G6 (major chord)
         click(0.0, 0.05);
         tone(1046.5, 75, 0.02, 0.12, 'sine');
-        tone(1318.5, 90, 0.10, 0.11, 'sine');
-        tone(1568.0, 85, 0.19, 0.10, 'sine');
+        tone(1318.5, 90, 0.1, 0.11, 'sine');
+        tone(1568.0, 85, 0.19, 0.1, 'sine');
 
         // tiny sparkle
         tone(2093.0, 40, 0.28, 0.06, 'triangle');
@@ -630,7 +747,12 @@ type DetectedBarcode = {
     cornerPoints?: Array<{ x: number; y: number }>;
 };
 
-function getCoverTransform(containerW: number, containerH: number, mediaW: number, mediaH: number) {
+function getCoverTransform(
+    containerW: number,
+    containerH: number,
+    mediaW: number,
+    mediaH: number,
+) {
     // object-fit: cover mapping
     const scale = Math.max(containerW / mediaW, containerH / mediaH);
     const renderW = mediaW * scale;
@@ -646,13 +768,20 @@ function clamp(n: number, min: number, max: number) {
 
 export default function Scanner(props: PageProps) {
     const events = props.events ?? [];
-    const defaultEventId = props.default_event_id ? String(props.default_event_id) : '';
-    const [selectedEventId, setSelectedEventId] = React.useState<string>(defaultEventId);
+    const defaultEventId = props.default_event_id
+        ? String(props.default_event_id)
+        : '';
+    const [selectedEventId, setSelectedEventId] =
+        React.useState<string>(defaultEventId);
     const [eventOpen, setEventOpen] = React.useState(false);
     const [isScanning, setIsScanning] = React.useState(false);
-    const [status, setStatus] = React.useState<'idle' | 'scanning' | 'verifying' | 'success' | 'error'>('idle');
+    const [status, setStatus] = React.useState<
+        'idle' | 'scanning' | 'verifying' | 'success' | 'error'
+    >('idle');
 
-    const [devices, setDevices] = React.useState<Array<{ deviceId: string; label: string }>>([]);
+    const [devices, setDevices] = React.useState<
+        Array<{ deviceId: string; label: string }>
+    >([]);
     const [deviceId, setDeviceId] = React.useState<string>('');
     const [cameraError, setCameraError] = React.useState<string | null>(null);
 
@@ -678,7 +807,9 @@ export default function Scanner(props: PageProps) {
     const sounds = useScanSounds();
 
     // ✅ alignment / detection UI
-    const [qrAim, setQrAim] = React.useState<'idle' | 'searching' | 'detected' | 'aligned'>('idle');
+    const [qrAim, setQrAim] = React.useState<
+        'idle' | 'searching' | 'detected' | 'aligned'
+    >('idle');
     const qrAimRef = React.useRef(qrAim);
 
     const scanBoxRef = React.useRef<HTMLDivElement | null>(null);
@@ -703,7 +834,10 @@ export default function Scanner(props: PageProps) {
                 setDevices(mapped);
 
                 const preferred =
-                    mapped.find((d) => /back|rear|environment/i.test(d.label))?.deviceId ?? mapped[0]?.deviceId ?? '';
+                    mapped.find((d) => /back|rear|environment/i.test(d.label))
+                        ?.deviceId ??
+                    mapped[0]?.deviceId ??
+                    '';
                 setDeviceId(preferred);
             } catch {
                 // user may grant permission later
@@ -723,7 +857,6 @@ export default function Scanner(props: PageProps) {
     React.useEffect(() => {
         resultOpenRef.current = resultOpen;
     }, [resultOpen]);
-
 
     // ✅ keep overlay canvas crisp
     React.useEffect(() => {
@@ -772,7 +905,9 @@ export default function Scanner(props: PageProps) {
 
         const AnyWindow = window as any;
         const Detector = AnyWindow.BarcodeDetector as
-            | (new (opts: { formats: string[] }) => { detect: (src: any) => Promise<DetectedBarcode[]> })
+            | (new (opts: { formats: string[] }) => {
+                  detect: (src: any) => Promise<DetectedBarcode[]>;
+              })
             | undefined;
 
         // Fallback: not supported (e.g. some Safari)
@@ -823,7 +958,12 @@ export default function Scanner(props: PageProps) {
             });
 
             // choose best barcode (largest area)
-            let best: { points: { x: number; y: number }[]; cx: number; cy: number; area: number } | null = null;
+            let best: {
+                points: { x: number; y: number }[];
+                cx: number;
+                cy: number;
+                area: number;
+            } | null = null;
 
             for (const b of barcodes) {
                 const pts = b.cornerPoints?.length ? b.cornerPoints : null;
@@ -841,7 +981,8 @@ export default function Scanner(props: PageProps) {
                     const cx = (minX + maxX) / 2;
                     const cy = (minY + maxY) / 2;
 
-                    if (!best || area > best.area) best = { points: mp, cx, cy, area };
+                    if (!best || area > best.area)
+                        best = { points: mp, cx, cy, area };
                     continue;
                 }
 
@@ -862,7 +1003,8 @@ export default function Scanner(props: PageProps) {
                     const cx = (x1 + x2) / 2;
                     const cy = (y1 + y2) / 2;
 
-                    if (!best || area > best.area) best = { points, cx, cy, area };
+                    if (!best || area > best.area)
+                        best = { points, cx, cy, area };
                 }
             }
 
@@ -880,8 +1022,14 @@ export default function Scanner(props: PageProps) {
             // draw polygon/box
             ctx.save();
             ctx.lineWidth = 3;
-            ctx.strokeStyle = aim === 'aligned' ? 'rgba(16,185,129,0.95)' : 'rgba(56,189,248,0.95)';
-            ctx.shadowColor = aim === 'aligned' ? 'rgba(16,185,129,0.55)' : 'rgba(56,189,248,0.45)';
+            ctx.strokeStyle =
+                aim === 'aligned'
+                    ? 'rgba(16,185,129,0.95)'
+                    : 'rgba(56,189,248,0.95)';
+            ctx.shadowColor =
+                aim === 'aligned'
+                    ? 'rgba(16,185,129,0.55)'
+                    : 'rgba(56,189,248,0.45)';
             ctx.shadowBlur = 18;
 
             ctx.beginPath();
@@ -968,13 +1116,29 @@ export default function Scanner(props: PageProps) {
         }
     }
 
-    const selectedEvent = selectedEventId ? events.find((e) => String(e.id) === selectedEventId) : null;
-    const selectedEventPhase = selectedEvent ? resolveEventPhase(selectedEvent, nowTs) : undefined;
-    const isEventBlocked = !!selectedEventPhase && selectedEventPhase !== 'ongoing';
+    const selectedEvent = selectedEventId
+        ? events.find((e) => String(e.id) === selectedEventId)
+        : null;
+    const selectedEventPhase = selectedEvent
+        ? resolveEventPhase(selectedEvent, nowTs)
+        : undefined;
+    const isEventBlocked =
+        !!selectedEventPhase && selectedEventPhase !== 'ongoing';
+    const scanHints = React.useMemo(
+        () =>
+            new Map<DecodeHintType, unknown>([
+                [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]],
+                [DecodeHintType.TRY_HARDER, true],
+            ]),
+        [],
+    );
 
     function ensureEventSelected() {
         if (!selectedEventId) {
-            const data = { ok: false, message: 'Please select an event before scanning.' } as ScanResponse;
+            const data = {
+                ok: false,
+                message: 'Please select an event before scanning.',
+            } as ScanResponse;
             if (!resultOpenRef.current) void openResultDialog(data);
             return false;
         }
@@ -992,12 +1156,20 @@ export default function Scanner(props: PageProps) {
         return true;
     }
 
+    function teardownScanSession() {
+        try {
+            controlsRef.current?.stop?.();
+        } catch {
+            // ignore
+        }
+        controlsRef.current = null;
+        hardStopVideoStream();
+        readerRef.current = null;
+    }
+
     async function startScan() {
         if (!ensureEventSelected()) return;
         if (!videoRef.current) return;
-
-        // ✅ unlock sound on a user gesture
-        await sounds.unlock();
 
         setCameraError(null);
         setResult(null);
@@ -1008,21 +1180,38 @@ export default function Scanner(props: PageProps) {
         setQrAim('searching');
 
         try {
-            stopScan();
+            teardownScanSession();
 
-            const reader = new BrowserQRCodeReader(undefined, {
-                delayBetweenScanAttempts: 120,
+            const reader = new BrowserQRCodeReader(scanHints, {
+                delayBetweenScanAttempts: 80,
                 delayBetweenScanSuccess: 600,
             });
 
             readerRef.current = reader;
 
-            const controls = await reader.decodeFromVideoDevice(
-                deviceId || undefined,
+            const controls = await reader.decodeFromConstraints(
+                {
+                    video: {
+                        deviceId: deviceId ? { exact: deviceId } : undefined,
+                        facingMode: deviceId
+                            ? undefined
+                            : { ideal: 'environment' },
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        ...({
+                            focusMode: 'continuous',
+                            advanced: [
+                                { focusMode: 'continuous' },
+                                { zoom: 1 },
+                            ],
+                        } as unknown as MediaTrackConstraints),
+                    },
+                },
                 videoRef.current,
                 async (scanResult, err) => {
                     if (scanResult) {
-                        const text = scanResult.getText?.() ?? String(scanResult);
+                        const text =
+                            scanResult.getText?.() ?? String(scanResult);
                         if (!text) return;
 
                         if (lockRef.current) return;
@@ -1035,8 +1224,14 @@ export default function Scanner(props: PageProps) {
                         return;
                     }
 
-                    if (err && !isNotFoundZXingError(err) && isScanningRef.current) {
-                        setCameraError('Camera scanning error. Try again.');
+                    if (
+                        err &&
+                        !isNotFoundZXingError(err) &&
+                        isStreamFatalScannerError(err) &&
+                        isScanningRef.current
+                    ) {
+                        teardownScanSession();
+                        setCameraError('Camera interrupted. Please retry.');
                         setStatus('error');
                         setIsScanning(false);
                         isScanningRef.current = false;
@@ -1051,8 +1246,9 @@ export default function Scanner(props: PageProps) {
                 e?.name === 'NotAllowedError'
                     ? 'Camera permission denied. Please allow camera access.'
                     : e?.name === 'NotFoundError'
-                        ? 'No camera found on this device.'
-                        : 'Unable to start camera. Try again.';
+                      ? 'No camera found on this device.'
+                      : 'Unable to start camera. Try again.';
+            teardownScanSession();
             setCameraError(msg);
             setStatus('error');
             setIsScanning(false);
@@ -1061,15 +1257,7 @@ export default function Scanner(props: PageProps) {
     }
 
     function stopScan() {
-        try {
-            controlsRef.current?.stop?.();
-        } catch {
-            // ignore
-        }
-        controlsRef.current = null;
-
-        hardStopVideoStream();
-        readerRef.current = null;
+        teardownScanSession();
 
         setIsScanning(false);
         isScanningRef.current = false;
@@ -1103,7 +1291,10 @@ export default function Scanner(props: PageProps) {
 
             await openResultDialog(data); // ✅ plays sound + vibrates
         } catch {
-            const data = { ok: false, message: 'Network/server error. Please try again.' } as ScanResponse;
+            const data = {
+                ok: false,
+                message: 'Network/server error. Please try again.',
+            } as ScanResponse;
             await openResultDialog(data); // ✅ error sound + vibrate
         }
     }
@@ -1117,6 +1308,30 @@ export default function Scanner(props: PageProps) {
         startScan();
     }
 
+    React.useEffect(() => {
+        if (
+            isScanning ||
+            resultOpen ||
+            status !== 'idle' ||
+            isEventBlocked ||
+            !selectedEventId ||
+            cameraError
+        ) {
+            return;
+        }
+
+        void startScan();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        selectedEventId,
+        deviceId,
+        isEventBlocked,
+        isScanning,
+        resultOpen,
+        status,
+        cameraError,
+    ]);
+
     const filteredEvents = React.useMemo(() => {
         return events.map((event) => ({
             ...event,
@@ -1126,7 +1341,9 @@ export default function Scanner(props: PageProps) {
 
     // ✅ build ID-card participant shape (match virtual ID content)
     const participantDisplayId = React.useMemo(() => {
-        const displayId = (result?.participant?.display_id ?? '').toString().trim();
+        const displayId = (result?.participant?.display_id ?? '')
+            .toString()
+            .trim();
         return displayId || null;
     }, [result?.participant?.display_id]);
 
@@ -1146,7 +1363,10 @@ export default function Scanner(props: PageProps) {
         };
     }, [participantDisplayId, result?.participant]);
 
-    const flagSrc = getFlagSrc(result?.participant?.country_code, result?.participant?.country_flag_url);
+    const flagSrc = getFlagSrc(
+        result?.participant?.country_code,
+        result?.participant?.country_flag_url,
+    );
 
     const dialogTone = result?.ok ? 'success' : 'danger';
 
@@ -1155,7 +1375,12 @@ export default function Scanner(props: PageProps) {
             <Head title="Scanner" />
 
             {/* ✅ RESULT DIALOG (Success + Error) */}
-            <Dialog open={resultOpen} onOpenChange={setResultOpen}>
+            <Dialog
+                open={resultOpen}
+                onOpenChange={(open) => {
+                    setResultOpen(open);
+                }}
+            >
                 <DialogContent className="max-w-md overflow-hidden rounded-3xl bg-white p-0 dark:bg-slate-950">
                     <div className="max-h-[85vh] overflow-y-auto p-5">
                         <DialogHeader className="space-y-1">
@@ -1209,14 +1434,19 @@ export default function Scanner(props: PageProps) {
 
                                         <div className="min-w-0">
                                             <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                {result.ok ? 'Verified' : 'Not Allowed'}
+                                                {result.ok
+                                                    ? 'Verified'
+                                                    : 'Not Allowed'}
                                             </div>
                                             <div className="mt-0.5 text-xs text-slate-700 dark:text-slate-300">
                                                 {result.message}
                                             </div>
                                             {result.scanned_at ? (
                                                 <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                    Scanned at: {fmtDateTime(result.scanned_at)}
+                                                    Scanned at:{' '}
+                                                    {fmtDateTime(
+                                                        result.scanned_at,
+                                                    )}
                                                 </div>
                                             ) : null}
                                         </div>
@@ -1236,7 +1466,10 @@ export default function Scanner(props: PageProps) {
                                                 <div className="flex items-center gap-2">
                                                     <UserRound className="h-4 w-4 text-slate-500" />
                                                     <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                        {result.participant.full_name}
+                                                        {
+                                                            result.participant
+                                                                .full_name
+                                                        }
                                                     </div>
                                                 </div>
 
@@ -1244,41 +1477,72 @@ export default function Scanner(props: PageProps) {
                                                     {participantDisplayId ? (
                                                         <div className="flex items-center gap-2">
                                                             <QrCodeIcon className="h-4 w-4" />
-                                                            <span className="truncate">ID: {participantDisplayId}</span>
+                                                            <span className="truncate">
+                                                                ID:{' '}
+                                                                {
+                                                                    participantDisplayId
+                                                                }
+                                                            </span>
                                                         </div>
                                                     ) : null}
-                                                    {result.participant.email ? (
+                                                    {result.participant
+                                                        .email ? (
                                                         <div className="flex items-center gap-2">
                                                             <Mail className="h-4 w-4" />
-                                                            <span className="truncate">{result.participant.email}</span>
+                                                            <span className="truncate">
+                                                                {
+                                                                    result
+                                                                        .participant
+                                                                        .email
+                                                                }
+                                                            </span>
                                                         </div>
                                                     ) : null}
 
-                                                    {result.participant.country || result.participant.user_type ? (
+                                                    {result.participant
+                                                        .country ||
+                                                    result.participant
+                                                        .user_type ? (
                                                         <div className="flex items-center gap-2">
                                                             <MapPin className="h-4 w-4" />
-                                                            {result.participant.country_flag_url ? (
+                                                            {result.participant
+                                                                .country_flag_url ? (
                                                                 <img
-                                                                    src={result.participant.country_flag_url}
+                                                                    src={
+                                                                        result
+                                                                            .participant
+                                                                            .country_flag_url
+                                                                    }
                                                                     alt=""
                                                                     className="h-4 w-4 rounded-sm object-cover"
                                                                     loading="lazy"
-                                                                    draggable={false}
+                                                                    draggable={
+                                                                        false
+                                                                    }
                                                                 />
                                                             ) : null}
                                                             <span className="truncate">
-                                                                {result.participant.country ?? '—'}
-                                                                {result.participant.user_type
+                                                                {result
+                                                                    .participant
+                                                                    .country ??
+                                                                    '—'}
+                                                                {result
+                                                                    .participant
+                                                                    .user_type
                                                                     ? ` • ${result.participant.user_type}`
                                                                     : ''}
                                                             </span>
                                                         </div>
                                                     ) : null}
 
-                                                    {result.participant.is_verified ? (
+                                                    {result.participant
+                                                        .is_verified ? (
                                                         <div className="flex items-center gap-2">
                                                             <ShieldCheck className="h-4 w-4" />
-                                                            <Pill tone="success">Verified Participant</Pill>
+                                                            <Pill tone="success">
+                                                                Verified
+                                                                Participant
+                                                            </Pill>
                                                         </div>
                                                     ) : null}
                                                 </div>
@@ -1289,7 +1553,6 @@ export default function Scanner(props: PageProps) {
                                                     <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                                                         Checked-in:
                                                     </div>
-
                                                 </div>
                                             ) : null}
                                         </div>
@@ -1311,10 +1574,7 @@ export default function Scanner(props: PageProps) {
 
                     <DialogFooter className="border-t border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950">
                         <Button
-                            onClick={() => {
-                                setResultOpen(false);
-                                scanAgain();
-                            }}
+                            onClick={scanAgain}
                             className={cn(
                                 'h-11 w-full rounded-2xl',
                                 dialogTone === 'success'
@@ -1331,13 +1591,13 @@ export default function Scanner(props: PageProps) {
 
             {/* MAIN CARD */}
             <div className="mx-auto flex h-full w-full max-w-md flex-1 flex-col overflow-hidden rounded-xl bg-white p-0 dark:bg-slate-950">
-                <div className="relative px-4 pb-3 pt-4">
+                <div className="relative px-4 pt-4 pb-3">
                     <div
                         aria-hidden
                         className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-[#00359c]/10 via-transparent to-transparent dark:from-[#00359c]/15"
                     />
 
-                    <div className="flex itemss items-start justify-between gap-3">
+                    <div className="itemss flex items-start justify-between gap-3">
                         <div>
                             <div className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                                 QR Scanner
@@ -1348,22 +1608,32 @@ export default function Scanner(props: PageProps) {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <Pill tone={status === 'success' ? 'success' : status === 'error' ? 'danger' : 'default'}>
+                            <Pill
+                                tone={
+                                    status === 'success'
+                                        ? 'success'
+                                        : status === 'error'
+                                          ? 'danger'
+                                          : 'default'
+                                }
+                            >
                                 {status === 'verifying'
                                     ? 'Verifying...'
                                     : status === 'scanning'
-                                        ? 'Scanning'
-                                        : status === 'success'
-                                            ? 'Verified'
-                                            : status === 'error'
-                                                ? 'Rejected'
-                                                : 'Ready'}
+                                      ? 'Scanning'
+                                      : status === 'success'
+                                        ? 'Verified'
+                                        : status === 'error'
+                                          ? 'Rejected'
+                                          : 'Ready'}
                             </Pill>
                         </div>
                     </div>
 
                     <div className="mt-3 grid gap-2">
-                        <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">Event (required)</div>
+                        <div className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                            Event (required)
+                        </div>
                         <Popover open={eventOpen} onOpenChange={setEventOpen}>
                             <PopoverTrigger asChild>
                                 <Button
@@ -1375,20 +1645,28 @@ export default function Scanner(props: PageProps) {
                                     <span className="flex min-w-0 items-center gap-2">
                                         {selectedEvent ? (
                                             <>
-                                                <span className="truncate">{selectedEvent.title}</span>
+                                                <span className="truncate">
+                                                    {selectedEvent.title}
+                                                </span>
                                                 {selectedEventPhase ? (
                                                     <span
                                                         className={cn(
-                                                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                                                            phaseBadgeClass(selectedEventPhase),
+                                                            'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
+                                                            phaseBadgeClass(
+                                                                selectedEventPhase,
+                                                            ),
                                                         )}
                                                     >
-                                                        {phaseLabel(selectedEventPhase)}
+                                                        {phaseLabel(
+                                                            selectedEventPhase,
+                                                        )}
                                                     </span>
                                                 ) : null}
                                             </>
                                         ) : (
-                                            <span className="text-muted-foreground">Select event…</span>
+                                            <span className="text-muted-foreground">
+                                                Select event…
+                                            </span>
                                         )}
                                     </span>
                                     <ChevronsUpDown className="h-4 w-4 opacity-50" />
@@ -1399,7 +1677,7 @@ export default function Scanner(props: PageProps) {
                                 align="start"
                                 sideOffset={8}
                                 collisionPadding={12}
-                                className="p-0 w-[min(var(--radix-popper-anchor-width),calc(100vw-2rem))]"
+                                className="w-[min(var(--radix-popper-anchor-width),calc(100vw-2rem))] p-0"
                             >
                                 <Command>
                                     <CommandInput placeholder="Search event…" />
@@ -1412,31 +1690,42 @@ export default function Scanner(props: PageProps) {
                                                     key={event.id}
                                                     value={event.title}
                                                     onSelect={() => {
-                                                        setSelectedEventId(String(event.id));
+                                                        setSelectedEventId(
+                                                            String(event.id),
+                                                        );
                                                         setEventOpen(false);
                                                         setResult(null);
-                                                        setStatus("idle");
+                                                        setStatus('idle');
                                                     }}
                                                     className="flex items-center gap-2"
                                                 >
                                                     {/* ✅ this is important: allows truncate to actually shrink */}
-                                                    <span className="min-w-0 flex-1 truncate">{event.title}</span>
+                                                    <span className="min-w-0 flex-1 truncate">
+                                                        {event.title}
+                                                    </span>
 
                                                     {event.phase ? (
                                                         <span
                                                             className={cn(
-                                                                "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                                                                phaseBadgeClass(event.phase),
+                                                                'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
+                                                                phaseBadgeClass(
+                                                                    event.phase,
+                                                                ),
                                                             )}
                                                         >
-                                                            {phaseLabel(event.phase)}
+                                                            {phaseLabel(
+                                                                event.phase,
+                                                            )}
                                                         </span>
                                                     ) : null}
 
                                                     <Check
                                                         className={cn(
-                                                            "ml-2 h-4 w-4 shrink-0",
-                                                            selectedEventId === String(event.id) ? "opacity-100" : "opacity-0",
+                                                            'ml-2 h-4 w-4 shrink-0',
+                                                            selectedEventId ===
+                                                                String(event.id)
+                                                                ? 'opacity-100'
+                                                                : 'opacity-0',
                                                         )}
                                                     />
                                                 </CommandItem>
@@ -1451,11 +1740,15 @@ export default function Scanner(props: PageProps) {
                             <div className="flex flex-col gap-1 text-xs text-slate-500">
                                 <div className="flex items-center gap-2">
                                     <CalendarDays className="h-4 w-4" />
-                                    <span>{fmtDate(selectedEvent.starts_at) ?? '—'}</span>
+                                    <span>
+                                        {fmtDate(selectedEvent.starts_at) ??
+                                            '—'}
+                                    </span>
                                 </div>
                                 {isEventBlocked ? (
                                     <div className="text-xs font-medium text-red-600 dark:text-red-400">
-                                        Scanning is disabled until the event starts.
+                                        Scanning is disabled until the event
+                                        starts.
                                     </div>
                                 ) : null}
                             </div>
@@ -1473,21 +1766,29 @@ export default function Scanner(props: PageProps) {
                             'aspect-[3/4] w-full',
                         )}
                     >
-                        <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
+                        <video
+                            ref={videoRef}
+                            className="h-full w-full object-cover"
+                            playsInline
+                            muted
+                        />
 
                         <div className="pointer-events-none absolute inset-0">
                             {/* ✅ crisp overlay canvas for QR highlight */}
-                            <canvas ref={overlayCanvasRef} className="absolute inset-0 h-full w-full" />
+                            <canvas
+                                ref={overlayCanvasRef}
+                                className="absolute inset-0 h-full w-full"
+                            />
 
                             {/* ✅ frame border that changes when QR is detected/aligned */}
                             <div
                                 className={cn(
-                                    'absolute inset-6 rounded-[28px] border-2 transition-all duration-200',
+                                    'absolute inset-3 rounded-[28px] border-2 transition-all duration-200',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-300/90 shadow-[0_0_0_1px_rgba(16,185,129,0.25),0_0_30px_rgba(16,185,129,0.35)]'
                                         : qrAim === 'detected'
-                                            ? 'border-sky-200/70 shadow-[0_0_26px_rgba(56,189,248,0.25)]'
-                                            : 'border-white/30',
+                                          ? 'border-sky-200/70 shadow-[0_0_26px_rgba(56,189,248,0.25)]'
+                                          : 'border-white/30',
                                 )}
                             />
 
@@ -1498,69 +1799,69 @@ export default function Scanner(props: PageProps) {
                             {/* ✅ corner guides (color reacts too) */}
                             <div
                                 className={cn(
-                                    'absolute left-6 top-6 h-8 w-8 rounded-tl-2xl border-l-4 border-t-4 transition-colors',
+                                    'absolute top-3 left-3 h-10 w-10 rounded-tl-2xl border-t-4 border-l-4 transition-colors',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
-                                            ? 'border-sky-200'
-                                            : 'border-white/80',
+                                          ? 'border-sky-200'
+                                          : 'border-white/80',
                                 )}
                             />
                             <div
                                 className={cn(
-                                    'absolute right-6 top-6 h-8 w-8 rounded-tr-2xl border-r-4 border-t-4 transition-colors',
+                                    'absolute top-3 right-3 h-10 w-10 rounded-tr-2xl border-t-4 border-r-4 transition-colors',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
-                                            ? 'border-sky-200'
-                                            : 'border-white/80',
+                                          ? 'border-sky-200'
+                                          : 'border-white/80',
                                 )}
                             />
                             <div
                                 className={cn(
-                                    'absolute left-6 bottom-6 h-8 w-8 rounded-bl-2xl border-b-4 border-l-4 transition-colors',
+                                    'absolute bottom-3 left-3 h-10 w-10 rounded-bl-2xl border-b-4 border-l-4 transition-colors',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
-                                            ? 'border-sky-200'
-                                            : 'border-white/80',
+                                          ? 'border-sky-200'
+                                          : 'border-white/80',
                                 )}
                             />
                             <div
                                 className={cn(
-                                    'absolute right-6 bottom-6 h-8 w-8 rounded-br-2xl border-b-4 border-r-4 transition-colors',
+                                    'absolute right-3 bottom-3 h-10 w-10 rounded-br-2xl border-r-4 border-b-4 transition-colors',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
-                                            ? 'border-sky-200'
-                                            : 'border-white/80',
+                                          ? 'border-sky-200'
+                                          : 'border-white/80',
                                 )}
                             />
 
                             {/* ✅ hint pill */}
                             {isScanning ? (
-                                <div className="absolute left-1/2 top-4 -translate-x-1/2">
+                                <div className="absolute top-4 left-1/2 -translate-x-1/2">
                                     <div
                                         className={cn(
                                             'rounded-full px-3 py-1 text-xs font-semibold text-white backdrop-blur',
                                             qrAim === 'aligned'
                                                 ? 'bg-emerald-600/55'
                                                 : qrAim === 'detected'
-                                                    ? 'bg-sky-600/50'
-                                                    : 'bg-black/35',
+                                                  ? 'bg-sky-600/50'
+                                                  : 'bg-black/35',
                                         )}
                                     >
                                         {qrAim === 'aligned'
                                             ? 'QR detected • Hold steady'
                                             : qrAim === 'detected'
-                                                ? 'QR detected • Center it'
-                                                : 'Searching for QR…'}
+                                              ? 'QR detected • Center it'
+                                              : 'Searching for QR…'}
                                     </div>
                                 </div>
                             ) : null}
 
                             {isScanning ? (
-                                <div className="absolute inset-x-6 top-10">
+                                <div className="absolute inset-x-3 top-10">
                                     <div className="h-px w-full animate-[scanline_1.8s_ease-in-out_infinite] bg-white/80 shadow-[0_0_18px_rgba(255,255,255,0.45)]" />
                                 </div>
                             ) : null}
@@ -1572,8 +1873,13 @@ export default function Scanner(props: PageProps) {
                                     <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-white/15">
                                         <ScanLine className="h-6 w-6" />
                                     </div>
-                                    <div className="mt-2 text-sm font-semibold">Align QR inside the frame</div>
-                                    <div className="mt-1 text-xs text-white/80">Tap “Start Scanning” to open camera</div>
+                                    <div className="mt-2 text-sm font-semibold">
+                                        Align QR inside the frame
+                                    </div>
+                                    <div className="mt-1 text-xs text-white/80">
+                                        Scanner starts automatically when event
+                                        is ready.
+                                    </div>
                                 </div>
                             </div>
                         ) : null}
@@ -1584,8 +1890,12 @@ export default function Scanner(props: PageProps) {
                                     <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-white/15">
                                         <CircleX className="h-6 w-6" />
                                     </div>
-                                    <div className="mt-2 text-sm font-semibold">Camera Error</div>
-                                    <div className="mt-1 text-xs text-white/80">{cameraError}</div>
+                                    <div className="mt-2 text-sm font-semibold">
+                                        Camera Error
+                                    </div>
+                                    <div className="mt-1 text-xs text-white/80">
+                                        {cameraError}
+                                    </div>
                                 </div>
                             </div>
                         ) : null}
@@ -1596,8 +1906,12 @@ export default function Scanner(props: PageProps) {
                                     <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-white/15">
                                         <RefreshCcw className="h-6 w-6 animate-spin" />
                                     </div>
-                                    <div className="mt-2 text-sm font-semibold">Verifying…</div>
-                                    <div className="mt-1 text-xs text-white/80">Checking participant & registration.</div>
+                                    <div className="mt-2 text-sm font-semibold">
+                                        Verifying…
+                                    </div>
+                                    <div className="mt-1 text-xs text-white/80">
+                                        Checking participant & registration.
+                                    </div>
                                 </div>
                             </div>
                         ) : null}
@@ -1605,13 +1919,19 @@ export default function Scanner(props: PageProps) {
 
                     <div className="mt-4 grid gap-2">
                         {devices.length > 1 ? (
-                            <Select value={deviceId} onValueChange={setDeviceId}>
+                            <Select
+                                value={deviceId}
+                                onValueChange={setDeviceId}
+                            >
                                 <SelectTrigger className="h-11 rounded-2xl">
                                     <SelectValue placeholder="Select camera" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {devices.map((d) => (
-                                        <SelectItem key={d.deviceId} value={d.deviceId}>
+                                        <SelectItem
+                                            key={d.deviceId}
+                                            value={d.deviceId}
+                                        >
                                             {d.label}
                                         </SelectItem>
                                     ))}
@@ -1620,18 +1940,28 @@ export default function Scanner(props: PageProps) {
                         ) : null}
 
                         <div className="grid grid-cols-2 gap-2">
-                            {!isScanning ? (
+                            {isScanning ? (
                                 <Button
-                                    onClick={startScan}
-                                    className={cn('h-11 rounded-2xl', PRIMARY_BTN)}
+                                    onClick={stopScan}
+                                    variant="secondary"
+                                    className="h-11 rounded-2xl"
+                                >
+                                    Stop
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() => {
+                                        setCameraError(null);
+                                        void startScan();
+                                    }}
+                                    className={cn(
+                                        'h-11 rounded-2xl',
+                                        PRIMARY_BTN,
+                                    )}
                                     disabled={isEventBlocked}
                                 >
                                     <Camera className="mr-2 h-4 w-4" />
-                                    Start Scanning
-                                </Button>
-                            ) : (
-                                <Button onClick={stopScan} variant="secondary" className="h-11 rounded-2xl">
-                                    Stop
+                                    Retry Camera
                                 </Button>
                             )}
 
@@ -1653,7 +1983,9 @@ export default function Scanner(props: PageProps) {
                                 <div className="mt-2 flex gap-2">
                                     <Input
                                         value={manualCode}
-                                        onChange={(e) => setManualCode(e.target.value)}
+                                        onChange={(e) =>
+                                            setManualCode(e.target.value)
+                                        }
                                         placeholder="Paste code here..."
                                         className="h-11 rounded-2xl"
                                     />
@@ -1664,7 +1996,10 @@ export default function Scanner(props: PageProps) {
                                             await sounds.unlock();
                                             verifyCode(code);
                                         }}
-                                        className={cn('h-11 rounded-2xl', PRIMARY_BTN)}
+                                        className={cn(
+                                            'h-11 rounded-2xl',
+                                            PRIMARY_BTN,
+                                        )}
                                         disabled={isEventBlocked}
                                     >
                                         Verify
@@ -1676,7 +2011,9 @@ export default function Scanner(props: PageProps) {
                 </div>
 
                 <div className="border-t border-slate-200 bg-white px-4 py-4 dark:border-slate-800 dark:bg-slate-950">
-                    <div className="text-center text-xs text-slate-500">Tip: Select an event then scan participant QR.</div>
+                    <div className="text-center text-xs text-slate-500">
+                        Tip: Select an event then scan participant QR.
+                    </div>
                 </div>
             </div>
 
