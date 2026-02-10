@@ -4285,10 +4285,7 @@ export default function ParticipantPage(props: PageProps) {
                                                 <div className="text-sm font-medium">
                                                     Profile image
                                                 </div>
-                                                <div className="text-xs text-slate-600 dark:text-slate-400">
-                                                    Saved to
-                                                    public/profile-image
-                                                </div>
+                                            
                                             </div>
 
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
