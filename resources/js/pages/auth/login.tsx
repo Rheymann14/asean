@@ -92,7 +92,7 @@ export default function Login({ status, canResetPassword, canRegister }: LoginPr
                                         USER LOGIN
                                     </div>
                                     <p className="mt-2 text-sm text-muted-foreground">
-                                        Enter your email and password to continue
+                                        Enter your email or participant ID and password to continue
                                     </p>
                                 </div>
 
@@ -108,16 +108,16 @@ export default function Login({ status, canResetPassword, canRegister }: LoginPr
                                             <>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="email" className="text-sm">
-                                                        Email address
+                                                        Email or Participant ID
                                                     </Label>
                                                     <Input
                                                         id="email"
-                                                        type="email"
+                                                        type="text"
                                                         name="email"
                                                         required
                                                         autoFocus
-                                                        autoComplete="email"
-                                                        placeholder="email@example.com"
+                                                        autoComplete="username"
+                                                        placeholder="email@example.com or ASEAN-XXXX-XXXX"
                                                         className="h-11 rounded-xl"
                                                     />
                                                     <InputError message={errors.email} />
