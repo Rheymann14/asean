@@ -211,6 +211,20 @@ function isNotFoundZXingError(err: unknown) {
     );
 }
 
+function isStreamFatalScannerError(err: unknown) {
+    if (!err || typeof err !== 'object' || !('name' in err)) return false;
+
+    const errorName = String((err as { name?: unknown }).name ?? '');
+    return [
+        'NotAllowedError',
+        'NotFoundError',
+        'NotReadableError',
+        'AbortError',
+        'SecurityError',
+        'OverconstrainedError',
+    ].includes(errorName);
+}
+
 function Pill({
     children,
     tone = 'default',
@@ -1213,10 +1227,11 @@ export default function Scanner(props: PageProps) {
                     if (
                         err &&
                         !isNotFoundZXingError(err) &&
+                        isStreamFatalScannerError(err) &&
                         isScanningRef.current
                     ) {
                         teardownScanSession();
-                        setCameraError('Camera scanning error. Try again.');
+                        setCameraError('Camera interrupted. Please retry.');
                         setStatus('error');
                         setIsScanning(false);
                         isScanningRef.current = false;
@@ -1766,7 +1781,7 @@ export default function Scanner(props: PageProps) {
                             {/* ✅ frame border that changes when QR is detected/aligned */}
                             <div
                                 className={cn(
-                                    'absolute inset-6 rounded-[28px] border-2 transition-all duration-200',
+                                    'absolute inset-3 rounded-[28px] border-2 transition-all duration-200',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-300/90 shadow-[0_0_0_1px_rgba(16,185,129,0.25),0_0_30px_rgba(16,185,129,0.35)]'
                                         : qrAim === 'detected'
@@ -1782,7 +1797,7 @@ export default function Scanner(props: PageProps) {
                             {/* ✅ corner guides (color reacts too) */}
                             <div
                                 className={cn(
-                                    'absolute top-6 left-6 h-8 w-8 rounded-tl-2xl border-t-4 border-l-4 transition-colors',
+                                    'absolute top-3 left-3 h-10 w-10 rounded-tl-2xl border-t-4 border-l-4 transition-colors',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
@@ -1792,7 +1807,7 @@ export default function Scanner(props: PageProps) {
                             />
                             <div
                                 className={cn(
-                                    'absolute top-6 right-6 h-8 w-8 rounded-tr-2xl border-t-4 border-r-4 transition-colors',
+                                    'absolute top-3 right-3 h-10 w-10 rounded-tr-2xl border-t-4 border-r-4 transition-colors',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
@@ -1802,7 +1817,7 @@ export default function Scanner(props: PageProps) {
                             />
                             <div
                                 className={cn(
-                                    'absolute bottom-6 left-6 h-8 w-8 rounded-bl-2xl border-b-4 border-l-4 transition-colors',
+                                    'absolute bottom-3 left-3 h-10 w-10 rounded-bl-2xl border-b-4 border-l-4 transition-colors',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
@@ -1812,7 +1827,7 @@ export default function Scanner(props: PageProps) {
                             />
                             <div
                                 className={cn(
-                                    'absolute right-6 bottom-6 h-8 w-8 rounded-br-2xl border-r-4 border-b-4 transition-colors',
+                                    'absolute right-3 bottom-3 h-10 w-10 rounded-br-2xl border-r-4 border-b-4 transition-colors',
                                     qrAim === 'aligned'
                                         ? 'border-emerald-200'
                                         : qrAim === 'detected'
@@ -1844,7 +1859,7 @@ export default function Scanner(props: PageProps) {
                             ) : null}
 
                             {isScanning ? (
-                                <div className="absolute inset-x-6 top-10">
+                                <div className="absolute inset-x-3 top-10">
                                     <div className="h-px w-full animate-[scanline_1.8s_ease-in-out_infinite] bg-white/80 shadow-[0_0_18px_rgba(255,255,255,0.45)]" />
                                 </div>
                             ) : null}
