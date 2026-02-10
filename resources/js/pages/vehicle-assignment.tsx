@@ -1,7 +1,7 @@
 import * as React from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head, router, useForm } from '@inertiajs/react';
-import { type BreadcrumbItem } from '@/types';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,21 +10,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@/components/ui/command';
-import { Bus, Check, CheckCircle2, ChevronsUpDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Bus, Check, CheckCircle2, ChevronsUpDown, QrCodeIcon } from 'lucide-react';
+import QRCode from 'qrcode';
 import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Vehicle Assignment', href: '/vehicle-assignment' }];
 
 type EventRow = { id: number; title: string };
-type VehicleRow = { id: number; label: string; plate_number?: string | null };
+type VehicleRow = {
+    id: number;
+    label: string;
+    plate_number?: string | null;
+    driver_name?: string | null;
+    driver_contact_number?: string | null;
+};
 type Assignment = {
     id: number;
     vehicle_id: number | null;
@@ -33,8 +34,30 @@ type Assignment = {
 };
 type Participant = {
     id: number;
+    display_id?: string | null;
+    qr_payload?: string | null;
+    profile_photo_url?: string | null;
     full_name: string;
     email: string | null;
+    country?: {
+        code?: string | null;
+        name?: string | null;
+        flag_url?: string | null;
+    } | null;
+    table_assignment?: {
+        table_number: string;
+        seat_number?: number | null;
+    } | null;
+    dietary?: {
+        has_food_restrictions?: boolean;
+        food_restrictions?: string[];
+        dietary_allergies?: string | null;
+        dietary_other?: string | null;
+    } | null;
+    accessibility?: {
+        needs?: string[];
+        other?: string | null;
+    } | null;
     assignment: Assignment | null;
 };
 
@@ -51,21 +74,15 @@ type SearchItem = {
     description?: string;
 };
 
-function SearchableDropdown({
-    value,
-    onValueChange,
-    items,
-    placeholder,
-    searchPlaceholder,
-    emptyText,
-}: {
-    value: string;
-    onValueChange: (value: string) => void;
-    items: SearchItem[];
-    placeholder: string;
-    searchPlaceholder: string;
-    emptyText: string;
-}) {
+function getFlagSrc(country?: Participant['country']) {
+    if (!country) return null;
+    if (country.flag_url) return country.flag_url;
+    const code = (country.code ?? '').trim().toLowerCase();
+    if (!code) return null;
+    return `https://flagcdn.com/w80/${code}.png`;
+}
+
+function SearchableDropdown({ value, onValueChange, items, placeholder, searchPlaceholder, emptyText }: { value: string; onValueChange: (value: string) => void; items: SearchItem[]; placeholder: string; searchPlaceholder: string; emptyText: string; }) {
     const [open, setOpen] = React.useState(false);
     const selected = items.find((item) => item.value === value) ?? null;
 
@@ -73,16 +90,11 @@ function SearchableDropdown({
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" className="w-full justify-between" type="button">
-                    <span className={cn('truncate', !selected && 'text-slate-500')}>
-                        {selected ? selected.label : placeholder}
-                    </span>
+                    <span className={cn('truncate', !selected && 'text-slate-500')}>{selected ? selected.label : placeholder}</span>
                     <ChevronsUpDown className="h-4 w-4 opacity-60" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent
-                align="start"
-                className="w-[min(var(--radix-popover-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] p-0"
-            >
+            <PopoverContent align="start" className="w-[min(var(--radix-popover-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] p-0">
                 <Command>
                     <CommandInput placeholder={searchPlaceholder} />
                     <CommandEmpty>{emptyText}</CommandEmpty>
@@ -101,9 +113,7 @@ function SearchableDropdown({
                                     <Check className={cn('h-4 w-4', value === item.value ? 'opacity-100' : 'opacity-0')} />
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate">{item.label}</div>
-                                        {item.description ? (
-                                            <div className="truncate text-xs text-slate-500">{item.description}</div>
-                                        ) : null}
+                                        {item.description ? <div className="truncate text-xs text-slate-500">{item.description}</div> : null}
                                     </div>
                                 </CommandItem>
                             ))}
@@ -120,13 +130,101 @@ function showToastError(errors: Record<string, string | string[]>) {
     toast.error(Array.isArray(first) ? first[0] : first || 'Please review the form and try again.');
 }
 
+function VirtualLandscapeId({ participant }: { participant: Participant }) {
+    const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
+    const flagSrc = getFlagSrc(participant.country);
+
+    React.useEffect(() => {
+        let active = true;
+        const run = async () => {
+            const value = participant.qr_payload?.trim() ?? '';
+            if (!value) {
+                setQrDataUrl(null);
+                return;
+            }
+            try {
+                const url = await QRCode.toDataURL(value, { margin: 1, width: 240, errorCorrectionLevel: 'M' });
+                if (active) setQrDataUrl(url);
+            } catch {
+                if (active) setQrDataUrl(null);
+            }
+        };
+
+        run();
+        return () => {
+            active = false;
+        };
+    }, [participant.qr_payload]);
+
+    return (
+        <div className="mx-auto w-full max-w-[760px] overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <div className="relative">
+                <img src="/img/bg.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" draggable={false} />
+                <div className="absolute inset-0 bg-white/40" />
+
+                <div className="relative grid gap-3 p-3 sm:grid-cols-[1fr_180px] sm:p-4">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <img src="/img/asean_logo.png" alt="ASEAN" className="h-8 w-8 object-contain" draggable={false} />
+                            <div className="min-w-0">
+                                <p className="truncate text-xs font-semibold text-slate-700">ASEAN Philippines 2026</p>
+                                <p className="truncate text-[11px] text-slate-500">Participant Identification</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-3">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-500">Participant</p>
+                            <p className="line-clamp-2 text-base font-semibold text-slate-900">{participant.full_name}</p>
+                        </div>
+
+                        <div className="mt-2 flex items-center gap-2">
+                            <div className="h-8 w-8 overflow-hidden rounded-lg border bg-white">
+                                {flagSrc ? <img src={flagSrc} alt={participant.country?.name ?? 'Country flag'} className="h-full w-full object-cover" /> : null}
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-slate-800">{participant.country?.name || '—'}</p>
+                                <p className="text-[11px] text-slate-500">{participant.country?.code?.toUpperCase() || ''}</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-2">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-500">Participant ID</p>
+                            <p className="inline-flex rounded-md border bg-white/80 px-2 py-1 font-mono text-xs">{participant.display_id || '—'}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center rounded-xl border bg-white/80 p-2">
+                        <div className="mb-1 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700">
+                            <QrCodeIcon className="h-3.5 w-3.5" /> QR Code
+                        </div>
+                        {qrDataUrl ? (
+                            <img src={qrDataUrl} alt="Participant QR" className="h-28 w-28 rounded-lg bg-white p-1 object-contain" draggable={false} />
+                        ) : (
+                            <div className="flex h-28 w-28 items-center justify-center rounded-lg border text-[11px] text-slate-500">QR unavailable</div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function VehicleAssignmentPage({ events, selected_event_id, vehicles, participants }: PageProps) {
+    const { auth } = usePage<SharedData>().props;
+    const userType = auth.user?.user_type ?? auth.user?.userType;
+    const roleName = (userType?.name ?? '').toUpperCase();
+    const roleSlug = (userType?.slug ?? '').toUpperCase();
+    const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
+
     const selectedEventId = selected_event_id ? String(selected_event_id) : events[0] ? String(events[0].id) : '';
+
     const [selectedIds, setSelectedIds] = React.useState<number[]>([]);
     const [selectedAssignedIds, setSelectedAssignedIds] = React.useState<number[]>([]);
     const [participantSearch, setParticipantSearch] = React.useState('');
     const [assignedPage, setAssignedPage] = React.useState(1);
     const [unassignedPage, setUnassignedPage] = React.useState(1);
+    const [presenceOverrides, setPresenceOverrides] = React.useState<Record<number, boolean>>({});
+    const [idPreviewParticipant, setIdPreviewParticipant] = React.useState<Participant | null>(null);
     const perPage = 10;
 
     const assignmentForm = useForm({
@@ -140,7 +238,16 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
         if (assignmentForm.data.programme_id !== selectedEventId) {
             assignmentForm.setData('programme_id', selectedEventId);
         }
-    }, [assignmentForm.data.programme_id, assignmentForm.setData, selectedEventId]);
+    }, [assignmentForm, selectedEventId]);
+
+    React.useEffect(() => {
+        const next: Record<number, boolean> = {};
+        participants.forEach((participant) => {
+            if (!participant.assignment) return;
+            next[participant.assignment.id] = participant.assignment.pickup_status !== 'pending';
+        });
+        setPresenceOverrides(next);
+    }, [participants]);
 
     const onChangeEvent = (value: string) => {
         assignmentForm.setData('programme_id', value);
@@ -156,17 +263,13 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
     const filteredAssignedParticipants = React.useMemo(() => {
         if (!participantSearch.trim()) return assignedParticipants;
         const query = participantSearch.trim().toLowerCase();
-        return assignedParticipants.filter((participant) =>
-            [participant.full_name, participant.email].filter(Boolean).some((value) => value!.toLowerCase().includes(query)),
-        );
+        return assignedParticipants.filter((participant) => [participant.full_name, participant.email].filter(Boolean).some((value) => value!.toLowerCase().includes(query)));
     }, [assignedParticipants, participantSearch]);
 
     const filteredUnassignedParticipants = React.useMemo(() => {
         if (!participantSearch.trim()) return unassignedParticipants;
         const query = participantSearch.trim().toLowerCase();
-        return unassignedParticipants.filter((participant) =>
-            [participant.full_name, participant.email].filter(Boolean).some((value) => value!.toLowerCase().includes(query)),
-        );
+        return unassignedParticipants.filter((participant) => [participant.full_name, participant.email].filter(Boolean).some((value) => value!.toLowerCase().includes(query)));
     }, [unassignedParticipants, participantSearch]);
 
     const assignedTotalPages = Math.max(1, Math.ceil(filteredAssignedParticipants.length / perPage));
@@ -193,9 +296,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
     };
 
     const toggleAssignedParticipant = (participantId: number, checked: boolean) => {
-        setSelectedAssignedIds((prev) =>
-            checked ? [...new Set([...prev, participantId])] : prev.filter((id) => id !== participantId),
-        );
+        setSelectedAssignedIds((prev) => (checked ? [...new Set([...prev, participantId])] : prev.filter((id) => id !== participantId)));
     };
 
     const doAssign = (participantIds: number[], successMessage: string) => {
@@ -252,6 +353,7 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
             toast.error('Please select participant(s) to unassign.');
             return;
         }
+
         assignmentsToRemove.forEach((participant) => {
             if (participant.assignment) {
                 removeAssignment(participant.assignment.id);
@@ -260,39 +362,54 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
         setSelectedAssignedIds([]);
     };
 
+    const togglePresence = (assignmentId: number, checked: boolean) => {
+        setPresenceOverrides((prev) => ({ ...prev, [assignmentId]: checked }));
+
+        router.patch(
+            `/vehicle-assignments/${assignmentId}/presence`,
+            { is_present: checked },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(checked ? 'Marked as present in vehicle.' : 'Marked as not present in vehicle.'),
+                onError: () => {
+                    setPresenceOverrides((prev) => ({ ...prev, [assignmentId]: !checked }));
+                    toast.error('Unable to update vehicle attendance status.');
+                },
+            },
+        );
+    };
+
+    const formatList = (items?: string[] | null) => {
+        if (!items?.length) return '—';
+        return items.map((value) => value.replaceAll('_', ' ')).join(', ');
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Vehicle Assignment" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-2 sm:p-4">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
                         <Bus className="h-5 w-5 text-[#00359c]" />
                         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Vehicle Assignment</h1>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Assign participants to vehicles per event.
+                        {isChedLo
+                            ? 'Monitor assigned participants per event, including vehicle presence, table/seat, support preferences, and virtual ID.'
+                            : 'Assign participants to vehicles per event.'}
                     </p>
                 </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base">Assign Participants</CardTitle>
-                        <CardDescription>Select event and vehicle, then assign individual or bulk participants.</CardDescription>
+                        <CardTitle className="text-base">Event Filter</CardTitle>
+                        <CardDescription>{isChedLo ? 'Choose an event to monitor assigned vehicles and participants.' : 'Choose an event to manage assignments.'}</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-1 md:max-w-sm">
-                            <Label htmlFor="participant-search">Search participant</Label>
-                            <Input
-                                id="participant-search"
-                                placeholder="Search participants..."
-                                value={participantSearch}
-                                onChange={(event) => setParticipantSearch(event.target.value)}
-                            />
-                        </div>
+                    <CardContent>
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-1">
-                                <Label>Event <span className="text-[11px] font-semibold text-red-600">*</span></Label>
+                                <Label>Event</Label>
                                 <SearchableDropdown
                                     value={assignmentForm.data.programme_id}
                                     onValueChange={onChangeEvent}
@@ -301,124 +418,195 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                                     emptyText="No events found."
                                     items={events.map((event) => ({ value: String(event.id), label: event.title }))}
                                 />
-                                {assignmentForm.errors.programme_id ? (
-                                    <p className="text-xs text-rose-500">{assignmentForm.errors.programme_id}</p>
-                                ) : null}
                             </div>
-
                             <div className="space-y-1">
-                                <Label>Vehicle <span className="text-[11px] font-semibold text-red-600">*</span></Label>
+                                <Label htmlFor="participant-search">Search participant</Label>
+                                <Input id="participant-search" placeholder="Search participants..." value={participantSearch} onChange={(event) => setParticipantSearch(event.target.value)} />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {isChedLo ? (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Vehicle Details</CardTitle>
+                            <CardDescription>Vehicles assigned under your supervision for the selected event.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                {vehicles.length === 0 ? <p className="text-sm text-slate-500">No vehicles assigned to you for this event.</p> : null}
+                                {vehicles.map((vehicle) => (
+                                    <div key={vehicle.id} className="rounded-lg border p-3">
+                                        <p className="font-semibold text-slate-900 dark:text-slate-100">{vehicle.label}</p>
+                                        <p className="text-xs text-slate-500">Plate: {vehicle.plate_number || '—'}</p>
+                                        <p className="text-xs text-slate-500">Driver: {vehicle.driver_name || '—'}</p>
+                                        <p className="text-xs text-slate-500">Contact: {vehicle.driver_contact_number || '—'}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Assign Participants</CardTitle>
+                            <CardDescription>Select vehicle, then assign individual or bulk participants.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="space-y-1 md:max-w-sm">
+                                <Label>Vehicle</Label>
                                 <SearchableDropdown
                                     value={assignmentForm.data.vehicle_id}
                                     onValueChange={(value) => assignmentForm.setData('vehicle_id', value)}
                                     placeholder="Select vehicle"
                                     searchPlaceholder="Search vehicles..."
                                     emptyText="No vehicles found."
-                                    items={vehicles.map((vehicle) => ({
-                                        value: String(vehicle.id),
-                                        label: vehicle.label,
-                                        description: vehicle.plate_number || '',
-                                    }))}
+                                    items={vehicles.map((vehicle) => ({ value: String(vehicle.id), label: vehicle.label, description: vehicle.plate_number || '' }))}
                                 />
-                                {assignmentForm.errors.vehicle_id ? (
-                                    <p className="text-xs text-rose-500">{assignmentForm.errors.vehicle_id}</p>
-                                ) : null}
+                                {assignmentForm.errors.vehicle_id ? <p className="text-xs text-rose-500">{assignmentForm.errors.vehicle_id}</p> : null}
                             </div>
-                        </div>
+                            {assignmentForm.errors.participant_ids ? <p className="text-xs text-rose-500">{assignmentForm.errors.participant_ids}</p> : null}
+                        </CardContent>
+                    </Card>
+                )}
 
-                        {assignmentForm.errors.participant_ids ? (
-                            <p className="text-xs text-rose-500">{assignmentForm.errors.participant_ids}</p>
-                        ) : null}
-                    </CardContent>
-                </Card>
-
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className={cn('grid gap-4', isChedLo ? 'lg:grid-cols-1' : 'lg:grid-cols-2')}>
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">Assigned Participants</CardTitle>
-                            <CardDescription>Remove assignments from participants already assigned to a vehicle.</CardDescription>
+                            <CardDescription>
+                                {isChedLo
+                                    ? 'Check participants present in your vehicle and review table/seat, support preferences, and virtual ID.'
+                                    : 'Remove assignments from participants already assigned to a vehicle.'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <Button type="button" variant="outline" onClick={removeBulkAssignments} disabled={!selectedAssignedIds.length}>
-                                    Remove Selected
-                                </Button>
-                            </div>
-                            <div className="overflow-hidden rounded-xl border">
+                            {!isChedLo ? (
+                                <div>
+                                    <Button type="button" variant="outline" onClick={removeBulkAssignments} disabled={!selectedAssignedIds.length}>
+                                        Remove Selected
+                                    </Button>
+                                </div>
+                            ) : null}
+
+                            {isChedLo ? (
+                                <div className="space-y-3 md:hidden">
+                                    {assignedPageItems.length === 0 ? <p className="rounded-lg border p-4 text-center text-sm text-slate-500">No assigned participants found.</p> : null}
+                                    {assignedPageItems.map((participant) => {
+                                        const assignmentId = participant.assignment?.id;
+                                        const isPresent = assignmentId ? presenceOverrides[assignmentId] ?? false : false;
+                                        return (
+                                            <div key={participant.id} className="space-y-2 rounded-xl border p-3">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <p className="font-semibold">{participant.full_name}</p>
+                                                        <p className="text-xs text-slate-500">{participant.email || '—'}</p>
+                                                    </div>
+                                                    <Checkbox checked={isPresent} disabled={!assignmentId} onCheckedChange={(checked) => assignmentId && togglePresence(assignmentId, Boolean(checked))} />
+                                                </div>
+                                                <p className="text-xs text-slate-600">Vehicle: {participant.assignment?.vehicle_label || '—'}</p>
+                                                <p className="text-xs text-slate-600">Table/Seat: {participant.table_assignment ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}` : '—'}</p>
+                                                <p className="text-xs text-slate-600">Dietary: {formatList(participant.dietary?.food_restrictions)}</p>
+                                                <p className="text-xs text-slate-600">Accessibility: {formatList(participant.accessibility?.needs)}</p>
+                                                <div className="flex justify-end">
+                                                    <Button size="sm" variant="outline" type="button" onClick={() => setIdPreviewParticipant(participant)}>
+                                                        View ID
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : null}
+
+                            <div className={cn('overflow-x-auto rounded-xl border', isChedLo ? 'hidden md:block' : 'block')}>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-10">
-                                                <Checkbox
-                                                    checked={assignedPageItems.length > 0 && selectedAssignedIds.length === assignedPageItems.length}
-                                                    onCheckedChange={(checked) => toggleAllAssigned(Boolean(checked))}
-                                                />
+                                                {isChedLo ? 'Present' : <Checkbox checked={assignedPageItems.length > 0 && selectedAssignedIds.length === assignedPageItems.length} onCheckedChange={(checked) => toggleAllAssigned(Boolean(checked))} />}
                                             </TableHead>
                                             <TableHead>Participant</TableHead>
-                                            <TableHead>Assigned Vehicle</TableHead>
-                                            <TableHead className="text-right">Action</TableHead>
+                                            <TableHead>Vehicle</TableHead>
+                                            <TableHead>Table / Seat</TableHead>
+                                            <TableHead>Dietary</TableHead>
+                                            <TableHead>Accessibility</TableHead>
+                                            {isChedLo ? <TableHead className="text-right">Virtual ID</TableHead> : null}
+                                            {!isChedLo ? <TableHead className="text-right">Action</TableHead> : null}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {assignedPageItems.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="py-6 text-center text-sm text-slate-500">
+                                                <TableCell colSpan={isChedLo ? 7 : 7} className="py-6 text-center text-sm text-slate-500">
                                                     No assigned participants found.
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            assignedPageItems.map((participant) => (
-                                                <TableRow key={participant.id}>
-                                                    <TableCell>
-                                                        <Checkbox
-                                                            checked={selectedAssignedIds.includes(participant.id)}
-                                                            onCheckedChange={(checked) =>
-                                                                toggleAssignedParticipant(participant.id, Boolean(checked))
-                                                            }
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="font-medium">{participant.full_name}</div>
-                                                        <div className="text-xs text-slate-500">{participant.email || '—'}</div>
-                                                    </TableCell>
-                                                    <TableCell>{participant.assignment?.vehicle_label || '—'}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => removeAssignment(participant.assignment!.id)}
-                                                        >
-                                                            Remove Assignment
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
+                                            assignedPageItems.map((participant) => {
+                                                const assignmentId = participant.assignment?.id;
+                                                const isPresent = assignmentId ? presenceOverrides[assignmentId] ?? false : false;
+
+                                                return (
+                                                    <TableRow key={participant.id}>
+                                                        <TableCell>
+                                                            {isChedLo ? (
+                                                                <Checkbox checked={isPresent} disabled={!assignmentId} onCheckedChange={(checked) => assignmentId && togglePresence(assignmentId, Boolean(checked))} />
+                                                            ) : (
+                                                                <Checkbox checked={selectedAssignedIds.includes(participant.id)} onCheckedChange={(checked) => toggleAssignedParticipant(participant.id, Boolean(checked))} />
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="font-medium">{participant.full_name}</div>
+                                                            <div className="text-xs text-slate-500">{participant.email || '—'}</div>
+                                                        </TableCell>
+                                                        <TableCell>{participant.assignment?.vehicle_label || '—'}</TableCell>
+                                                        <TableCell>{participant.table_assignment ? `Table ${participant.table_assignment.table_number} / Seat ${participant.table_assignment.seat_number ?? '—'}` : '—'}</TableCell>
+                                                        <TableCell>
+                                                            <div className="text-xs">
+                                                                <p>{formatList(participant.dietary?.food_restrictions)}</p>
+                                                                {participant.dietary?.dietary_allergies ? <p>Allergies: {participant.dietary.dietary_allergies}</p> : null}
+                                                                {participant.dietary?.dietary_other ? <p>Other: {participant.dietary.dietary_other}</p> : null}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="text-xs">
+                                                                <p>{formatList(participant.accessibility?.needs)}</p>
+                                                                {participant.accessibility?.other ? <p>Other: {participant.accessibility.other}</p> : null}
+                                                            </div>
+                                                        </TableCell>
+                                                        {isChedLo ? (
+                                                            <TableCell className="text-right">
+                                                                <Button type="button" size="sm" variant="outline" onClick={() => setIdPreviewParticipant(participant)}>
+                                                                    View ID
+                                                                </Button>
+                                                            </TableCell>
+                                                        ) : null}
+                                                        {!isChedLo ? (
+                                                            <TableCell className="text-right">
+                                                                <Button type="button" size="sm" variant="outline" onClick={() => removeAssignment(participant.assignment!.id)}>
+                                                                    Remove Assignment
+                                                                </Button>
+                                                            </TableCell>
+                                                        ) : null}
+                                                    </TableRow>
+                                                );
+                                            })
                                         )}
                                     </TableBody>
                                 </Table>
                             </div>
+
                             <div className="flex items-center justify-between text-sm text-slate-500">
                                 <span>
                                     Page {assignedPage} of {assignedTotalPages}
                                 </span>
                                 <div className="flex gap-2">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        disabled={assignedPage <= 1}
-                                        onClick={() => setAssignedPage((page) => Math.max(1, page - 1))}
-                                    >
+                                    <Button type="button" size="sm" variant="outline" disabled={assignedPage <= 1} onClick={() => setAssignedPage((page) => Math.max(1, page - 1))}>
                                         Previous
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        disabled={assignedPage >= assignedTotalPages}
-                                        onClick={() => setAssignedPage((page) => Math.min(assignedTotalPages, page + 1))}
-                                    >
+                                    <Button type="button" size="sm" variant="outline" disabled={assignedPage >= assignedTotalPages} onClick={() => setAssignedPage((page) => Math.min(assignedTotalPages, page + 1))}>
                                         Next
                                     </Button>
                                 </div>
@@ -426,107 +614,88 @@ export default function VehicleAssignmentPage({ events, selected_event_id, vehic
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Unassigned Participants</CardTitle>
-                            <CardDescription>Select participants and assign them to a vehicle.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex justify-end">
-                                <Button
-                                    type="button"
-                                    onClick={assignBulk}
-                                    disabled={!selectedIds.length || assignmentForm.processing}
-                                    className="bg-[#00359c] text-white hover:bg-[#00359c]/90"
-                                >
-                                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                                    Assign Selected
-                                </Button>
-                            </div>
-                            {assignmentForm.errors.participant_ids ? (
-                                <p className="text-xs text-rose-500">{assignmentForm.errors.participant_ids}</p>
-                            ) : null}
-                            <div className="overflow-hidden rounded-xl border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-10">
-                                                <Checkbox
-                                                    checked={unassignedPageItems.length > 0 && selectedIds.length === unassignedPageItems.length}
-                                                    onCheckedChange={(checked) => toggleAllUnassigned(Boolean(checked))}
-                                                />
-                                            </TableHead>
-                                            <TableHead>Participant</TableHead>
-                                            <TableHead className="text-right">Action</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {unassignedPageItems.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={3} className="py-6 text-center text-sm text-slate-500">
-                                                    No unassigned participants found.
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            unassignedPageItems.map((participant) => (
-                                                <TableRow key={participant.id}>
-                                                    <TableCell>
-                                                        <Checkbox
-                                                            checked={selectedIds.includes(participant.id)}
-                                                            onCheckedChange={(checked) =>
-                                                                toggleUnassignedParticipant(participant.id, Boolean(checked))
-                                                            }
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="font-medium">{participant.full_name}</div>
-                                                        <div className="text-xs text-slate-500">{participant.email || '—'}</div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => assignSingle(participant.id)}
-                                                        >
-                                                            Assign
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                            <div className="flex items-center justify-between text-sm text-slate-500">
-                                <span>
-                                    Page {unassignedPage} of {unassignedTotalPages}
-                                </span>
-                                <div className="flex gap-2">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        disabled={unassignedPage <= 1}
-                                        onClick={() => setUnassignedPage((page) => Math.max(1, page - 1))}
-                                    >
-                                        Previous
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        disabled={unassignedPage >= unassignedTotalPages}
-                                        onClick={() => setUnassignedPage((page) => Math.min(unassignedTotalPages, page + 1))}
-                                    >
-                                        Next
+                    {!isChedLo ? (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Unassigned Participants</CardTitle>
+                                <CardDescription>Select participants and assign them to a vehicle.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex justify-end">
+                                    <Button type="button" onClick={assignBulk} disabled={!selectedIds.length || assignmentForm.processing} className="bg-[#00359c] text-white hover:bg-[#00359c]/90">
+                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                        Assign Selected
                                     </Button>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                {assignmentForm.errors.participant_ids ? <p className="text-xs text-rose-500">{assignmentForm.errors.participant_ids}</p> : null}
+
+                                <div className="overflow-x-auto rounded-xl border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-10">
+                                                    <Checkbox checked={unassignedPageItems.length > 0 && selectedIds.length === unassignedPageItems.length} onCheckedChange={(checked) => toggleAllUnassigned(Boolean(checked))} />
+                                                </TableHead>
+                                                <TableHead>Participant</TableHead>
+                                                <TableHead className="text-right">Action</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {unassignedPageItems.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={3} className="py-6 text-center text-sm text-slate-500">
+                                                        No unassigned participants found.
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                unassignedPageItems.map((participant) => (
+                                                    <TableRow key={participant.id}>
+                                                        <TableCell>
+                                                            <Checkbox checked={selectedIds.includes(participant.id)} onCheckedChange={(checked) => toggleUnassignedParticipant(participant.id, Boolean(checked))} />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="font-medium">{participant.full_name}</div>
+                                                            <div className="text-xs text-slate-500">{participant.email || '—'}</div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button type="button" size="sm" variant="outline" onClick={() => assignSingle(participant.id)}>
+                                                                Assign
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                <div className="flex items-center justify-between text-sm text-slate-500">
+                                    <span>
+                                        Page {unassignedPage} of {unassignedTotalPages}
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <Button type="button" size="sm" variant="outline" disabled={unassignedPage <= 1} onClick={() => setUnassignedPage((page) => Math.max(1, page - 1))}>
+                                            Previous
+                                        </Button>
+                                        <Button type="button" size="sm" variant="outline" disabled={unassignedPage >= unassignedTotalPages} onClick={() => setUnassignedPage((page) => Math.min(unassignedTotalPages, page + 1))}>
+                                            Next
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : null}
                 </div>
             </div>
+
+            <Dialog open={Boolean(idPreviewParticipant)} onOpenChange={(open) => !open && setIdPreviewParticipant(null)}>
+                <DialogContent className="max-w-[900px]">
+                    <DialogHeader>
+                        <DialogTitle>Participant Virtual ID (Landscape)</DialogTitle>
+                    </DialogHeader>
+                    {idPreviewParticipant ? <VirtualLandscapeId participant={idPreviewParticipant} /> : null}
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

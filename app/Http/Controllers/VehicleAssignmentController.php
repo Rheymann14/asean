@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Programme;
+use App\Models\ParticipantAttendance;
+use App\Models\ParticipantTableAssignment;
 use App\Models\TransportVehicle;
 use App\Models\User;
 use App\Models\UserType;
@@ -18,8 +20,12 @@ class VehicleAssignmentController extends Controller
     {
         $user = $request->user();
 
-        if ($this->isChedAdmin($user)) {
+        if ($this->isAdmin($user)) {
             return $this->assignmentIndex($request);
+        }
+
+        if ($user && $this->isChedLoType($user)) {
+            return $this->chedLoAssignmentIndex($request);
         }
 
         return $this->participantAssignmentIndex($request);
@@ -157,6 +163,9 @@ class VehicleAssignmentController extends Controller
 
                 return [
                     'id' => $participant->id,
+                    'display_id' => $participant->display_id,
+                    'qr_payload' => $participant->qr_payload,
+                    'profile_photo_url' => $participant->profile_photo_url,
                     'full_name' => $participant->name,
                     'email' => $participant->email,
                     'country' => $participant->country
@@ -243,6 +252,157 @@ class VehicleAssignmentController extends Controller
         return Inertia::render('participant-vehicle-assignment', [
             'events' => $eventRows,
         ]);
+    }
+
+    public function chedLoAssignmentIndex(Request $request)
+    {
+        $user = $request->user();
+
+        $events = Programme::query()
+            ->orderBy('starts_at')
+            ->orderBy('title')
+            ->get();
+
+        $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
+
+        $vehicles = TransportVehicle::query()
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->where('incharge_user_id', $user->id)
+            ->orderBy('label')
+            ->get()
+            ->map(fn (TransportVehicle $vehicle) => [
+                'id' => $vehicle->id,
+                'label' => $vehicle->label,
+                'plate_number' => $vehicle->plate_number,
+                'driver_name' => $vehicle->driver_name,
+                'driver_contact_number' => $vehicle->driver_contact_number,
+            ]);
+
+        $assignmentsByUser = VehicleAssignment::query()
+            ->with('vehicle')
+            ->where('driver_user_id', $user->id)
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->get()
+            ->keyBy('user_id');
+
+        $participantIds = $assignmentsByUser->keys()->values();
+
+        $tableAssignments = ParticipantTableAssignment::query()
+            ->with('participantTable')
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->when($participantIds->isNotEmpty(), fn ($query) => $query->whereIn('user_id', $participantIds))
+            ->get()
+            ->keyBy('user_id');
+
+        $attendanceByUser = ParticipantAttendance::query()
+            ->when($selectedEventId, fn ($query) => $query->where('programme_id', $selectedEventId))
+            ->when($participantIds->isNotEmpty(), fn ($query) => $query->whereIn('user_id', $participantIds))
+            ->get()
+            ->keyBy('user_id');
+
+        $participants = User::query()
+            ->with(['country', 'userType'])
+            ->when($participantIds->isNotEmpty(), fn ($query) => $query->whereIn('id', $participantIds), fn ($query) => $query->whereRaw('1 = 0'))
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $participant) use ($assignmentsByUser, $tableAssignments, $attendanceByUser) {
+                $assignment = $assignmentsByUser->get($participant->id);
+                $tableAssignment = $tableAssignments->get($participant->id);
+                $table = $tableAssignment?->participantTable;
+                $attendance = $attendanceByUser->get($participant->id);
+
+                return [
+                    'id' => $participant->id,
+                    'display_id' => $participant->display_id,
+                    'qr_payload' => $participant->qr_payload,
+                    'profile_photo_url' => $participant->profile_photo_url,
+                    'full_name' => $participant->name,
+                    'email' => $participant->email,
+                    'country' => $participant->country
+                        ? [
+                            'id' => $participant->country->id,
+                            'code' => $participant->country->code,
+                            'name' => $participant->country->name,
+                            'flag_url' => $participant->country->flag_url,
+                        ]
+                        : null,
+                    'user_type' => $participant->userType
+                        ? [
+                            'id' => $participant->userType->id,
+                            'name' => $participant->userType->name,
+                            'slug' => $participant->userType->slug,
+                        ]
+                        : null,
+                    'table_assignment' => $table
+                        ? [
+                            'table_number' => $table->table_number,
+                            'seat_number' => $tableAssignment?->seat_number,
+                        ]
+                        : null,
+                    'attendance' => [
+                        'scanned_at' => $attendance?->scanned_at?->toISOString(),
+                    ],
+                    'dietary' => [
+                        'has_food_restrictions' => (bool) ($participant->has_food_restrictions ?? false),
+                        'food_restrictions' => $participant->food_restrictions ?? [],
+                        'dietary_allergies' => $participant->dietary_allergies,
+                        'dietary_other' => $participant->dietary_other,
+                    ],
+                    'accessibility' => [
+                        'needs' => $participant->accessibility_needs ?? [],
+                        'other' => $participant->accessibility_other,
+                    ],
+                    'assignment' => $assignment
+                        ? [
+                            'id' => $assignment->id,
+                            'vehicle_id' => $assignment->vehicle_id,
+                            'vehicle_label' => $assignment->vehicle?->label ?: $assignment->vehicle_label,
+                            'pickup_status' => $assignment->pickup_status,
+                            'pickup_location' => $assignment->pickup_location,
+                            'pickup_at' => $assignment->pickup_at?->toISOString(),
+                            'dropoff_location' => $assignment->dropoff_location,
+                            'dropoff_at' => $assignment->dropoff_at?->toISOString(),
+                        ]
+                        : null,
+                ];
+            });
+
+        return Inertia::render('vehicle-assignment', [
+            'events' => $events->map(fn (Programme $event) => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'starts_at' => $event->starts_at?->toISOString(),
+                'ends_at' => $event->ends_at?->toISOString(),
+                'is_active' => (bool) $event->is_active,
+            ]),
+            'selected_event_id' => $selectedEventId ?: null,
+            'vehicles' => $vehicles,
+            'participants' => $participants,
+        ]);
+    }
+
+
+    public function updatePresence(Request $request, VehicleAssignment $vehicleAssignment)
+    {
+        $user = $request->user();
+
+        if (! $this->isAdmin($user) && $vehicleAssignment->driver_user_id !== $user?->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'is_present' => ['required', 'boolean'],
+        ]);
+
+        $isPresent = (bool) $validated['is_present'];
+
+        $vehicleAssignment->update([
+            'pickup_status' => $isPresent ? 'picked_up' : 'pending',
+            'pickup_at' => $isPresent ? ($vehicleAssignment->pickup_at ?? now()) : null,
+            'dropoff_at' => $isPresent ? $vehicleAssignment->dropoff_at : null,
+        ]);
+
+        return back();
     }
 
     public function store(Request $request)
@@ -364,5 +524,20 @@ class VehicleAssignmentController extends Controller
             || in_array('CHED-LO', [$roleSlug], true);
 
         return $isAdmin || $isChed || $isChedLo;
+    }
+
+    private function isAdmin(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $user->loadMissing('userType');
+
+        $roleName = Str::upper((string) ($user->userType?->name ?? ''));
+        $roleSlug = Str::upper((string) ($user->userType?->slug ?? ''));
+
+        return in_array('ADMIN', [$roleName, $roleSlug], true)
+            || in_array('CHED', [$roleName, $roleSlug], true);
     }
 }

@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetClose, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, ArrowRight, LogIn, LayoutDashboard, Globe, Facebook } from 'lucide-react';
 
 type NavItem = { label: string; href: string };
@@ -67,7 +67,7 @@ export default function PublicLayout({
     const roleSlug = (userType?.slug ?? '').toUpperCase();
     const isAdmin = roleName === 'ADMIN' || roleSlug === 'ADMIN';
     const isChedLo = roleName === 'CHED LO' || roleSlug === 'CHED-LO';
-    const dashboardHref = isAdmin ? '/dashboard' : isChedLo ? '/table-assignment/create' : '/participant-dashboard';
+    const dashboardHref = isAdmin ? '/dashboard' : isChedLo ? '/vehicle-assignment' : '/participant-dashboard';
 
     const toHref = (href: string) => {
         if (href.startsWith('#') && !isHome) return `/${href}`;
