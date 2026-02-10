@@ -256,7 +256,7 @@ export default function Issuances(props: PageProps) {
                         </div>
                     </div>
 
-                    <div className="mx-auto mt-6 w-full max-w-5xl">
+                    <div className="mx-auto mt-6 w-full max-w-3xl px-4 sm:px-0">
                         <div className="rounded-xl border border-slate-200 bg-white/70 shadow-sm backdrop-blur">
                             <div className="p-3 sm:p-4">
                                 <div className="grid items-center gap-3 sm:grid-cols-[auto_110px] sm:gap-4">
@@ -267,12 +267,11 @@ export default function Issuances(props: PageProps) {
 
                                         <div className="min-w-0">
                                             <h2 className="text-sm font-semibold text-slate-900">
-                                                Event Kit & Certificates
+                                                EVENT KIT & CERTIFICATES
                                             </h2>
 
                                             <p className="mt-1 text-xs leading-snug text-slate-600">
-                                                Scan the QR or click the link to
-                                                access materials and claim
+                                                Scan the QR or click the link to access materials and claim
                                                 certificates.
                                             </p>
 
@@ -282,11 +281,8 @@ export default function Issuances(props: PageProps) {
                                                     size="sm"
                                                     className="h-8 bg-[#0033A0] px-3 text-white hover:bg-[#0033A0]/90"
                                                 >
-                                                    <a
-                                                        href="/event-kit"
-                                                        className="inline-flex items-center"
-                                                    >
-                                                        Access event kit
+                                                    <a href="/event-kit" className="inline-flex items-center">
+                                                        Access Event Kit
                                                         <ArrowRight className="ml-2 h-4 w-4" />
                                                     </a>
                                                 </Button>
@@ -306,15 +302,14 @@ export default function Issuances(props: PageProps) {
                                                 />
                                             </div>
                                         ) : (
-                                            <span className="text-[11px] text-slate-500">
-                                                QR unavailable
-                                            </span>
+                                            <span className="text-[11px] text-slate-500">QR unavailable</span>
                                         )}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
 
                     {/* Search */}
                     <div className="mx-auto mt-10 max-w-5xl">

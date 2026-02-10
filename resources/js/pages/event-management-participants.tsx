@@ -110,8 +110,8 @@ export default function EventManagementParticipants() {
     const participantsList = programme.participants ?? [];
     const checkedInCount = participantsList.filter((participant) => participant.checked_in_at).length;
 
-    const [signatoryName, setSignatoryName] = React.useState('Shirley C. Agrupis, Ph.D.');
-    const [signatoryTitle, setSignatoryTitle] = React.useState('CHED Chairperson');
+    const [signatoryName, setSignatoryName] = React.useState('');
+    const [signatoryTitle, setSignatoryTitle] = React.useState('');
     const [signatorySignature, setSignatorySignature] = React.useState<string | null>(null);
     const [signatorySignatureLabel, setSignatorySignatureLabel] = React.useState<string>('');
     const signatorySyncEnabledRef = React.useRef(false);
@@ -125,8 +125,8 @@ export default function EventManagementParticipants() {
             URL.revokeObjectURL(signatorySignature);
         }
 
-        setSignatoryName(programme.signatory_name ?? 'Shirley C. Agrupis, Ph.D.');
-        setSignatoryTitle(programme.signatory_title ?? 'CHED Chairperson');
+        setSignatoryName(programme.signatory_name ?? '');
+        setSignatoryTitle(programme.signatory_title ?? '');
         setSignatorySignature(signatureUrl);
         setSignatorySignatureLabel(signatureUrl ? basename(signatureUrl) : '');
 

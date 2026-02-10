@@ -200,8 +200,8 @@ export default function EventKitMaterials() {
                 givenDate: givenDateLabel,
                 venue,
                 signatoryName:
-                    programme.signatory_name ?? 'Shirley C. Agrupis, Ph.D.',
-                signatoryTitle: programme.signatory_title ?? 'CHED Chairperson',
+                    programme.signatory_name ?? '',
+                signatoryTitle: programme.signatory_title ?? '',
                 signatorySignature: signatorySignatureUrl,
             },
             participants: [{ name: participant.name }],
