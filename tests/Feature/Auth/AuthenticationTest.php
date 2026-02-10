@@ -22,6 +22,22 @@ test('users can authenticate using the login screen', function () {
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
+
+
+test('users can authenticate using participant id on the login screen', function () {
+    $user = User::factory()->withoutTwoFactor()->create([
+        'display_id' => 'ASEAN-TEST-0001',
+    ]);
+
+    $response = $this->post(route('login.store'), [
+        'email' => 'asean-test-0001',
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect(route('dashboard', absolute: false));
+});
+
 test('users with two factor enabled are redirected to two factor challenge', function () {
     if (! Features::canManageTwoFactorAuthentication()) {
         $this->markTestSkipped('Two-factor authentication is not enabled.');
