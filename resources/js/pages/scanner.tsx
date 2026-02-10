@@ -211,8 +211,8 @@ function ScannerIdCardPreview({
 
     const maxW = isLandscape ? 'max-w-[520px]' : 'max-w-[320px] sm:max-w-[360px]';
 
-    const qrPanelWidth = isLandscape ? 'w-[150px]' : '';
-    const qrSize = isLandscape ? 108 : 160;
+    const qrPanelWidth = isLandscape ? 'w-[178px]' : '';
+    const qrSize = isLandscape ? 132 : 172;
 
     // ✅ slightly reduce bottom padding so it feels tighter
     const pad = isLandscape ? 'px-3 pt-3 pb-2' : 'p-4 pb-3';
@@ -289,7 +289,7 @@ function ScannerIdCardPreview({
                 <div
                     className={cn(
                         'min-h-0',
-                        isLandscape ? 'grid grid-cols-[1fr_150px] items-start gap-3' : 'flex flex-col gap-3',
+                        isLandscape ? 'grid grid-cols-[1fr_178px] items-start gap-3' : 'flex flex-col gap-3',
                     )}
                 >
                     {/* LEFT INFO */}
@@ -417,9 +417,6 @@ function ScannerIdCardPreview({
                                     {participant.country?.code ? ' • ' : ''}
                                     {participant.name}
                                 </span>
-                            </div>
-                            <div className={cn('mt-1 break-words font-mono text-slate-500 dark:text-slate-400', 'text-[10px]')}>
-                                {participant.display_id}
                             </div>
                         </div>
                     </div>
