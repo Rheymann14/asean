@@ -161,23 +161,27 @@ function getFlagSrc(
     return `/asean/${code}.png`;
 }
 
-function resolveEventPhase(event: EventRow, now: number) {
-    if (event.phase) return event.phase;
-    if (event.is_active === false) return 'closed';
-
-    const start = event.starts_at ?? event.ends_at;
-    if (!start) return 'ongoing';
+function resolveEventPhase(event: EventRow, now: number): EventRow['phase'] {
+    const start = event.starts_at;
+    if (!start) return 'upcoming';
 
     const startDate = new Date(start);
-    if (Number.isNaN(startDate.getTime())) return 'ongoing';
+    if (Number.isNaN(startDate.getTime())) return 'upcoming';
+
+    const endDate = event.ends_at ? new Date(event.ends_at) : null;
 
     const nowDate = new Date(now);
     const nowDateTs = toDateOnlyTimestamp(nowDate);
     const startDateTs = toDateOnlyTimestamp(startDate);
+    const endDateTs =
+        endDate && !Number.isNaN(endDate.getTime())
+            ? toDateOnlyTimestamp(endDate)
+            : null;
+
+    if (endDateTs !== null && nowDateTs > endDateTs) return 'closed';
 
     if (nowDateTs < startDateTs) return 'upcoming';
-    if (nowDateTs === startDateTs) return 'ongoing';
-    return 'closed';
+    return 'ongoing';
 }
 
 function phaseLabel(phase?: EventRow['phase']) {
