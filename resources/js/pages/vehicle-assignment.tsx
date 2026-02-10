@@ -441,6 +441,8 @@ export default function VehicleAssignmentPage({
     const [presenceOverrides, setPresenceOverrides] = React.useState<
         Record<number, boolean>
     >({});
+    const [sendingPickupVehicleId, setSendingPickupVehicleId] =
+        React.useState<number | null>(null);
     const [idPreviewParticipant, setIdPreviewParticipant] =
         React.useState<Participant | null>(null);
     const perPage = 10;
@@ -657,6 +659,47 @@ export default function VehicleAssignmentPage({
         );
     };
 
+    const sendPickup = (vehicleId: number) => {
+        setSendingPickupVehicleId(vehicleId);
+        router.post(
+            '/vehicle-assignments/send-pickup',
+            {
+                programme_id: assignmentForm.data.programme_id,
+                vehicle_id: vehicleId,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Pickup details sent to admin.');
+                },
+                onError: (errors) => {
+                    showToastError(errors as Record<string, string | string[]>);
+                },
+                onFinish: () => setSendingPickupVehicleId(null),
+            },
+        );
+    };
+
+    const checkedPassengersByVehicle = React.useMemo(() => {
+        const counts: Record<number, number> = {};
+
+        assignedParticipants.forEach((participant) => {
+            const assignment = participant.assignment;
+            if (!assignment?.vehicle_id) {
+                return;
+            }
+
+            const isPresent = presenceOverrides[assignment.id] ?? false;
+            if (!isPresent) {
+                return;
+            }
+
+            counts[assignment.vehicle_id] = (counts[assignment.vehicle_id] ?? 0) + 1;
+        });
+
+        return counts;
+    }, [assignedParticipants, presenceOverrides]);
+
     const formatList = (items?: string[] | null) => {
         if (!items?.length) return '—';
         return items.map((value) => value.replaceAll('_', ' ')).join(', ');
@@ -764,6 +807,23 @@ export default function VehicleAssignmentPage({
                                             {vehicle.driver_contact_number ||
                                                 '—'}
                                         </p>
+                                        <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">
+                                            Checked passengers: {checkedPassengersByVehicle[vehicle.id] ?? 0}
+                                        </p>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            className="mt-3 w-full bg-[#00359c] text-white hover:bg-[#00359c]/90"
+                                            disabled={
+                                                (checkedPassengersByVehicle[vehicle.id] ?? 0) === 0 ||
+                                                sendingPickupVehicleId === vehicle.id
+                                            }
+                                            onClick={() => sendPickup(vehicle.id)}
+                                        >
+                                            {sendingPickupVehicleId === vehicle.id
+                                                ? 'Sending...'
+                                                : 'Send Pickup'}
+                                        </Button>
                                     </div>
                                 ))}
                             </div>
