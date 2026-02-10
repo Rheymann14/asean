@@ -1722,12 +1722,16 @@ export default function ParticipantPage(props: PageProps) {
     }
 
     function removeParticipantProfileImage() {
+        const currentProfileImage =
+            resolveParticipantProfileImage(editingParticipant);
+
         participantForm.setData('profile_image', null);
-        participantForm.setData('remove_profile_image', true);
+        participantForm.setData('remove_profile_image', false);
         if (participantProfileInputRef.current) {
             participantProfileInputRef.current.value = '';
         }
-        resetParticipantProfilePreview(null);
+        resetParticipantProfilePreview(currentProfileImage);
+        toast.success('Uploaded profile image removed.');
     }
 
     function openAddParticipant() {
@@ -4286,7 +4290,6 @@ export default function ParticipantPage(props: PageProps) {
                                                 <div className="text-sm font-medium">
                                                     Profile image
                                                 </div>
-                                            
                                             </div>
 
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -4335,7 +4338,9 @@ export default function ParticipantPage(props: PageProps) {
                                                             variant="outline"
                                                             size="sm"
                                                             disabled={
-                                                                !participantProfilePreview
+                                                                !participantForm
+                                                                    .data
+                                                                    .profile_image
                                                             }
                                                             onClick={
                                                                 removeParticipantProfileImage
