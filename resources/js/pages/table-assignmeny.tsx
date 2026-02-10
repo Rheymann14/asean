@@ -1338,7 +1338,7 @@ export default function TableAssignmenyPage(props: PageProps) {
                             <div className="grid gap-6">
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle className="text-base">Event filter</CardTitle>
+                                        <CardTitle className="text-base">Event Filter</CardTitle>
                                         <CardDescription>Filter assignments by event.</CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
