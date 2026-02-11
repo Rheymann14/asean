@@ -42,6 +42,7 @@ import {
     Printer,
 } from 'lucide-react';
 import * as React from 'react';
+import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Reports', href: '/reports' }];
 
@@ -66,6 +67,7 @@ type ReportRow = {
     family_name?: string | null;
     suffix?: string | null;
     name: string;
+    display_id?: string | null;
     country_name?: string | null;
     registrant_type?: string | null;
     organization_name?: string | null;
@@ -231,6 +233,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     >({});
     const [sendingNotificationByUser, setSendingNotificationByUser] =
         React.useState<Record<number, boolean>>({});
+    const [notificationSentAtByUser, setNotificationSentAtByUser] =
+        React.useState<Record<number, string>>({});
 
     React.useEffect(() => {
         setWelcomeDinnerByUser(
@@ -345,11 +349,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     );
 
     const handleSendNotification = React.useCallback(
-        (row: ReportRow) => {
+        async (row: ReportRow) => {
             const notificationEventId = getNotificationEventId(row);
 
             if (!notificationEventId) {
-                window.alert(
+                toast.warning(
                     'Notification can only be sent when table or vehicle assignment is available.',
                 );
                 return;
@@ -361,29 +365,57 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 .querySelector('meta[name="csrf-token"]')
                 ?.getAttribute('content');
 
-            fetch(`/reports/${row.id}/assignment-notification`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    ...(token ? { 'X-CSRF-TOKEN': token } : {}),
-                },
-                body: JSON.stringify({ event_id: notificationEventId }),
-            })
-                .then((response) => {
-                    if (!response.ok) throw new Error('Request failed');
-                    window.alert('Notification sent successfully.');
-                })
-                .catch(() => {
-                    window.alert('Failed to send notification.');
-                })
-                .finally(() => {
-                    setSendingNotificationByUser((prev) => {
-                        const next = { ...prev };
-                        delete next[row.id];
-                        return next;
-                    });
+            try {
+                const response = await fetch(
+                    `/reports/${row.id}/assignment-notification`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+                        },
+                        body: JSON.stringify({ event_id: notificationEventId }),
+                    },
+                );
+
+                const payload = (await response.json().catch(() => ({}))) as {
+                    message?: string;
+                    sent_at?: string;
+                    errors?: Record<string, string[]>;
+                };
+
+                if (!response.ok) {
+                    if (response.status === 422) {
+                        toast.warning(
+                            payload.message ??
+                                'Validation failed. Please check assignment data.',
+                        );
+                    } else {
+                        toast.error(
+                            payload.message ?? 'Failed to send notification.',
+                        );
+                    }
+
+                    return;
+                }
+
+                const sentAt = payload.sent_at ?? new Date().toISOString();
+                setNotificationSentAtByUser((prev) => ({
+                    ...prev,
+                    [row.id]: sentAt,
+                }));
+
+                toast.success(payload.message ?? 'Notification sent successfully.');
+            } catch {
+                toast.error('Failed to send notification.');
+            } finally {
+                setSendingNotificationByUser((prev) => {
+                    const next = { ...prev };
+                    delete next[row.id];
+                    return next;
                 });
+            }
         },
         [getNotificationEventId],
     );
@@ -1390,6 +1422,13 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                     row,
                                                                 )
                                                             }
+                                                            className={cn(
+                                                                notificationSentAtByUser[
+                                                                    row.id
+                                                                ]
+                                                                    ? 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white'
+                                                                    : '',
+                                                            )}
                                                         >
                                                             {sendingNotificationByUser[
                                                                 row.id
@@ -1397,6 +1436,17 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                 ? 'Sending...'
                                                                 : 'Email'}
                                                         </Button>
+                                                        {notificationSentAtByUser[
+                                                            row.id
+                                                        ] ? (
+                                                            <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
+                                                                Sent: {formatDateTime(
+                                                                    notificationSentAtByUser[
+                                                                        row.id
+                                                                    ],
+                                                                )}
+                                                            </p>
+                                                        ) : null}
                                                     </TableCell>
                                                     <TableCell>
                                                         {hasCheckin ? (

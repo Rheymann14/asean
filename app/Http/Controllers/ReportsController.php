@@ -91,8 +91,7 @@ class ReportsController extends Controller
 Please be informed of the following:
 
 "
-            . "Participant ID: {$user->id}
-"
+            . "Participant ID: ".($user->display_id ?: $user->id)."\n"
             . "Event Title: {$event->title}
 "
             . 'Event Date: '.($eventDate ?: 'TBA')."
@@ -111,7 +110,7 @@ Please be informed of the following:
             'bannerUrl' => $appUrl.'/img/asean_banner_logo.png',
             'logoUrl' => $appUrl.'/img/asean_logo.png',
             'participantName' => $participantName,
-            'participantId' => $user->id,
+            'participantId' => $user->display_id ?: $user->id,
             'eventTitle' => $event->title,
             'eventDate' => $eventDate ?: 'TBA',
             'vehicleName' => $vehicleName,
@@ -170,6 +169,7 @@ Please be informed of the following:
 
             return response()->json([
                 'message' => 'Notification sent successfully.',
+                'sent_at' => now()->toISOString(),
             ]);
         } catch (\Throwable $exception) {
             report($exception);
@@ -303,6 +303,7 @@ Please be informed of the following:
                 'users.family_name',
                 'users.suffix',
                 'users.name',
+                'users.display_id',
                 'users.organization_name',
                 'users.other_user_type',
                 'users.attend_welcome_dinner',
@@ -363,6 +364,7 @@ Please be informed of the following:
                     'family_name' => $row->family_name,
                     'suffix' => $row->suffix,
                     'name' => $row->name,
+                    'display_id' => $row->display_id,
                     'country_name' => $row->country_name,
                     'registrant_type' => $row->registrant_type,
                     'organization_name' => $row->organization_name,
