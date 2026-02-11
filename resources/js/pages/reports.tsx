@@ -69,6 +69,7 @@ type ReportRow = {
     country_name?: string | null;
     registrant_type?: string | null;
     organization_name?: string | null;
+    other_user_type?: string | null;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
@@ -152,6 +153,14 @@ function buildDisplayName(row: ReportRow) {
     if (parts.length) return parts.join(' ');
 
     return row.name;
+}
+
+function displayRegistrantType(row: ReportRow) {
+    if ((row.registrant_type ?? '').trim().toLowerCase() === 'other') {
+        return row.other_user_type?.trim() || 'Other';
+    }
+
+    return row.registrant_type ?? '—';
 }
 
 function getCheckinTime(
@@ -240,7 +249,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
             return [
                 buildDisplayName(row),
                 row.country_name ?? '',
-                row.registrant_type ?? '',
+                displayRegistrantType(row),
                 row.organization_name ?? '',
                 checkinLabel,
             ]
@@ -255,8 +264,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
 
         return rowsCopy.sort((a, b) => {
             if (registrantTypeSort !== 'none') {
-                const typeOrder = (a.registrant_type ?? '').localeCompare(
-                    b.registrant_type ?? '',
+                const typeOrder = displayRegistrantType(a).localeCompare(
+                    displayRegistrantType(b),
                     undefined,
                     {
                         sensitivity: 'base',
@@ -301,7 +310,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                         <td>${index + 1}</td>
                         <td>${buildDisplayName(row)}</td>
                         <td>${row.country_name ?? '—'}</td>
-                        <td>${row.registrant_type ?? '—'}</td>
+                        <td>${displayRegistrantType(row)}</td>
                         <td>${row.organization_name ?? '—'}</td>
                         <td>${hasCheckin ? 'Checked In' : 'Did Not Join'}</td>
                         <td>${hasCheckin ? formatDateTime(scannedAt) : '—'}</td>
@@ -322,12 +331,14 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 <head>
                     <title>Participants Report</title>
                     <style>
-                        body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
-                        h1 { margin-bottom: 12px; font-size: 20px; }
+                        @page { margin: 14mm; }
+                        html, body { background: #ffffff !important; color: #0f172a !important; }
+                        body { font-family: Arial, sans-serif; margin: 0; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        h1 { margin-bottom: 12px; font-size: 20px; color: #0f172a; }
                         p { margin: 0 0 16px; color: #475569; font-size: 12px; }
                         table { width: 100%; border-collapse: collapse; }
                         th, td { border: 1px solid #cbd5e1; padding: 8px; font-size: 12px; vertical-align: top; text-align: left; }
-                        th { background: #f1f5f9; }
+                        th { background: #ffffff; }
                     </style>
                 </head>
                 <body>
@@ -414,7 +425,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 index + 1,
                 buildDisplayName(row),
                 row.country_name ?? '—',
-                row.registrant_type ?? '—',
+                displayRegistrantType(row),
                 row.organization_name ?? '—',
                 hasCheckin ? 'Checked In' : 'Did Not Join',
                 hasCheckin ? formatDateTime(scannedAt) : '—',
@@ -985,8 +996,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        {row.registrant_type ??
-                                                            '—'}
+                                                        {displayRegistrantType(
+                                                            row,
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>
                                                         {row.organization_name ??
