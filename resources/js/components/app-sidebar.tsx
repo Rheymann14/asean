@@ -30,6 +30,7 @@ import {
     ScanLine,
     ScrollText,
     Table,
+    FileBarChart2,
     User,
     Users,
 } from 'lucide-react';
@@ -116,6 +117,11 @@ export function AppSidebar() {
                   title: 'Contact Details',
                   href: contactDetails(),
                   icon: MapPin,
+              },
+              {
+                  title: 'Reports',
+                  href: '/reports',
+                  icon: FileBarChart2,
               },
           ]
         : isChedLo
