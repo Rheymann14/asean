@@ -24,7 +24,7 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ArrowUpDown, Check, ChevronsUpDown } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Reports', href: '/reports' }];
 
@@ -67,6 +67,7 @@ type PageProps = {
 };
 
 type EventPhase = 'ongoing' | 'upcoming' | 'closed';
+type CheckinSort = 'desc' | 'asc';
 
 const PER_PAGE = 10;
 const ALL_EVENTS_VALUE = 'all';
@@ -126,11 +127,17 @@ function buildDisplayName(row: ReportRow) {
     return row.name;
 }
 
+function getCheckinTime(row: ReportRow, selectedEventId: number | null): string | null | undefined {
+    if (selectedEventId) return row.attendance_by_programme?.[String(selectedEventId)];
+    return row.latest_attendance_at;
+}
+
 export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [search, setSearch] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
     const [selectedEvent, setSelectedEvent] = React.useState<string>(ALL_EVENTS_VALUE);
     const [eventsOpen, setEventsOpen] = React.useState(false);
+    const [checkinSort, setCheckinSort] = React.useState<CheckinSort>('desc');
 
     const referenceNowTs = React.useMemo(() => {
         const parsed = now_iso ? Date.parse(now_iso) : Number.NaN;
@@ -158,16 +165,19 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         [eventOptionItems, selectedEvent],
     );
 
-    const rowsAfterEventFilter = React.useMemo(() => {
-        if (selectedEvent === ALL_EVENTS_VALUE) return rows;
+    const selectedEventId = React.useMemo(() => {
+        if (selectedEvent === ALL_EVENTS_VALUE) return null;
+        const parsed = Number(selectedEvent);
+        return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
+    }, [selectedEvent]);
 
-        const selectedEventId = Number(selectedEvent);
+    const rowsAfterEventFilter = React.useMemo(() => {
         if (!selectedEventId) return rows;
 
         return rows.filter((row) =>
             row.joined_programme_ids.includes(selectedEventId) || row.attended_programme_ids.includes(selectedEventId),
         );
-    }, [rows, selectedEvent]);
+    }, [rows, selectedEventId]);
 
     const filteredRows = React.useMemo(() => {
         const keyword = search.trim().toLowerCase();
@@ -175,7 +185,6 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         if (!keyword) return rowsAfterEventFilter;
 
         return rowsAfterEventFilter.filter((row) => {
-            const selectedEventId = selectedEvent === ALL_EVENTS_VALUE ? null : Number(selectedEvent);
             const checkinLabel = selectedEventId
                 ? row.attended_programme_ids.includes(selectedEventId)
                     ? 'checked in attended'
@@ -195,14 +204,30 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 .toLowerCase()
                 .includes(keyword);
         });
-    }, [rowsAfterEventFilter, search, selectedEvent]);
+    }, [rowsAfterEventFilter, search, selectedEventId]);
+
+    const sortedRows = React.useMemo(() => {
+        const rowsCopy = [...filteredRows];
+
+        return rowsCopy.sort((a, b) => {
+            const aScan = getCheckinTime(a, selectedEventId);
+            const bScan = getCheckinTime(b, selectedEventId);
+            const aParsed = aScan ? Date.parse(aScan) : Number.NaN;
+            const bParsed = bScan ? Date.parse(bScan) : Number.NaN;
+            const aTs = Number.isNaN(aParsed) ? (checkinSort === 'desc' ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : aParsed;
+            const bTs = Number.isNaN(bParsed) ? (checkinSort === 'desc' ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : bParsed;
+
+            if (aTs === bTs) return buildDisplayName(a).localeCompare(buildDisplayName(b));
+            return checkinSort === 'desc' ? bTs - aTs : aTs - bTs;
+        });
+    }, [filteredRows, selectedEventId, checkinSort]);
 
     const summaryCards = React.useMemo(() => {
         if (selectedEvent === ALL_EVENTS_VALUE) return summary;
 
-        const selectedEventId = Number(selectedEvent);
-        const totalRegisteredParticipants = rows.filter((row) => row.joined_programme_ids.includes(selectedEventId)).length;
-        const totalParticipantsAttended = rows.filter((row) => row.attended_programme_ids.includes(selectedEventId)).length;
+        const selectedId = Number(selectedEvent);
+        const totalRegisteredParticipants = rows.filter((row) => row.joined_programme_ids.includes(selectedId)).length;
+        const totalParticipantsAttended = rows.filter((row) => row.attended_programme_ids.includes(selectedId)).length;
         const totalParticipantsDidNotJoin = Math.max(0, totalRegisteredParticipants - totalParticipantsAttended);
 
         return {
@@ -212,11 +237,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         };
     }, [rows, selectedEvent, summary]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredRows.length / PER_PAGE));
+    const totalPages = Math.max(1, Math.ceil(sortedRows.length / PER_PAGE));
 
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [search, selectedEvent]);
+    }, [search, selectedEvent, checkinSort]);
 
     React.useEffect(() => {
         if (currentPage > totalPages) {
@@ -226,8 +251,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
 
     const paginatedRows = React.useMemo(() => {
         const start = (currentPage - 1) * PER_PAGE;
-        return filteredRows.slice(start, start + PER_PAGE);
-    }, [filteredRows, currentPage]);
+        return sortedRows.slice(start, start + PER_PAGE);
+    }, [sortedRows, currentPage]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -284,9 +309,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={eventsOpen}
-                                            className="w-full justify-between gap-2 md:w-[260px]"
+                                            className="h-auto w-full justify-between gap-2 py-2 md:w-[260px]"
                                         >
-                                            <span className="min-w-0 truncate text-left">
+                                            <span className="min-w-0 break-words whitespace-normal text-left leading-tight md:overflow-hidden md:text-ellipsis md:whitespace-nowrap">
                                                 {selectedEventData ? selectedEventData.title : 'All Events'}
                                             </span>
                                             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" />
@@ -373,16 +398,27 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         <TableHead>Name</TableHead>
                                         <TableHead>Registrant Type</TableHead>
                                         <TableHead>Organization</TableHead>
-                                        <TableHead>Check-in (Date and Time)</TableHead>
+                                        <TableHead>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="-ml-3 h-8 gap-1 px-3 font-semibold"
+                                                onClick={() => setCheckinSort((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                                            >
+                                                Check-in (Date and Time)
+                                                <ArrowUpDown className="h-3.5 w-3.5" />
+                                                <span className="text-[11px] text-slate-500">
+                                                    {checkinSort === 'desc' ? 'Newest' : 'Oldest'}
+                                                </span>
+                                            </Button>
+                                        </TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {paginatedRows.length ? (
                                         paginatedRows.map((row, index) => {
-                                            const selectedEventId = selectedEvent === ALL_EVENTS_VALUE ? null : Number(selectedEvent);
-                                            const scannedAt = selectedEventId
-                                                ? row.attendance_by_programme?.[String(selectedEventId)]
-                                                : row.latest_attendance_at;
+                                            const scannedAt = getCheckinTime(row, selectedEventId);
                                             const hasCheckin = Boolean(scannedAt);
 
                                             return (
@@ -429,7 +465,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                         <div className="flex flex-col items-center justify-between gap-3 text-sm text-slate-600 md:flex-row dark:text-slate-300">
                             <p>
                                 Showing {(currentPage - 1) * PER_PAGE + (paginatedRows.length ? 1 : 0)} to{' '}
-                                {(currentPage - 1) * PER_PAGE + paginatedRows.length} of {filteredRows.length} entries
+                                {(currentPage - 1) * PER_PAGE + paginatedRows.length} of {sortedRows.length} entries
                             </p>
 
                             <div className="flex items-center gap-2">
