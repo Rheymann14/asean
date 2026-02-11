@@ -71,6 +71,8 @@ class CreateNewUser implements CreatesNewUsers
             'programme_ids.*' => ['integer', 'exists:programmes,id'],
             'consent_contact_sharing' => ['required', 'accepted'],
             'consent_photo_video' => ['required', 'accepted'],
+            'attend_welcome_dinner' => ['required', 'boolean'],
+            'avail_transport_from_makati_to_peninsula' => ['nullable', 'boolean'],
             'has_food_restrictions' => ['nullable', 'boolean'],
             'food_restrictions' => ['nullable', 'array'],
             'food_restrictions.*' => ['string', Rule::in(self::FOOD_RESTRICTION_OPTIONS)],
@@ -122,6 +124,11 @@ class CreateNewUser implements CreatesNewUsers
             'ip_group_name' => $input['ip_group_name'] ?? null,
             'consent_contact_sharing' => (bool) $input['consent_contact_sharing'],
             'consent_photo_video' => (bool) $input['consent_photo_video'],
+            'attend_welcome_dinner' => (bool) $input['attend_welcome_dinner'],
+            'avail_transport_from_makati_to_peninsula' => (bool) (
+                (bool) ($input['attend_welcome_dinner'] ?? false)
+                && (bool) ($input['avail_transport_from_makati_to_peninsula'] ?? false)
+            ),
             'has_food_restrictions' => ! empty($foodRestrictions),
             'food_restrictions' => $foodRestrictions,
             'dietary_allergies' => $input['dietary_allergies'] ?? null,

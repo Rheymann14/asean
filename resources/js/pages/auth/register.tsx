@@ -208,6 +208,8 @@ export default function Register({
         {
             step: 3,
             fields: [
+                'attend_welcome_dinner',
+                'avail_transport_from_makati_to_peninsula',
                 'dietary_allergies',
                 'dietary_other',
                 'ip_group_name',
@@ -314,8 +316,25 @@ export default function Register({
         useRemember<string>('', 'register.emergency_contact_phone');
     const [emergencyContactEmail, setEmergencyContactEmail] =
         useRemember<string>('', 'register.emergency_contact_email');
+    const [attendWelcomeDinner, setAttendWelcomeDinner] =
+        useRemember<string>('', 'register.attend_welcome_dinner');
+    const [availTransportFromMakatiToPeninsula, setAvailTransportFromMakatiToPeninsula] =
+        useRemember<string>(
+            '',
+            'register.avail_transport_from_makati_to_peninsula',
+        );
 
     const canContinue = consentContact && consentMedia;
+
+    React.useEffect(() => {
+        if (attendWelcomeDinner !== 'yes' && availTransportFromMakatiToPeninsula) {
+            setAvailTransportFromMakatiToPeninsula('');
+        }
+    }, [
+        attendWelcomeDinner,
+        availTransportFromMakatiToPeninsula,
+        setAvailTransportFromMakatiToPeninsula,
+    ]);
 
     const [country, setCountry] = useRemember<string>('', 'register.country');
     const [honorificTitle, setHonorificTitle] = useRemember<string>(
@@ -573,6 +592,8 @@ export default function Register({
         setEmergencyContactRelationship('');
         setEmergencyContactPhone('');
         setEmergencyContactEmail('');
+        setAttendWelcomeDinner('');
+        setAvailTransportFromMakatiToPeninsula('');
         setOtherRegistrantType('');
         setHonorificTitle('');
         setSexAssignedAtBirth('');
@@ -594,6 +615,8 @@ export default function Register({
         setEmergencyContactRelationship,
         setEmergencyContactPhone,
         setEmergencyContactEmail,
+        setAttendWelcomeDinner,
+        setAvailTransportFromMakatiToPeninsula,
         setHonorificTitle,
         setSexAssignedAtBirth,
         setContactCountryCode,
@@ -829,6 +852,26 @@ export default function Register({
                                         name="ip_affiliation"
                                         value={
                                             ipAffiliation === 'yes' ? '1' : '0'
+                                        }
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="attend_welcome_dinner"
+                                        value={
+                                            attendWelcomeDinner === 'yes'
+                                                ? '1'
+                                                : '0'
+                                        }
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="avail_transport_from_makati_to_peninsula"
+                                        value={
+                                            attendWelcomeDinner === 'yes' &&
+                                            availTransportFromMakatiToPeninsula ===
+                                                'yes'
+                                                ? '1'
+                                                : '0'
                                         }
                                     />
                                     {foodRestrictions.map((restriction) => (
@@ -2212,6 +2255,117 @@ export default function Register({
                                             currentStep === 3 ? '' : 'hidden',
                                         )}
                                     >
+                                        <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
+                                            <div>
+                                                <p className="text-[11px] font-semibold tracking-wide text-slate-700 uppercase">
+                                                    Welcome Dinner
+                                                </p>
+                                            </div>
+
+                                            <div className="mt-3 grid gap-2">
+                                                <Label>
+                                                    Will you attend the welcome
+                                                    dinner?
+                                                </Label>
+                                                <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                                                    <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                        <input
+                                                            type="radio"
+                                                            value="yes"
+                                                            checked={
+                                                                attendWelcomeDinner ===
+                                                                'yes'
+                                                            }
+                                                            onChange={() =>
+                                                                setAttendWelcomeDinner(
+                                                                    'yes',
+                                                                )
+                                                            }
+                                                            required
+                                                        />
+                                                        Yes
+                                                    </label>
+                                                    <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                        <input
+                                                            type="radio"
+                                                            value="no"
+                                                            checked={
+                                                                attendWelcomeDinner ===
+                                                                'no'
+                                                            }
+                                                            onChange={() =>
+                                                                setAttendWelcomeDinner(
+                                                                    'no',
+                                                                )
+                                                            }
+                                                            required
+                                                        />
+                                                        No
+                                                    </label>
+                                                </div>
+                                                <InputError
+                                                    message={
+                                                        err.attend_welcome_dinner
+                                                    }
+                                                />
+                                            </div>
+
+                                            {attendWelcomeDinner === 'yes' ? (
+                                                <div className="mt-3 grid gap-2">
+                                                    <Label>
+                                                        Transportation
+                                                    </Label>
+                                                    <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                                                        <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                            <input
+                                                                type="radio"
+                                                                value="yes"
+                                                                checked={
+                                                                    availTransportFromMakatiToPeninsula ===
+                                                                    'yes'
+                                                                }
+                                                                onChange={() =>
+                                                                    setAvailTransportFromMakatiToPeninsula(
+                                                                        'yes',
+                                                                    )
+                                                                }
+                                                                required={
+                                                                    attendWelcomeDinner ===
+                                                                    'yes'
+                                                                }
+                                                            />
+                                                            Yes
+                                                        </label>
+                                                        <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                            <input
+                                                                type="radio"
+                                                                value="no"
+                                                                checked={
+                                                                    availTransportFromMakatiToPeninsula ===
+                                                                    'no'
+                                                                }
+                                                                onChange={() =>
+                                                                    setAvailTransportFromMakatiToPeninsula(
+                                                                        'no',
+                                                                    )
+                                                                }
+                                                                required={
+                                                                    attendWelcomeDinner ===
+                                                                    'yes'
+                                                                }
+                                                            />
+                                                            No
+                                                        </label>
+                                                    </div>
+                                                    <InputError
+                                                        message={
+                                                            err.avail_transport_from_makati_to_peninsula
+                                                        }
+                                                    />
+                                                </div>
+                                            ) : null}
+                                        </div>
+
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
