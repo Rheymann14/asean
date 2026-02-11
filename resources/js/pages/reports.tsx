@@ -1,22 +1,6 @@
-import * as React from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
-import { type BreadcrumbItem } from '@/types';
-import { toDateOnlyTimestamp, cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Command,
     CommandEmpty,
@@ -25,7 +9,39 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import { ArrowUpDown, Check, ChevronsUpDown } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
+import { type BreadcrumbItem } from '@/types';
+import { Head } from '@inertiajs/react';
+import {
+    ArrowUpDown,
+    Check,
+    ChevronsUpDown,
+    FileDown,
+    Printer,
+} from 'lucide-react';
+import * as React from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Reports', href: '/reports' }];
 
@@ -69,6 +85,7 @@ type PageProps = {
 
 type EventPhase = 'ongoing' | 'upcoming' | 'closed';
 type CheckinSort = 'desc' | 'asc';
+type RegistrantTypeSort = 'none' | 'asc' | 'desc';
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 1000] as const;
 const ALL_EVENTS_VALUE = 'all';
@@ -89,7 +106,11 @@ function resolveEventPhase(event: EventRow, nowTs: number): EventPhase {
 }
 
 function phaseLabel(phase: EventPhase) {
-    return phase === 'ongoing' ? 'Ongoing' : phase === 'upcoming' ? 'Upcoming' : 'Closed';
+    return phase === 'ongoing'
+        ? 'Ongoing'
+        : phase === 'upcoming'
+          ? 'Upcoming'
+          : 'Closed';
 }
 
 function phaseBadgeClass(phase: EventPhase) {
@@ -119,7 +140,12 @@ function formatDateTime(value?: string | null) {
 }
 
 function buildDisplayName(row: ReportRow) {
-    const parts = [row.honorific_title, row.given_name, row.family_name, row.suffix]
+    const parts = [
+        row.honorific_title,
+        row.given_name,
+        row.family_name,
+        row.suffix,
+    ]
         .map((item) => (item ?? '').trim())
         .filter(Boolean);
 
@@ -128,17 +154,24 @@ function buildDisplayName(row: ReportRow) {
     return row.name;
 }
 
-function getCheckinTime(row: ReportRow, selectedEventId: number | null): string | null | undefined {
-    if (selectedEventId) return row.attendance_by_programme?.[String(selectedEventId)];
+function getCheckinTime(
+    row: ReportRow,
+    selectedEventId: number | null,
+): string | null | undefined {
+    if (selectedEventId)
+        return row.attendance_by_programme?.[String(selectedEventId)];
     return row.latest_attendance_at;
 }
 
 export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [search, setSearch] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
-    const [selectedEvent, setSelectedEvent] = React.useState<string>(ALL_EVENTS_VALUE);
+    const [selectedEvent, setSelectedEvent] =
+        React.useState<string>(ALL_EVENTS_VALUE);
     const [eventsOpen, setEventsOpen] = React.useState(false);
     const [checkinSort, setCheckinSort] = React.useState<CheckinSort>('desc');
+    const [registrantTypeSort, setRegistrantTypeSort] =
+        React.useState<RegistrantTypeSort>('none');
     const [entriesPerPage, setEntriesPerPage] = React.useState<number>(10);
 
     const referenceNowTs = React.useMemo(() => {
@@ -157,13 +190,20 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 };
             })
             .sort((a, b) => {
-                const order: Record<EventPhase, number> = { ongoing: 0, upcoming: 1, closed: 2 };
+                const order: Record<EventPhase, number> = {
+                    ongoing: 0,
+                    upcoming: 1,
+                    closed: 2,
+                };
                 return order[a.phase] - order[b.phase];
             });
     }, [events, referenceNowTs]);
 
     const selectedEventData = React.useMemo(
-        () => eventOptionItems.find((event) => String(event.id) === selectedEvent) ?? null,
+        () =>
+            eventOptionItems.find(
+                (event) => String(event.id) === selectedEvent,
+            ) ?? null,
         [eventOptionItems, selectedEvent],
     );
 
@@ -176,8 +216,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const rowsAfterEventFilter = React.useMemo(() => {
         if (!selectedEventId) return rows;
 
-        return rows.filter((row) =>
-            row.joined_programme_ids.includes(selectedEventId) || row.attended_programme_ids.includes(selectedEventId),
+        return rows.filter(
+            (row) =>
+                row.joined_programme_ids.includes(selectedEventId) ||
+                row.attended_programme_ids.includes(selectedEventId),
         );
     }, [rows, selectedEventId]);
 
@@ -192,8 +234,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                     ? 'checked in attended'
                     : 'did not join'
                 : row.has_attended
-                    ? 'checked in attended'
-                    : 'did not join';
+                  ? 'checked in attended'
+                  : 'did not join';
 
             return [
                 buildDisplayName(row),
@@ -212,25 +254,110 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         const rowsCopy = [...filteredRows];
 
         return rowsCopy.sort((a, b) => {
+            if (registrantTypeSort !== 'none') {
+                const typeOrder = (a.registrant_type ?? '').localeCompare(
+                    b.registrant_type ?? '',
+                    undefined,
+                    {
+                        sensitivity: 'base',
+                    },
+                );
+
+                if (typeOrder !== 0)
+                    return registrantTypeSort === 'asc'
+                        ? typeOrder
+                        : -typeOrder;
+            }
+
             const aScan = getCheckinTime(a, selectedEventId);
             const bScan = getCheckinTime(b, selectedEventId);
             const aParsed = aScan ? Date.parse(aScan) : Number.NaN;
             const bParsed = bScan ? Date.parse(bScan) : Number.NaN;
-            const aTs = Number.isNaN(aParsed) ? (checkinSort === 'desc' ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : aParsed;
-            const bTs = Number.isNaN(bParsed) ? (checkinSort === 'desc' ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : bParsed;
+            const aTs = Number.isNaN(aParsed)
+                ? checkinSort === 'desc'
+                    ? Number.NEGATIVE_INFINITY
+                    : Number.POSITIVE_INFINITY
+                : aParsed;
+            const bTs = Number.isNaN(bParsed)
+                ? checkinSort === 'desc'
+                    ? Number.NEGATIVE_INFINITY
+                    : Number.POSITIVE_INFINITY
+                : bParsed;
 
-            if (aTs === bTs) return buildDisplayName(a).localeCompare(buildDisplayName(b));
+            if (aTs === bTs)
+                return buildDisplayName(a).localeCompare(buildDisplayName(b));
             return checkinSort === 'desc' ? bTs - aTs : aTs - bTs;
         });
-    }, [filteredRows, selectedEventId, checkinSort]);
+    }, [filteredRows, selectedEventId, checkinSort, registrantTypeSort]);
+
+    const handlePrintPdf = React.useCallback(() => {
+        window.print();
+    }, []);
+
+    const handleExportXlsx = React.useCallback(() => {
+        const escapeCsv = (value: string | number) => {
+            const normalized = String(value).replaceAll('"', '""');
+            return /[",\n]/.test(normalized) ? `"${normalized}"` : normalized;
+        };
+
+        const headers = [
+            'Seq',
+            'Name',
+            'Country',
+            'Registrant Type',
+            'Organization',
+            'Check-in Status',
+            'Check-in Date and Time',
+        ];
+
+        const csvRows = sortedRows.map((row, index) => {
+            const scannedAt = getCheckinTime(row, selectedEventId);
+            const hasCheckin = Boolean(scannedAt);
+
+            return [
+                index + 1,
+                buildDisplayName(row),
+                row.country_name ?? '—',
+                row.registrant_type ?? '—',
+                row.organization_name ?? '—',
+                hasCheckin ? 'Checked In' : 'Did Not Join',
+                hasCheckin ? formatDateTime(scannedAt) : '—',
+            ]
+                .map(escapeCsv)
+                .join(',');
+        });
+
+        const csvContent = [headers.map(escapeCsv).join(','), ...csvRows].join(
+            '\n',
+        );
+        const blob = new Blob([csvContent], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        const dateLabel = new Date().toISOString().slice(0, 10);
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.href = url;
+        link.download = `participants-report-${dateLabel}.xlsx`;
+        link.click();
+
+        URL.revokeObjectURL(url);
+    }, [selectedEventId, sortedRows]);
 
     const summaryCards = React.useMemo(() => {
         if (selectedEvent === ALL_EVENTS_VALUE) return summary;
 
         const selectedId = Number(selectedEvent);
-        const totalRegisteredParticipants = rows.filter((row) => row.joined_programme_ids.includes(selectedId)).length;
-        const totalParticipantsAttended = rows.filter((row) => row.attended_programme_ids.includes(selectedId)).length;
-        const totalParticipantsDidNotJoin = Math.max(0, totalRegisteredParticipants - totalParticipantsAttended);
+        const totalRegisteredParticipants = rows.filter((row) =>
+            row.joined_programme_ids.includes(selectedId),
+        ).length;
+        const totalParticipantsAttended = rows.filter((row) =>
+            row.attended_programme_ids.includes(selectedId),
+        ).length;
+        const totalParticipantsDidNotJoin = Math.max(
+            0,
+            totalRegisteredParticipants - totalParticipantsAttended,
+        );
 
         return {
             total_registered_participants: totalRegisteredParticipants,
@@ -239,11 +366,20 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         };
     }, [rows, selectedEvent, summary]);
 
-    const totalPages = Math.max(1, Math.ceil(sortedRows.length / entriesPerPage));
+    const totalPages = Math.max(
+        1,
+        Math.ceil(sortedRows.length / entriesPerPage),
+    );
 
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [search, selectedEvent, checkinSort, entriesPerPage]);
+    }, [
+        search,
+        selectedEvent,
+        checkinSort,
+        registrantTypeSort,
+        entriesPerPage,
+    ]);
 
     React.useEffect(() => {
         if (currentPage > totalPages) {
@@ -261,7 +397,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
             <Head title="Reports" />
 
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Reports</h1>
+                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                    Reports
+                </h1>
 
                 <div className="grid gap-4 md:grid-cols-3">
                     <Card>
@@ -271,7 +409,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">{summaryCards.total_registered_participants.toLocaleString()}</p>
+                            <p className="text-2xl font-bold">
+                                {summaryCards.total_registered_participants.toLocaleString()}
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -282,7 +422,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">{summaryCards.total_participants_attended.toLocaleString()}</p>
+                            <p className="text-2xl font-bold">
+                                {summaryCards.total_participants_attended.toLocaleString()}
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -293,7 +435,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">{summaryCards.total_participants_did_not_join.toLocaleString()}</p>
+                            <p className="text-2xl font-bold">
+                                {summaryCards.total_participants_did_not_join.toLocaleString()}
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -304,21 +448,22 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             <CardTitle>Participants Report</CardTitle>
 
                             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
-                                <Popover open={eventsOpen} onOpenChange={setEventsOpen}>
+                                <Popover
+                                    open={eventsOpen}
+                                    onOpenChange={setEventsOpen}
+                                >
                                     <PopoverTrigger asChild>
                                         <Button
                                             type="button"
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={eventsOpen}
-                                            className="
-                h-auto w-full justify-between gap-2 py-2
-                sm:max-w-[420px]
-                md:w-[260px] md:max-w-none
-            "
+                                            className="h-auto w-full justify-between gap-2 py-2 sm:max-w-[420px] md:w-[260px] md:max-w-none"
                                         >
-                                            <span className="min-w-0 break-words whitespace-normal text-left leading-tight md:overflow-hidden md:text-ellipsis md:whitespace-nowrap">
-                                                {selectedEventData ? selectedEventData.title : 'All Events'}
+                                            <span className="min-w-0 text-left leading-tight break-words whitespace-normal md:overflow-hidden md:text-ellipsis md:whitespace-nowrap">
+                                                {selectedEventData
+                                                    ? selectedEventData.title
+                                                    : 'All Events'}
                                             </span>
                                             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" />
                                         </Button>
@@ -327,84 +472,147 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     <PopoverContent
                                         align="start"
                                         sideOffset={8}
-                                        className="
-            p-0
-            w-[min(420px,calc(100vw-1.5rem))]
-            max-h-[70vh] overflow-hidden
-            md:w-[--radix-popover-trigger-width]
-        "
+                                        className="max-h-[70vh] w-[min(420px,calc(100vw-1.5rem))] overflow-hidden p-0 md:w-[--radix-popover-trigger-width]"
                                     >
                                         <Command className="w-full">
                                             <CommandInput placeholder="Search event..." />
-                                            <CommandEmpty>No event found.</CommandEmpty>
+                                            <CommandEmpty>
+                                                No event found.
+                                            </CommandEmpty>
 
                                             <CommandList className="max-h-[60vh] overflow-auto">
                                                 <CommandGroup>
                                                     <CommandItem
                                                         value="all events"
                                                         onSelect={() => {
-                                                            setSelectedEvent(ALL_EVENTS_VALUE);
-                                                            setEventsOpen(false);
+                                                            setSelectedEvent(
+                                                                ALL_EVENTS_VALUE,
+                                                            );
+                                                            setEventsOpen(
+                                                                false,
+                                                            );
                                                         }}
                                                     >
                                                         <Check
                                                             className={cn(
                                                                 'mr-2 h-4 w-4',
-                                                                selectedEvent === ALL_EVENTS_VALUE ? 'opacity-100' : 'opacity-0',
+                                                                selectedEvent ===
+                                                                    ALL_EVENTS_VALUE
+                                                                    ? 'opacity-100'
+                                                                    : 'opacity-0',
                                                             )}
                                                         />
-                                                        <span className="truncate">All Events</span>
+                                                        <span className="truncate">
+                                                            All Events
+                                                        </span>
                                                     </CommandItem>
 
-                                                    {eventOptionItems.map((event) => (
-                                                        <CommandItem
-                                                            key={event.id}
-                                                            value={`${event.title} ${event.phase_label}`}
-                                                            onSelect={() => {
-                                                                setSelectedEvent(String(event.id));
-                                                                setEventsOpen(false);
-                                                            }}
-                                                            className="flex items-start justify-between gap-2"
-                                                        >
-                                                            <div className="flex min-w-0 items-start gap-2">
-                                                                <Check
-                                                                    className={cn(
-                                                                        'mt-0.5 h-4 w-4 shrink-0',
-                                                                        selectedEvent === String(event.id) ? 'opacity-100' : 'opacity-0',
-                                                                    )}
-                                                                />
-                                                                <div className="min-w-0">
-                                                                    <p className="truncate text-sm font-medium">{event.title}</p>
-                                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                                        {formatDateTime(event.starts_at)}
-                                                                    </p>
+                                                    {eventOptionItems.map(
+                                                        (event) => (
+                                                            <CommandItem
+                                                                key={event.id}
+                                                                value={`${event.title} ${event.phase_label}`}
+                                                                onSelect={() => {
+                                                                    setSelectedEvent(
+                                                                        String(
+                                                                            event.id,
+                                                                        ),
+                                                                    );
+                                                                    setEventsOpen(
+                                                                        false,
+                                                                    );
+                                                                }}
+                                                                className="flex items-start justify-between gap-2"
+                                                            >
+                                                                <div className="flex min-w-0 items-start gap-2">
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'mt-0.5 h-4 w-4 shrink-0',
+                                                                            selectedEvent ===
+                                                                                String(
+                                                                                    event.id,
+                                                                                )
+                                                                                ? 'opacity-100'
+                                                                                : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                    <div className="min-w-0">
+                                                                        <p className="truncate text-sm font-medium">
+                                                                            {
+                                                                                event.title
+                                                                            }
+                                                                        </p>
+                                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                                            {formatDateTime(
+                                                                                event.starts_at,
+                                                                            )}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <Badge className={cn('shrink-0', phaseBadgeClass(event.phase))}>
-                                                                {event.phase_label}
-                                                            </Badge>
-                                                        </CommandItem>
-                                                    ))}
+                                                                <Badge
+                                                                    className={cn(
+                                                                        'shrink-0',
+                                                                        phaseBadgeClass(
+                                                                            event.phase,
+                                                                        ),
+                                                                    )}
+                                                                >
+                                                                    {
+                                                                        event.phase_label
+                                                                    }
+                                                                </Badge>
+                                                            </CommandItem>
+                                                        ),
+                                                    )}
                                                 </CommandGroup>
                                             </CommandList>
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
 
-
                                 <Input
                                     value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    onChange={(event) =>
+                                        setSearch(event.target.value)
+                                    }
                                     placeholder="Search name, country, registrant type, organization, or check-in"
                                     className="w-full md:w-80"
                                 />
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handlePrintPdf}
+                                    className="gap-2"
+                                >
+                                    <Printer className="h-4 w-4" />
+                                    Print PDF
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    onClick={handleExportXlsx}
+                                    className="gap-2"
+                                >
+                                    <FileDown className="h-4 w-4" />
+                                    Export XLSX
+                                </Button>
                             </div>
                         </div>
 
                         {selectedEventData ? (
                             <p className="text-sm text-slate-600 dark:text-slate-300">
-                                Filtered by: <span className="font-medium">{selectedEventData.title}</span>{' '}
-                                <Badge className={phaseBadgeClass(selectedEventData.phase)}>{selectedEventData.phase_label}</Badge>
+                                Filtered by:{' '}
+                                <span className="font-medium">
+                                    {selectedEventData.title}
+                                </span>{' '}
+                                <Badge
+                                    className={phaseBadgeClass(
+                                        selectedEventData.phase,
+                                    )}
+                                >
+                                    {selectedEventData.phase_label}
+                                </Badge>
                             </p>
                         ) : null}
                     </CardHeader>
@@ -413,9 +621,40 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-16">Seq</TableHead>
+                                        <TableHead className="w-16">
+                                            Seq
+                                        </TableHead>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Registrant Type</TableHead>
+                                        <TableHead>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="-ml-3 h-8 gap-1 px-3 font-semibold"
+                                                onClick={() =>
+                                                    setRegistrantTypeSort(
+                                                        (prev) =>
+                                                            prev === 'none'
+                                                                ? 'asc'
+                                                                : prev === 'asc'
+                                                                  ? 'desc'
+                                                                  : 'none',
+                                                    )
+                                                }
+                                            >
+                                                Registrant Type
+                                                <ArrowUpDown className="h-3.5 w-3.5" />
+                                                <span className="text-[11px] text-slate-500">
+                                                    {registrantTypeSort ===
+                                                    'none'
+                                                        ? 'Default'
+                                                        : registrantTypeSort ===
+                                                            'asc'
+                                                          ? 'A-Z'
+                                                          : 'Z-A'}
+                                                </span>
+                                            </Button>
+                                        </TableHead>
                                         <TableHead>Organization</TableHead>
                                         <TableHead>
                                             <Button
@@ -423,12 +662,20 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="-ml-3 h-8 gap-1 px-3 font-semibold"
-                                                onClick={() => setCheckinSort((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                                                onClick={() =>
+                                                    setCheckinSort((prev) =>
+                                                        prev === 'desc'
+                                                            ? 'asc'
+                                                            : 'desc',
+                                                    )
+                                                }
                                             >
                                                 Check-in (Date and Time)
                                                 <ArrowUpDown className="h-3.5 w-3.5" />
                                                 <span className="text-[11px] text-slate-500">
-                                                    {checkinSort === 'desc' ? 'Newest' : 'Oldest'}
+                                                    {checkinSort === 'desc'
+                                                        ? 'Newest'
+                                                        : 'Oldest'}
                                                 </span>
                                             </Button>
                                         </TableHead>
@@ -437,20 +684,42 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                 <TableBody>
                                     {paginatedRows.length ? (
                                         paginatedRows.map((row, index) => {
-                                            const scannedAt = getCheckinTime(row, selectedEventId);
-                                            const hasCheckin = Boolean(scannedAt);
+                                            const scannedAt = getCheckinTime(
+                                                row,
+                                                selectedEventId,
+                                            );
+                                            const hasCheckin =
+                                                Boolean(scannedAt);
 
                                             return (
                                                 <TableRow key={row.id}>
-                                                    <TableCell>{(currentPage - 1) * entriesPerPage + index + 1}</TableCell>
+                                                    <TableCell>
+                                                        {(currentPage - 1) *
+                                                            entriesPerPage +
+                                                            index +
+                                                            1}
+                                                    </TableCell>
                                                     <TableCell>
                                                         <div className="min-w-[240px]">
-                                                            <p className="font-medium text-slate-900 dark:text-slate-100">{buildDisplayName(row)}</p>
-                                                            <p className="text-xs text-slate-500 dark:text-slate-400">{row.country_name ?? '—'}</p>
+                                                            <p className="font-medium text-slate-900 dark:text-slate-100">
+                                                                {buildDisplayName(
+                                                                    row,
+                                                                )}
+                                                            </p>
+                                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                                {row.country_name ??
+                                                                    '—'}
+                                                            </p>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell>{row.registrant_type ?? '—'}</TableCell>
-                                                    <TableCell>{row.organization_name ?? '—'}</TableCell>
+                                                    <TableCell>
+                                                        {row.registrant_type ??
+                                                            '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {row.organization_name ??
+                                                            '—'}
+                                                    </TableCell>
                                                     <TableCell>
                                                         {hasCheckin ? (
                                                             <div className="flex flex-col gap-1">
@@ -458,7 +727,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                     Checked In
                                                                 </Badge>
                                                                 <span className="text-xs text-slate-600 dark:text-slate-300">
-                                                                    {formatDateTime(scannedAt)}
+                                                                    {formatDateTime(
+                                                                        scannedAt,
+                                                                    )}
                                                                 </span>
                                                             </div>
                                                         ) : (
@@ -472,7 +743,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         })
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center text-slate-500">
+                                            <TableCell
+                                                colSpan={5}
+                                                className="text-center text-slate-500"
+                                            >
                                                 No participants found.
                                             </TableCell>
                                         </TableRow>
@@ -487,14 +761,19 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     <span>Show entries</span>
                                     <Select
                                         value={String(entriesPerPage)}
-                                        onValueChange={(value) => setEntriesPerPage(Number(value))}
+                                        onValueChange={(value) =>
+                                            setEntriesPerPage(Number(value))
+                                        }
                                     >
                                         <SelectTrigger className="h-8 w-[90px]">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {PAGE_SIZE_OPTIONS.map((size) => (
-                                                <SelectItem key={size} value={String(size)}>
+                                                <SelectItem
+                                                    key={size}
+                                                    value={String(size)}
+                                                >
                                                     {size}
                                                 </SelectItem>
                                             ))}
@@ -502,8 +781,13 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     </Select>
                                 </div>
                                 <p>
-                                    Showing {(currentPage - 1) * entriesPerPage + (paginatedRows.length ? 1 : 0)} to{' '}
-                                    {(currentPage - 1) * entriesPerPage + paginatedRows.length} of {sortedRows.length} entries
+                                    Showing{' '}
+                                    {(currentPage - 1) * entriesPerPage +
+                                        (paginatedRows.length ? 1 : 0)}{' '}
+                                    to{' '}
+                                    {(currentPage - 1) * entriesPerPage +
+                                        paginatedRows.length}{' '}
+                                    of {sortedRows.length} entries
                                 </p>
                             </div>
 
@@ -512,7 +796,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     variant="outline"
                                     size="sm"
                                     disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                                    onClick={() =>
+                                        setCurrentPage((page) =>
+                                            Math.max(1, page - 1),
+                                        )
+                                    }
                                 >
                                     Previous
                                 </Button>
@@ -523,7 +811,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     variant="outline"
                                     size="sm"
                                     disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                                    onClick={() =>
+                                        setCurrentPage((page) =>
+                                            Math.min(totalPages, page + 1),
+                                        )
+                                    }
                                 >
                                     Next
                                 </Button>
