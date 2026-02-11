@@ -857,8 +857,8 @@ export default function VehicleAssignmentPage({
                                                     ? 'Removing...'
                                                     : 'Sending...'
                                                 : vehicle.pickup_sent_at
-                                                  ? 'Remove Pickup'
-                                                  : 'Send Pickup'}
+                                                  ? 'Remove Notification'
+                                                  : 'Notify Admin'}
                                         </Button>
                                     </div>
                                 ))}
