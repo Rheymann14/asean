@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ParticipantAttendance;
+use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,18 @@ class ReportsController extends Controller
             });
         };
 
+        $events = Programme::query()
+            ->orderBy('starts_at')
+            ->get()
+            ->map(fn (Programme $programme) => [
+                'id' => $programme->id,
+                'title' => $programme->title,
+                'starts_at' => $programme->starts_at?->toISOString(),
+                'ends_at' => $programme->ends_at?->toISOString(),
+                'is_active' => (bool) $programme->is_active,
+            ])
+            ->values();
+
         $totalRegisteredParticipants = User::query()
             ->where('is_active', true)
             ->tap($excludeAdmin)
@@ -46,6 +59,28 @@ class ReportsController extends Controller
 
         $totalParticipantsDidNotJoin = max(0, $totalRegisteredParticipants - $totalParticipantsAttended);
 
+        $joinedByUser = DB::table('participant_programmes')
+            ->join('users', 'participant_programmes.user_id', '=', 'users.id')
+            ->where('users.is_active', true)
+            ->tap($excludeAdmin)
+            ->select('participant_programmes.user_id', 'participant_programmes.programme_id')
+            ->get()
+            ->groupBy('user_id')
+            ->map(fn ($group) => $group->pluck('programme_id')->map(fn ($id) => (int) $id)->values());
+
+        $attendedByUser = ParticipantAttendance::query()
+            ->join('users', 'participant_attendances.user_id', '=', 'users.id')
+            ->where('users.is_active', true)
+            ->whereNotNull('participant_attendances.scanned_at')
+            ->tap(function ($query) use ($excludeAdmin) {
+                $excludeAdmin($query);
+            })
+            ->select('participant_attendances.user_id', 'participant_attendances.programme_id')
+            ->distinct()
+            ->get()
+            ->groupBy('user_id')
+            ->map(fn ($group) => $group->pluck('programme_id')->map(fn ($id) => (int) $id)->values());
+
         $rows = User::query()
             ->leftJoin('countries', 'users.country_id', '=', 'countries.id')
             ->where('users.is_active', true)
@@ -56,18 +91,24 @@ class ReportsController extends Controller
                 'users.name',
                 'users.email',
                 'countries.name as country_name',
-                DB::raw('EXISTS(SELECT 1 FROM participant_attendances pa WHERE pa.user_id = users.id AND pa.scanned_at IS NOT NULL) as has_attended'),
             ])
             ->orderBy('users.name')
             ->get()
-            ->map(fn ($row) => [
-                'id' => $row->id,
-                'display_id' => $row->display_id,
-                'name' => $row->name,
-                'email' => $row->email,
-                'country_name' => $row->country_name,
-                'has_attended' => (bool) $row->has_attended,
-            ])
+            ->map(function ($row) use ($joinedByUser, $attendedByUser) {
+                $joinedProgrammeIds = ($joinedByUser->get($row->id) ?? collect())->values();
+                $attendedProgrammeIds = ($attendedByUser->get($row->id) ?? collect())->values();
+
+                return [
+                    'id' => $row->id,
+                    'display_id' => $row->display_id,
+                    'name' => $row->name,
+                    'email' => $row->email,
+                    'country_name' => $row->country_name,
+                    'has_attended' => $attendedProgrammeIds->isNotEmpty(),
+                    'joined_programme_ids' => $joinedProgrammeIds,
+                    'attended_programme_ids' => $attendedProgrammeIds,
+                ];
+            })
             ->values();
 
         return Inertia::render('reports', [
@@ -77,6 +118,8 @@ class ReportsController extends Controller
                 'total_participants_did_not_join' => $totalParticipantsDidNotJoin,
             ],
             'rows' => $rows,
+            'events' => $events,
+            'now_iso' => now()->toISOString(),
         ]);
     }
 }
