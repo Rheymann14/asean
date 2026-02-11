@@ -33,7 +33,7 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     ArrowUpDown,
     Check,
@@ -70,6 +70,8 @@ type ReportRow = {
     registrant_type?: string | null;
     organization_name?: string | null;
     other_user_type?: string | null;
+    attend_welcome_dinner: boolean;
+    avail_transport_from_makati_to_peninsula: boolean;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
@@ -182,6 +184,63 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [registrantTypeSort, setRegistrantTypeSort] =
         React.useState<RegistrantTypeSort>('none');
     const [entriesPerPage, setEntriesPerPage] = React.useState<number>(10);
+    const [welcomeDinnerByUser, setWelcomeDinnerByUser] = React.useState<
+        Record<number, boolean>
+    >({});
+    const [transportByUser, setTransportByUser] = React.useState<
+        Record<number, boolean>
+    >({});
+    const [savingUserIds, setSavingUserIds] = React.useState<
+        Record<number, boolean>
+    >({});
+
+    React.useEffect(() => {
+        setWelcomeDinnerByUser(
+            Object.fromEntries(
+                rows.map((row) => [row.id, row.attend_welcome_dinner]),
+            ),
+        );
+        setTransportByUser(
+            Object.fromEntries(
+                rows.map((row) => [
+                    row.id,
+                    row.avail_transport_from_makati_to_peninsula,
+                ]),
+            ),
+        );
+    }, [rows]);
+
+    const updateWelcomeDinnerPreferences = React.useCallback(
+        (
+            userId: number,
+            attendWelcomeDinner: boolean,
+            availTransport: boolean,
+        ) => {
+            setSavingUserIds((prev) => ({ ...prev, [userId]: true }));
+
+            router.patch(
+                `/reports/${userId}/welcome-dinner-preferences`,
+                {
+                    attend_welcome_dinner: attendWelcomeDinner ? 1 : 0,
+                    avail_transport_from_makati_to_peninsula: availTransport
+                        ? 1
+                        : 0,
+                },
+                {
+                    preserveState: true,
+                    preserveScroll: true,
+                    onFinish: () => {
+                        setSavingUserIds((prev) => {
+                            const next = { ...prev };
+                            delete next[userId];
+                            return next;
+                        });
+                    },
+                },
+            );
+        },
+        [],
+    );
 
     const referenceNowTs = React.useMemo(() => {
         const parsed = now_iso ? Date.parse(now_iso) : Number.NaN;
@@ -320,6 +379,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                         <td>${escapeHtml(row.country_name ?? '—')}</td>
                         <td>${escapeHtml(displayRegistrantType(row))}</td>
                         <td>${escapeHtml(row.organization_name ?? '—')}</td>
+                        <td>${row.attend_welcome_dinner ? 'YES' : 'NO'}</td>
+                        <td>${row.avail_transport_from_makati_to_peninsula ? 'YES' : 'NO'}</td>
                         <td>${hasCheckin ? 'Checked In' : 'Did Not Join'}</td>
                         <td>${escapeHtml(hasCheckin ? formatDateTime(scannedAt) : '—')}</td>
                     </tr>
@@ -353,12 +414,14 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                 <th>Country</th>
                                 <th>Registrant Type</th>
                                 <th>Organization</th>
+                                <th>Welcome Dinner</th>
+                                <th>Transportation</th>
                                 <th>Check-in Status</th>
                                 <th>Check-in Date and Time</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${rowsForPrint || '<tr><td colspan="7">No participants found.</td></tr>'}
+                            ${rowsForPrint || '<tr><td colspan="9">No participants found.</td></tr>'}
                         </tbody>
                     </table>
                 </body>
@@ -442,6 +505,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
             'Country',
             'Registrant Type',
             'Organization',
+            'Welcome Dinner YES',
+            'Transportation YES',
             'Check-in Status',
             'Check-in Date and Time',
         ];
@@ -456,6 +521,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 row.country_name ?? '—',
                 displayRegistrantType(row),
                 row.organization_name ?? '—',
+                row.attend_welcome_dinner ? 'YES' : 'NO',
+                row.avail_transport_from_makati_to_peninsula ? 'YES' : 'NO',
                 hasCheckin ? 'Checked In' : 'Did Not Join',
                 hasCheckin ? formatDateTime(scannedAt) : '—',
             ];
@@ -969,6 +1036,12 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         </TableHead>
                                         <TableHead>Organization</TableHead>
                                         <TableHead>
+                                            Welcome Dinner YES
+                                        </TableHead>
+                                        <TableHead>
+                                            Transportation YES
+                                        </TableHead>
+                                        <TableHead>
                                             <Button
                                                 type="button"
                                                 variant="ghost"
@@ -1034,6 +1107,143 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                             '—'}
                                                     </TableCell>
                                                     <TableCell>
+                                                        <Select
+                                                            value={
+                                                                (welcomeDinnerByUser[
+                                                                    row.id
+                                                                ] ??
+                                                                row.attend_welcome_dinner)
+                                                                    ? 'yes'
+                                                                    : 'no'
+                                                            }
+                                                            onValueChange={(
+                                                                value,
+                                                            ) => {
+                                                                const nextWelcomeDinner =
+                                                                    value ===
+                                                                    'yes';
+                                                                const currentTransport =
+                                                                    transportByUser[
+                                                                        row.id
+                                                                    ] ??
+                                                                    row.avail_transport_from_makati_to_peninsula;
+                                                                const nextTransport =
+                                                                    nextWelcomeDinner
+                                                                        ? currentTransport
+                                                                        : false;
+
+                                                                setWelcomeDinnerByUser(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        [row.id]:
+                                                                            nextWelcomeDinner,
+                                                                    }),
+                                                                );
+                                                                setTransportByUser(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        [row.id]:
+                                                                            nextTransport,
+                                                                    }),
+                                                                );
+
+                                                                updateWelcomeDinnerPreferences(
+                                                                    row.id,
+                                                                    nextWelcomeDinner,
+                                                                    nextTransport,
+                                                                );
+                                                            }}
+                                                            disabled={
+                                                                Boolean(
+                                                                    savingUserIds[
+                                                                        row.id
+                                                                    ],
+                                                                ) ||
+                                                                !(
+                                                                    welcomeDinnerByUser[
+                                                                        row.id
+                                                                    ] ??
+                                                                    row.attend_welcome_dinner
+                                                                )
+                                                            }
+                                                        >
+                                                            <SelectTrigger className="h-8 w-[90px]">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="yes">
+                                                                    YES
+                                                                </SelectItem>
+                                                                <SelectItem value="no">
+                                                                    NO
+                                                                </SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Select
+                                                            value={
+                                                                (transportByUser[
+                                                                    row.id
+                                                                ] ??
+                                                                row.avail_transport_from_makati_to_peninsula)
+                                                                    ? 'yes'
+                                                                    : 'no'
+                                                            }
+                                                            onValueChange={(
+                                                                value,
+                                                            ) => {
+                                                                const currentWelcomeDinner =
+                                                                    welcomeDinnerByUser[
+                                                                        row.id
+                                                                    ] ??
+                                                                    row.attend_welcome_dinner;
+                                                                const nextTransport =
+                                                                    value ===
+                                                                    'yes';
+
+                                                                setTransportByUser(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        [row.id]:
+                                                                            nextTransport,
+                                                                    }),
+                                                                );
+
+                                                                updateWelcomeDinnerPreferences(
+                                                                    row.id,
+                                                                    currentWelcomeDinner,
+                                                                    nextTransport,
+                                                                );
+                                                            }}
+                                                            disabled={
+                                                                Boolean(
+                                                                    savingUserIds[
+                                                                        row.id
+                                                                    ],
+                                                                ) ||
+                                                                !(
+                                                                    welcomeDinnerByUser[
+                                                                        row.id
+                                                                    ] ??
+                                                                    row.attend_welcome_dinner
+                                                                )
+                                                            }
+                                                        >
+                                                            <SelectTrigger className="h-8 w-[90px]">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="yes">
+                                                                    YES
+                                                                </SelectItem>
+                                                                <SelectItem value="no">
+                                                                    NO
+                                                                </SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </TableCell>
+                                                    <TableCell>
                                                         {hasCheckin ? (
                                                             <div className="flex flex-col gap-1">
                                                                 <Badge className="w-fit bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
@@ -1057,7 +1267,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     ) : (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={5}
+                                                colSpan={7}
                                                 className="text-center text-slate-500"
                                             >
                                                 No participants found.
