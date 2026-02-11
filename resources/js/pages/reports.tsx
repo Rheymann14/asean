@@ -76,6 +76,8 @@ type ReportRow = {
     table_assignment_by_programme: Record<string, string | null>;
     vehicle_assignment?: string | null;
     vehicle_assignment_by_programme: Record<string, string | null>;
+    vehicle_plate_number?: string | null;
+    vehicle_plate_number_by_programme: Record<string, string | null>;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
@@ -198,6 +200,16 @@ function getVehicleAssignment(
     return row.vehicle_assignment;
 }
 
+function getVehiclePlateNumber(
+    row: ReportRow,
+    selectedEventId: number | null,
+): string | null | undefined {
+    if (selectedEventId)
+        return row.vehicle_plate_number_by_programme?.[String(selectedEventId)];
+
+    return row.vehicle_plate_number;
+}
+
 export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [search, setSearch] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
@@ -217,6 +229,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [savingUserIds, setSavingUserIds] = React.useState<
         Record<number, boolean>
     >({});
+    const [sendingNotificationByUser, setSendingNotificationByUser] =
+        React.useState<Record<number, boolean>>({});
 
     React.useEffect(() => {
         setWelcomeDinnerByUser(
@@ -266,6 +280,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         [],
     );
 
+
     const referenceNowTs = React.useMemo(() => {
         const parsed = now_iso ? Date.parse(now_iso) : Number.NaN;
         return Number.isNaN(parsed) ? 0 : parsed;
@@ -304,6 +319,74 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         const parsed = Number(selectedEvent);
         return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
     }, [selectedEvent]);
+
+    const getNotificationEventId = React.useCallback(
+        (row: ReportRow) => {
+            if (selectedEventId) {
+                const hasTable = Boolean(getTableAssignment(row, selectedEventId));
+                const hasVehicle = Boolean(
+                    getVehicleAssignment(row, selectedEventId),
+                );
+
+                return hasTable || hasVehicle ? selectedEventId : null;
+            }
+
+            for (const event of eventOptionItems) {
+                const eventId = event.id;
+                const hasTable = Boolean(getTableAssignment(row, eventId));
+                const hasVehicle = Boolean(getVehicleAssignment(row, eventId));
+
+                if (hasTable || hasVehicle) return eventId;
+            }
+
+            return null;
+        },
+        [eventOptionItems, selectedEventId],
+    );
+
+    const handleSendNotification = React.useCallback(
+        (row: ReportRow) => {
+            const notificationEventId = getNotificationEventId(row);
+
+            if (!notificationEventId) {
+                window.alert(
+                    'Notification can only be sent when table or vehicle assignment is available.',
+                );
+                return;
+            }
+
+            setSendingNotificationByUser((prev) => ({ ...prev, [row.id]: true }));
+
+            const token = document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content');
+
+            fetch(`/reports/${row.id}/assignment-notification`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+                },
+                body: JSON.stringify({ event_id: notificationEventId }),
+            })
+                .then((response) => {
+                    if (!response.ok) throw new Error('Request failed');
+                    window.alert('Notification sent successfully.');
+                })
+                .catch(() => {
+                    window.alert('Failed to send notification.');
+                })
+                .finally(() => {
+                    setSendingNotificationByUser((prev) => {
+                        const next = { ...prev };
+                        delete next[row.id];
+                        return next;
+                    });
+                });
+        },
+        [getNotificationEventId],
+    );
 
     const rowsAfterEventFilter = React.useMemo(() => {
         if (!selectedEventId) return rows;
@@ -1077,6 +1160,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         <TableHead>
                                             Vehicle Assignment
                                         </TableHead>
+                                        <TableHead>Notification</TableHead>
                                         <TableHead>
                                             <Button
                                                 type="button"
@@ -1282,6 +1366,37 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                             row,
                                                             selectedEventId,
                                                         ) ?? '—'}
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                            Plate: {getVehiclePlateNumber(row, selectedEventId) ?? '—'}
+                                                        </p>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                handleSendNotification(
+                                                                    row,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                Boolean(
+                                                                    sendingNotificationByUser[
+                                                                        row.id
+                                                                    ],
+                                                                ) ||
+                                                                !getNotificationEventId(
+                                                                    row,
+                                                                )
+                                                            }
+                                                        >
+                                                            {sendingNotificationByUser[
+                                                                row.id
+                                                            ]
+                                                                ? 'Sending...'
+                                                                : 'Email'}
+                                                        </Button>
                                                     </TableCell>
                                                     <TableCell>
                                                         {hasCheckin ? (
@@ -1307,7 +1422,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     ) : (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={9}
+                                                colSpan={11}
                                                 className="text-center text-slate-500"
                                             >
                                                 No participants found.
