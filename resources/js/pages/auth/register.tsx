@@ -2449,7 +2449,7 @@ export default function Register({
                                                         Dietary Preferences
                                                     </p>
                                                     <p className="mt-1 text-sm leading-snug text-slate-600">
-                                                        Select all that apply.
+                                                        Select all that apply. (Leave blank if none)
                                                     </p>
                                                 </div>
                                             </div>
@@ -2699,7 +2699,7 @@ export default function Register({
                                                     </p>
                                                     <p className="mt-1 text-sm leading-snug text-slate-600">
                                                         Select all applicable
-                                                        needs.
+                                                        needs. (Leave blank if none)
                                                     </p>
                                                 </div>
                                             </div>

@@ -18,19 +18,23 @@
                         <tr>
                             <td style="padding: 0 28px 18px;">
                                 <h1 style="margin: 0 0 10px; font-size: 20px; line-height: 1.3; color: #0f172a;">
-                                    Your ASEAN PH 2026 registration Higher Education Sector is successful! 
+                                    Thank you for registering for the CHED-Hosted Welcome Dinner. Your registration is confirmed.
                                 </h1>
                                 <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
-                                    Hi {{ $user->name }}, thank you for registering! Please keep this message for your records and for smooth entry on event day.
+                                    Please log in to the registration portal to access your QR code, which will serve as your entry pass to the event.
+                                   
                                 </p>
-                                <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
-                                    System link:
-                                    <a href="{{ $appUrl }}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">{{ $appUrl }}</a>
-                                    &mdash; log in and check your profile.
-                                    <strong>Your username is:</strong> {{ $user->email }}
+                              <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
+                                    <strong>System Link:</strong>
+                                    <a href="{{ $appUrl }}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">
+                                        {{ $appUrl }}
+                                    </a>
+                                    <br />
+                                    <strong>Username:</strong> {{ $user->email }}
                                 </p>
-                                <p style="margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: #64748b;">
-                                    This is a no-reply email.
+
+                                <p style="margin: 0 0 6px; font-size: 14px; line-height: 1.6; color: #64748b;">
+                                    Kindly save a copy of your QR code and present it for scanning at the registration desk upon arrival.
                                 </p>
                             </td>
                         </tr>
@@ -84,8 +88,8 @@
                         </tr>
                         <tr>
                             <td style="padding: 0 28px 24px;">
-                                <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e293b; font-weight: 600;">
-                                    Welcome to ASEAN PH 2026 thank you for registering!
+                                <p style="margin: 0; font-size: 133px; line-height: 1.6; color: #1e293b; font-weight: 600;">
+                                   This is a system-generated message. Please do not reply to this email.
                                 </p>
                             </td>
                         </tr>
