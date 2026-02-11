@@ -1306,6 +1306,15 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                           )
                                                       ]
                                                     : null;
+                                            const hasAnyNotificationSentAt =
+                                                Object.entries(
+                                                    notificationSentAtByAssignment,
+                                                ).some(
+                                                    ([assignmentKey, sentAt]) =>
+                                                        assignmentKey.startsWith(
+                                                            `${row.id}:`,
+                                                        ) && Boolean(sentAt),
+                                                );
                                             const disableNotificationButton =
                                                 Boolean(
                                                     sendingNotificationByUser[
@@ -1314,9 +1323,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                 ) ||
                                                 !notificationEventId ||
                                                 (!selectedEventId &&
-                                                    Boolean(
-                                                        notificationSentAt,
-                                                    ));
+                                                    hasAnyNotificationSentAt);
 
                                             return (
                                                 <TableRow key={row.id}>
