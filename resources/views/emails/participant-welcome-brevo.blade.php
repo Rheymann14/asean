@@ -54,7 +54,7 @@
                                     line-height: 1.6;
                                     color: #1e293b;
                                     font-weight: 600;
-                                    font-style: bold;
+                                    font-style: italic;
                                 "
                             >
                               (System Generated ID / QR Code Section)
