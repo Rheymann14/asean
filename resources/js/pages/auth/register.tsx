@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import RegisterLayout from '@/layouts/register-layout';
+import { splitCountriesByAsean } from '@/lib/countries';
 import { cn } from '@/lib/utils';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
@@ -403,6 +404,10 @@ export default function Register({
     const selectedCountry = React.useMemo(
         () => countries.find((c) => String(c.id) === country) ?? null,
         [countries, country],
+    );
+    const groupedCountries = React.useMemo(
+        () => splitCountriesByAsean(countries),
+        [countries],
     );
 
     React.useEffect(() => {
@@ -1010,8 +1015,8 @@ export default function Register({
                                                         <CommandEmpty>
                                                             No country found.
                                                         </CommandEmpty>
-                                                        <CommandGroup>
-                                                            {countries.map(
+                                                        <CommandGroup heading="ASEAN Countries">
+                                                            {groupedCountries.asean.map(
                                                                 (item) => (
                                                                     <CommandItem
                                                                         key={
@@ -1071,6 +1076,69 @@ export default function Register({
                                                                 ),
                                                             )}
                                                         </CommandGroup>
+                                                        {groupedCountries
+                                                            .nonAsean.length >
+                                                        0 ? (
+                                                            <CommandGroup heading="Non-ASEAN Countries">
+                                                                {groupedCountries.nonAsean.map(
+                                                                    (item) => (
+                                                                        <CommandItem
+                                                                            key={
+                                                                                item.id
+                                                                            }
+                                                                            value={`${item.name} ${item.code}`}
+                                                                            onSelect={() => {
+                                                                                setCountry(
+                                                                                    String(
+                                                                                        item.id,
+                                                                                    ),
+                                                                                );
+                                                                                setCountryOpen(
+                                                                                    false,
+                                                                                );
+                                                                            }}
+                                                                            className="gap-2"
+                                                                        >
+                                                                            {item.flag_url ? (
+                                                                                <img
+                                                                                    src={
+                                                                                        item.flag_url
+                                                                                    }
+                                                                                    alt=""
+                                                                                    className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
+                                                                                    loading="lazy"
+                                                                                    draggable={
+                                                                                        false
+                                                                                    }
+                                                                                />
+                                                                            ) : (
+                                                                                <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                                                                                    {
+                                                                                        item.code
+                                                                                    }
+                                                                                </span>
+                                                                            )}
+                                                                            <span className="truncate">
+                                                                                {
+                                                                                    item.name
+                                                                                }
+                                                                            </span>
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    'ml-auto h-4 w-4',
+                                                                                    country ===
+                                                                                        String(
+                                                                                            item.id,
+                                                                                        )
+                                                                                        ? 'opacity-100'
+                                                                                        : 'opacity-0',
+                                                                                )}
+                                                                            />
+                                                                        </CommandItem>
+                                                                    ),
+                                                                )}
+                                                            </CommandGroup>
+                                                        ) : null}
                                                     </Command>
                                                 </PopoverContent>
                                             </Popover>

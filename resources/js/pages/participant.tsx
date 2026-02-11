@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
+import { splitCountriesByAsean } from '@/lib/countries';
 import { cn, toDateOnlyTimestamp } from '@/lib/utils';
 import { participant } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -877,7 +878,7 @@ function ParticipantIdPrintCard({
                                             >
                                                 {String(
                                                     participant.country.code ??
-                                                    '',
+                                                        '',
                                                 ).toUpperCase()}
                                             </div>
                                         ) : null}
@@ -1516,9 +1517,21 @@ export default function ParticipantPage(props: PageProps) {
             !q
                 ? true
                 : c.name.toLowerCase().includes(q) ||
-                c.code.toLowerCase().includes(q),
+                  c.code.toLowerCase().includes(q),
         );
     }, [countries, countryQuery]);
+
+    const groupedCountries = React.useMemo(
+        () => splitCountriesByAsean(countries),
+        [countries],
+    );
+    const groupedActiveCountries = React.useMemo(
+        () =>
+            splitCountriesByAsean(
+                countries.filter((country) => country.is_active),
+            ),
+        [countries],
+    );
 
     const orderedUserTypes = React.useMemo(() => {
         return [...userTypes].sort((a, b) => {
@@ -1537,7 +1550,7 @@ export default function ParticipantPage(props: PageProps) {
             !q
                 ? true
                 : u.name.toLowerCase().includes(q) ||
-                (u.slug ?? '').toLowerCase().includes(q),
+                  (u.slug ?? '').toLowerCase().includes(q),
         );
     }, [orderedUserTypes, userTypeQuery]);
 
@@ -1584,7 +1597,7 @@ export default function ParticipantPage(props: PageProps) {
                 fields.some(
                     (field) =>
                         !!(participantForm.errors as Record<string, string>)[
-                        field
+                            field
                         ],
                 )
             ) {
@@ -1635,8 +1648,8 @@ export default function ParticipantPage(props: PageProps) {
         participantStatusFilter === 'all'
             ? 'All Statuses'
             : participantStatusFilter === 'active'
-                ? 'Active'
-                : 'Inactive';
+              ? 'Active'
+              : 'Inactive';
     const selectedFormCountry = participantForm.data.country_id
         ? countryById.get(Number(participantForm.data.country_id))
         : null;
@@ -2020,8 +2033,8 @@ export default function ParticipantPage(props: PageProps) {
             kind === 'participant'
                 ? ENDPOINTS.participants.destroy(id)
                 : kind === 'country'
-                    ? ENDPOINTS.countries.destroy(id)
-                    : ENDPOINTS.userTypes.destroy(id);
+                  ? ENDPOINTS.countries.destroy(id)
+                  : ENDPOINTS.userTypes.destroy(id);
 
         router.delete(destroyUrl, {
             preserveScroll: true,
@@ -2404,7 +2417,9 @@ export default function ParticipantPage(props: PageProps) {
                                                                     )}
                                                                 />
                                                             </CommandItem>
-                                                            {countries.map(
+                                                        </CommandGroup>
+                                                        <CommandGroup heading="ASEAN Countries">
+                                                            {groupedCountries.asean.map(
                                                                 (c) => (
                                                                     <CommandItem
                                                                         key={
@@ -2457,6 +2472,64 @@ export default function ParticipantPage(props: PageProps) {
                                                                 ),
                                                             )}
                                                         </CommandGroup>
+                                                        {groupedCountries
+                                                            .nonAsean.length >
+                                                        0 ? (
+                                                            <CommandGroup heading="Non-ASEAN Countries">
+                                                                {groupedCountries.nonAsean.map(
+                                                                    (c) => (
+                                                                        <CommandItem
+                                                                            key={
+                                                                                c.id
+                                                                            }
+                                                                            value={`${c.name} ${c.code}`}
+                                                                            onSelect={() => {
+                                                                                setParticipantCountryFilter(
+                                                                                    String(
+                                                                                        c.id,
+                                                                                    ),
+                                                                                );
+                                                                                setParticipantCountryOpen(
+                                                                                    false,
+                                                                                );
+                                                                            }}
+                                                                            className="gap-2"
+                                                                        >
+                                                                            <div className="grid size-5 place-items-center overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                                                <FlagImage
+                                                                                    code={
+                                                                                        c.code
+                                                                                    }
+                                                                                    name={
+                                                                                        c.name
+                                                                                    }
+                                                                                    preferredSrc={
+                                                                                        c.flag_url
+                                                                                    }
+                                                                                    className="h-full w-full object-cover"
+                                                                                />
+                                                                            </div>
+                                                                            <span className="truncate">
+                                                                                {
+                                                                                    c.name
+                                                                                }
+                                                                            </span>
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    'ml-auto h-4 w-4',
+                                                                                    participantCountryFilter ===
+                                                                                        String(
+                                                                                            c.id,
+                                                                                        )
+                                                                                        ? 'opacity-100'
+                                                                                        : 'opacity-0',
+                                                                                )}
+                                                                            />
+                                                                        </CommandItem>
+                                                                    ),
+                                                                )}
+                                                            </CommandGroup>
+                                                        ) : null}
                                                     </CommandList>
                                                 </Command>
                                             </PopoverContent>
@@ -2702,26 +2775,26 @@ export default function ParticipantPage(props: PageProps) {
                                                                 (event) => {
                                                                     const phaseLabel =
                                                                         event.phase ===
-                                                                            'ongoing'
+                                                                        'ongoing'
                                                                             ? 'Ongoing'
                                                                             : event.phase ===
                                                                                 'upcoming'
-                                                                                ? 'Upcoming'
-                                                                                : 'Closed';
+                                                                              ? 'Upcoming'
+                                                                              : 'Closed';
                                                                     const phaseTone =
                                                                         event.phase ===
-                                                                            'ongoing'
+                                                                        'ongoing'
                                                                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200'
                                                                             : event.phase ===
                                                                                 'upcoming'
-                                                                                ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200'
-                                                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200';
+                                                                              ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200'
+                                                                              : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200';
                                                                     const dateLabel =
                                                                         event.endsAt
                                                                             ? `${formatDateSafe(event.startsAt)} - ${formatDateSafe(event.endsAt)}`
                                                                             : formatDateSafe(
-                                                                                event.startsAt,
-                                                                            );
+                                                                                  event.startsAt,
+                                                                              );
 
                                                                     return (
                                                                         <CommandItem
@@ -2876,15 +2949,15 @@ export default function ParticipantPage(props: PageProps) {
                                             <span className="ml-2">
                                                 Showing{' '}
                                                 {filteredParticipants.length ===
-                                                    0
+                                                0
                                                     ? 0
                                                     : (currentPage - 1) *
-                                                    entriesPerPage +
-                                                    1}{' '}
+                                                          entriesPerPage +
+                                                      1}{' '}
                                                 to{' '}
                                                 {Math.min(
                                                     currentPage *
-                                                    entriesPerPage,
+                                                        entriesPerPage,
                                                     filteredParticipants.length,
                                                 )}{' '}
                                                 of {filteredParticipants.length}{' '}
@@ -2943,12 +3016,12 @@ export default function ParticipantPage(props: PageProps) {
                                             >
                                                 {paginatedParticipants.length >
                                                     0 &&
-                                                    paginatedParticipants.every(
-                                                        (p) =>
-                                                            expandedRowIds.has(
-                                                                p.id,
-                                                            ),
-                                                    )
+                                                paginatedParticipants.every(
+                                                    (p) =>
+                                                        expandedRowIds.has(
+                                                            p.id,
+                                                        ),
+                                                )
                                                     ? 'Collapse All'
                                                     : 'View All'}
                                             </Button>
@@ -3022,7 +3095,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                             ? 'bg-blue-50/70 hover:bg-blue-50 dark:bg-blue-950/30 dark:hover:bg-blue-950/40'
                                                                             : 'hover:bg-slate-50 dark:hover:bg-slate-900/40',
                                                                         isExpanded &&
-                                                                        'border-b-0',
+                                                                            'border-b-0',
                                                                     )}
                                                                     onClick={() =>
                                                                         toggleRowExpand(
@@ -3058,7 +3131,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                         className={cn(
                                                                             'font-medium text-slate-900 dark:text-slate-100',
                                                                             isChed &&
-                                                                            'text-blue-900 dark:text-blue-100',
+                                                                                'text-blue-900 dark:text-blue-100',
                                                                         )}
                                                                     >
                                                                         <div className="flex items-center gap-1.5">
@@ -3066,7 +3139,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                                 className={cn(
                                                                                     'h-3.5 w-3.5 text-slate-400 transition-transform',
                                                                                     isExpanded &&
-                                                                                    'rotate-180',
+                                                                                        'rotate-180',
                                                                                 )}
                                                                             />
                                                                             {
@@ -3256,7 +3329,8 @@ export default function ParticipantPage(props: PageProps) {
                                                                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                                                                 <div>
                                                                                     <div className="mb-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                                                                                        Agency /
+                                                                                        Agency
+                                                                                        /
                                                                                         Organization
                                                                                         /
                                                                                         Institution
@@ -3277,7 +3351,8 @@ export default function ParticipantPage(props: PageProps) {
 
                                                                                 <div>
                                                                                     <div className="mb-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                                                                                        Position /
+                                                                                        Position
+                                                                                        /
                                                                                         Designation
                                                                                     </div>
                                                                                     {p.position_title ? (
@@ -3304,7 +3379,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                                         []
                                                                                     )
                                                                                         .length >
-                                                                                        0 ? (
+                                                                                    0 ? (
                                                                                         <div className="space-y-1">
                                                                                             <div className="flex flex-wrap gap-1">
                                                                                                 {(
@@ -3379,7 +3454,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                                         []
                                                                                     )
                                                                                         .length >
-                                                                                        0 ? (
+                                                                                    0 ? (
                                                                                         <div className="space-y-1">
                                                                                             <div className="flex flex-wrap gap-1">
                                                                                                 {(
@@ -3541,7 +3616,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                     key={page}
                                                                     variant={
                                                                         currentPage ===
-                                                                            page
+                                                                        page
                                                                             ? 'default'
                                                                             : 'outline'
                                                                     }
@@ -3554,8 +3629,8 @@ export default function ParticipantPage(props: PageProps) {
                                                                     className={cn(
                                                                         'h-8 w-8 p-0 text-xs',
                                                                         currentPage ===
-                                                                        page &&
-                                                                        PRIMARY_BTN,
+                                                                            page &&
+                                                                            PRIMARY_BTN,
                                                                     )}
                                                                 >
                                                                     {page}
@@ -4164,23 +4239,11 @@ export default function ParticipantPage(props: PageProps) {
                     if (!open) setVirtualIdParticipant(null);
                 }}
             >
-                <DialogContent
-                    className="
-            w-[calc(100vw-1.5rem)]
-            max-w-[calc(100vw-1.5rem)]
-            sm:max-w-[620px]
-            max-h-[92vh]
-            overflow-hidden
-            p-0
-            sm:p-6
-        "
-                >
+                <DialogContent className="max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden p-0 sm:max-w-[620px] sm:p-6">
                     <div className="flex max-h-[92vh] flex-col">
                         <DialogHeader className="shrink-0 border-b border-slate-200/70 px-4 py-4 sm:border-0 sm:px-0 sm:py-0 dark:border-slate-800">
                             <DialogTitle>Participant Virtual ID</DialogTitle>
-                            <DialogDescription className="text-balance">
-                  
-                            </DialogDescription>
+                            <DialogDescription className="text-balance"></DialogDescription>
                         </DialogHeader>
 
                         <div className="flex-1 overflow-y-auto px-4 pb-4 sm:px-0 sm:pb-0">
@@ -4191,8 +4254,15 @@ export default function ParticipantPage(props: PageProps) {
                                         <div className="mx-auto w-fit max-w-full">
                                             <div className="min-w-[520px] sm:min-w-0">
                                                 <ParticipantIdPrintCard
-                                                    participant={virtualIdParticipant}
-                                                    qrDataUrl={qrDataUrls[virtualIdParticipant.id]}
+                                                    participant={
+                                                        virtualIdParticipant
+                                                    }
+                                                    qrDataUrl={
+                                                        qrDataUrls[
+                                                            virtualIdParticipant
+                                                                .id
+                                                        ]
+                                                    }
                                                     orientation="landscape"
                                                 />
                                             </div>
@@ -4200,7 +4270,8 @@ export default function ParticipantPage(props: PageProps) {
                                     </div>
 
                                     <p className="mt-2 text-center text-xs text-slate-500 sm:hidden">
-                                        Tip: swipe left/right to view the full ID.
+                                        Tip: swipe left/right to view the full
+                                        ID.
                                     </p>
                                 </div>
                             ) : (
@@ -4212,7 +4283,6 @@ export default function ParticipantPage(props: PageProps) {
                     </div>
                 </DialogContent>
             </Dialog>
-
 
             <Dialog
                 open={participantDialogOpen}
@@ -4264,10 +4334,10 @@ export default function ParticipantPage(props: PageProps) {
                                         participantFormStep === step.id
                                             ? 'bg-[#00359c] text-white'
                                             : stepWithErrors.has(
-                                                step.id as ParticipantFormStep,
-                                            )
-                                                ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
-                                                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
+                                                    step.id as ParticipantFormStep,
+                                                )
+                                              ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
+                                              : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
                                     )}
                                 >
                                     <span
@@ -4448,15 +4518,15 @@ export default function ParticipantPage(props: PageProps) {
                                                                 .data
                                                                 .honorific_title
                                                                 ? (HONORIFIC_OPTIONS.find(
-                                                                    (o) =>
-                                                                        o.value ===
-                                                                        participantForm
-                                                                            .data
-                                                                            .honorific_title,
-                                                                )?.label ??
-                                                                    participantForm
-                                                                        .data
-                                                                        .honorific_title)
+                                                                      (o) =>
+                                                                          o.value ===
+                                                                          participantForm
+                                                                              .data
+                                                                              .honorific_title,
+                                                                  )?.label ??
+                                                                  participantForm
+                                                                      .data
+                                                                      .honorific_title)
                                                                 : 'Select honorific…'}
                                                         </span>
                                                         <ChevronsUpDown className="h-4 w-4 opacity-50" />
@@ -4667,15 +4737,15 @@ export default function ParticipantPage(props: PageProps) {
                                                                 .data
                                                                 .sex_assigned_at_birth
                                                                 ? (SEX_ASSIGNED_OPTIONS.find(
-                                                                    (o) =>
-                                                                        o.value ===
-                                                                        participantForm
-                                                                            .data
-                                                                            .sex_assigned_at_birth,
-                                                                )?.label ??
-                                                                    participantForm
-                                                                        .data
-                                                                        .sex_assigned_at_birth)
+                                                                      (o) =>
+                                                                          o.value ===
+                                                                          participantForm
+                                                                              .data
+                                                                              .sex_assigned_at_birth,
+                                                                  )?.label ??
+                                                                  participantForm
+                                                                      .data
+                                                                      .sex_assigned_at_birth)
                                                                 : 'Select…'}
                                                         </span>
                                                         <ChevronsUpDown className="h-4 w-4 opacity-50" />
@@ -4816,16 +4886,16 @@ export default function ParticipantPage(props: PageProps) {
                                                                     .data
                                                                     .contact_country_code
                                                                     ? (PHONE_CODE_OPTIONS.find(
-                                                                        (o) =>
-                                                                            o.value ===
-                                                                            participantForm
-                                                                                .data
-                                                                                .contact_country_code,
-                                                                    )
-                                                                        ?.label ??
-                                                                        participantForm
-                                                                            .data
-                                                                            .contact_country_code)
+                                                                          (o) =>
+                                                                              o.value ===
+                                                                              participantForm
+                                                                                  .data
+                                                                                  .contact_country_code,
+                                                                      )
+                                                                          ?.label ??
+                                                                      participantForm
+                                                                          .data
+                                                                          .contact_country_code)
                                                                     : 'Country code…'}
                                                             </span>
                                                             <ChevronsUpDown className="h-4 w-4 opacity-50" />
@@ -4915,7 +4985,7 @@ export default function ParticipantPage(props: PageProps) {
                                                     }
                                                 </div>
                                             ) : participantForm.errors
-                                                .contact_number ? (
+                                                  .contact_number ? (
                                                 <div className="text-xs text-red-600">
                                                     {
                                                         participantForm.errors
@@ -5007,13 +5077,62 @@ export default function ParticipantPage(props: PageProps) {
                                                             No country found.
                                                         </CommandEmpty>
                                                         <CommandList>
-                                                            <CommandGroup>
-                                                                {countries
-                                                                    .filter(
-                                                                        (c) =>
-                                                                            c.is_active,
-                                                                    )
-                                                                    .map(
+                                                            <CommandGroup heading="ASEAN Countries">
+                                                                {groupedActiveCountries.asean.map(
+                                                                    (c) => (
+                                                                        <CommandItem
+                                                                            key={
+                                                                                c.id
+                                                                            }
+                                                                            value={`${c.name} ${c.code}`}
+                                                                            onSelect={() => {
+                                                                                participantForm.setData(
+                                                                                    'country_id',
+                                                                                    String(
+                                                                                        c.id,
+                                                                                    ),
+                                                                                );
+                                                                                setParticipantFormCountryOpen(
+                                                                                    false,
+                                                                                );
+                                                                            }}
+                                                                            className="gap-2"
+                                                                        >
+                                                                            <FlagThumb
+                                                                                country={
+                                                                                    c
+                                                                                }
+                                                                                size={
+                                                                                    18
+                                                                                }
+                                                                            />
+                                                                            <span className="truncate">
+                                                                                {
+                                                                                    c.name
+                                                                                }
+                                                                            </span>
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    'ml-auto h-4 w-4',
+                                                                                    participantForm
+                                                                                        .data
+                                                                                        .country_id ===
+                                                                                        String(
+                                                                                            c.id,
+                                                                                        )
+                                                                                        ? 'opacity-100'
+                                                                                        : 'opacity-0',
+                                                                                )}
+                                                                            />
+                                                                        </CommandItem>
+                                                                    ),
+                                                                )}
+                                                            </CommandGroup>
+                                                            {groupedActiveCountries
+                                                                .nonAsean
+                                                                .length > 0 ? (
+                                                                <CommandGroup heading="Non-ASEAN Countries">
+                                                                    {groupedActiveCountries.nonAsean.map(
                                                                         (c) => (
                                                                             <CommandItem
                                                                                 key={
@@ -5062,7 +5181,8 @@ export default function ParticipantPage(props: PageProps) {
                                                                             </CommandItem>
                                                                         ),
                                                                     )}
-                                                            </CommandGroup>
+                                                                </CommandGroup>
+                                                            ) : null}
                                                         </CommandList>
                                                     </Command>
                                                 </PopoverContent>
@@ -5247,9 +5367,9 @@ export default function ParticipantPage(props: PageProps) {
                                                                                     )
                                                                                         ? current
                                                                                         : [
-                                                                                            ...current,
-                                                                                            option.value,
-                                                                                        ],
+                                                                                              ...current,
+                                                                                              option.value,
+                                                                                          ],
                                                                                 );
                                                                                 return;
                                                                             }
@@ -5377,9 +5497,9 @@ export default function ParticipantPage(props: PageProps) {
                                                                                 )
                                                                                     ? current
                                                                                     : [
-                                                                                        ...current,
-                                                                                        option.value,
-                                                                                    ],
+                                                                                          ...current,
+                                                                                          option.value,
+                                                                                      ],
                                                                             );
                                                                             return;
                                                                         }
@@ -5956,12 +6076,12 @@ export default function ParticipantPage(props: PageProps) {
 
             {printMounted
                 ? createPortal(
-                    <div
-                        id="participant-print-root"
-                        data-orientation={printOrientation}
-                        className="hidden print:block"
-                    >
-                        <style>{`
+                      <div
+                          id="participant-print-root"
+                          data-orientation={printOrientation}
+                          className="hidden print:block"
+                      >
+                          <style>{`
                   @media print {
                       @page { size: ${printOrientation === 'landscape' ? '297mm 210mm' : '210mm 297mm'}; margin: 0; }
                       html, body { margin: 0 !important; padding: 0 !important; height: auto !important; background: #fff !important; }
@@ -5991,26 +6111,26 @@ export default function ParticipantPage(props: PageProps) {
                   }
               `}</style>
 
-                        {chunk(
-                            selectedParticipantsPrintable,
-                            printOrientation === 'landscape' ? 9 : 4,
-                        ).map((page, pageIndex) => (
-                            <div key={pageIndex} className="print-page">
-                                <div className="print-grid">
-                                    {page.map((p) => (
-                                        <ParticipantIdPrintCard
-                                            key={p.id}
-                                            participant={p}
-                                            qrDataUrl={qrDataUrls[p.id]}
-                                            orientation={printOrientation}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>,
-                    document.body,
-                )
+                          {chunk(
+                              selectedParticipantsPrintable,
+                              printOrientation === 'landscape' ? 9 : 4,
+                          ).map((page, pageIndex) => (
+                              <div key={pageIndex} className="print-page">
+                                  <div className="print-grid">
+                                      {page.map((p) => (
+                                          <ParticipantIdPrintCard
+                                              key={p.id}
+                                              participant={p}
+                                              qrDataUrl={qrDataUrls[p.id]}
+                                              orientation={printOrientation}
+                                          />
+                                      ))}
+                                  </div>
+                              </div>
+                          ))}
+                      </div>,
+                      document.body,
+                  )
                 : null}
         </AppLayout>
     );
