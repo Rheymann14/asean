@@ -3,13 +3,11 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, router } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn, toDateOnlyTimestamp } from '@/lib/utils';
-import { CalendarDays, ImageOff, MapPin, Search, Utensils, BusFront } from 'lucide-react';
+import { CalendarDays, ImageOff, MapPin, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ProgrammeRow = {
@@ -32,10 +30,6 @@ type ProgrammeRow = {
 type PageProps = {
     programmes?: ProgrammeRow[];
     joined_programme_ids?: number[];
-    welcome_dinner_preferences?: {
-        attend_welcome_dinner: boolean | null;
-        avail_transport_from_makati_to_peninsula: boolean | null;
-    };
     checked_in_programmes?: {
         programme_id: number;
         scanned_at: string | null;
@@ -469,7 +463,6 @@ function AttendanceGrid({
 export default function EventList({
     programmes = [],
     joined_programme_ids = [],
-    welcome_dinner_preferences,
     checked_in_programmes = [],
 }: PageProps) {
     const nowTs = useNowTs();
@@ -477,38 +470,6 @@ export default function EventList({
 
     const [tab, setTab] = React.useState<TabKey>('ongoing');
     const [search, setSearch] = React.useState('');
-
-    const [attendWelcomeDinner, setAttendWelcomeDinner] = React.useState<'yes' | 'no' | ''>(() => {
-        if (welcome_dinner_preferences?.attend_welcome_dinner === true) return 'yes';
-        if (welcome_dinner_preferences?.attend_welcome_dinner === false) return 'no';
-        return '';
-    });
-    const [availTransport, setAvailTransport] = React.useState<'yes' | 'no' | ''>(() => {
-        if (welcome_dinner_preferences?.avail_transport_from_makati_to_peninsula === true) return 'yes';
-        if (welcome_dinner_preferences?.avail_transport_from_makati_to_peninsula === false) return 'no';
-        return '';
-    });
-
-    React.useEffect(() => {
-        if (attendWelcomeDinner !== 'yes' && availTransport) {
-            setAvailTransport('');
-        }
-    }, [attendWelcomeDinner, availTransport]);
-
-    const saveDinnerPrefs = React.useCallback(() => {
-        router.post(
-            '/participant-dashboard/welcome-dinner',
-            {
-                attend_welcome_dinner: attendWelcomeDinner === 'yes',
-                avail_transport_from_makati_to_peninsula: attendWelcomeDinner === 'yes' ? availTransport === 'yes' : false,
-            },
-            {
-                preserveScroll: true,
-                onSuccess: () => toast.success('Saved.'),
-                onError: () => toast.error('Unable to save preferences.'),
-            },
-        );
-    }, [attendWelcomeDinner, availTransport]);
 
     const normalized = React.useMemo(() => normalizeProgrammes(programmes, nowTs), [programmes, nowTs]);
 
@@ -806,104 +767,6 @@ export default function EventList({
                             <AttendanceGrid events={missedEvents} attendanceByProgramme={attendanceByProgramme} />
                         </TabsContent>
                     </Tabs>
-                </Card>
-
-                <Card className="border-slate-200/70 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                <Utensils className="h-4 w-4 text-[#00359c]" />
-                                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                    Welcome Dinner
-                                </h2>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                                Please answer to help us plan seating and transportation.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="mt-3 grid gap-4">
-                        <div className="rounded-xl border border-slate-200/70 bg-white/60 p-3 dark:border-slate-800 dark:bg-slate-900/30">
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
-                                Will you attend the welcome dinner?
-                            </p>
-
-                            <RadioGroup
-                                value={attendWelcomeDinner}
-                                onValueChange={(v) => setAttendWelcomeDinner(v as 'yes' | 'no')}
-                                className="mt-2 grid gap-2 sm:grid-cols-2"
-                            >
-                                <Label
-                                    htmlFor="welcome-dinner-yes"
-                                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-200"
-                                >
-                                    <RadioGroupItem id="welcome-dinner-yes" value="yes" />
-                                    Yes
-                                </Label>
-
-                                <Label
-                                    htmlFor="welcome-dinner-no"
-                                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-200"
-                                >
-                                    <RadioGroupItem id="welcome-dinner-no" value="no" />
-                                    No
-                                </Label>
-                            </RadioGroup>
-                        </div>
-
-                        {attendWelcomeDinner === 'yes' ? (
-                            <div className="rounded-xl border border-slate-200/70 bg-white/60 p-3 dark:border-slate-800 dark:bg-slate-900/30">
-                                <div className="flex items-center gap-2">
-                                    <BusFront className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
-                                        Transportation
-                                    </p>
-                                </div>
-
-                                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                                    Will you avail transportation services from{' '}
-                                    <span className="font-medium">Makati Diamond Hotel</span> to{' '}
-                                    <span className="font-medium">The Peninsula Manila</span>?
-                                </p>
-
-                                <RadioGroup
-                                    value={availTransport}
-                                    onValueChange={(v) => setAvailTransport(v as 'yes' | 'no')}
-                                    className="mt-2 grid gap-2 sm:grid-cols-2"
-                                >
-                                    <Label
-                                        htmlFor="transport-yes"
-                                        className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-200"
-                                    >
-                                        <RadioGroupItem id="transport-yes" value="yes" />
-                                        Yes
-                                    </Label>
-
-                                    <Label
-                                        htmlFor="transport-no"
-                                        className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-200"
-                                    >
-                                        <RadioGroupItem id="transport-no" value="no" />
-                                        No
-                                    </Label>
-                                </RadioGroup>
-                            </div>
-                        ) : null}
-
-                        {/* ✅ Save button moved to bottom */}
-                        <div className="flex justify-end pt-1">
-                            <Button
-                                type="button"
-                                size="sm"
-                                onClick={saveDinnerPrefs}
-                                disabled={!attendWelcomeDinner || (attendWelcomeDinner === 'yes' && !availTransport)}
-                                className="h-8 px-3 text-xs bg-[#00359c] text-white hover:bg-[#00359c]/90 disabled:opacity-60"
-                            >
-                                Save
-                            </Button>
-                        </div>
-                    </div>
                 </Card>
 
             </div>
