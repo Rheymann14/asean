@@ -2389,7 +2389,7 @@ export default function Register({
                                             {attendWelcomeDinner === 'yes' ? (
                                                 <div className="mt-3 grid gap-2">
                                                     <Label>
-                                                        Transportation
+                                                       Will you avail of the transportation to The Peninsula Manila?
                                                     </Label>
                                                     <div className="mt-1 grid gap-2 sm:grid-cols-2">
                                                         <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">

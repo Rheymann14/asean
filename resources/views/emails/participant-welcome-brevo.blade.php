@@ -88,7 +88,7 @@
                         </tr>
                         <tr>
                             <td style="padding: 0 28px 24px;">
-                                <p style="margin: 0; font-size: 133px; line-height: 1.6; color: #1e293b; font-weight: 600;">
+                                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #1e293b; font-weight: 600;">
                                    This is a system-generated message. Please do not reply to this email.
                                 </p>
                             </td>
