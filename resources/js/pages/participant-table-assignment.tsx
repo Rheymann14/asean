@@ -1,6 +1,3 @@
-import * as React from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,9 +9,22 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import AppLayout from '@/layouts/app-layout';
 import { cn, toDateOnlyTimestamp } from '@/lib/utils';
-import { CalendarDays, Check, ChevronsUpDown, MapPin, Table, Armchair } from 'lucide-react';
+import { Head } from '@inertiajs/react';
+import {
+    CalendarDays,
+    Check,
+    ChevronsUpDown,
+    MapPin,
+    Table,
+} from 'lucide-react';
+import * as React from 'react';
 
 type TableAssignment = {
     table_number: string;
@@ -48,8 +58,15 @@ function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
 
     const start = new Date(startsAt);
     const end = endsAt ? new Date(endsAt) : null;
-    const dateFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
-    const timeFmt = new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' });
+    const dateFmt = new Intl.DateTimeFormat('en-PH', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    });
+    const timeFmt = new Intl.DateTimeFormat('en-PH', {
+        hour: 'numeric',
+        minute: '2-digit',
+    });
 
     const date = dateFmt.format(start);
     const startTime = timeFmt.format(start);
@@ -67,7 +84,11 @@ function formatEventWindow(startsAt?: string | null, endsAt?: string | null) {
     return `${dateFmt.format(start)} ${startTime} → ${dateFmt.format(end)} ${timeFmt.format(end)}`;
 }
 
-function getEventPhase(startsAt: string | null | undefined, endsAt: string | null | undefined, nowTs: number): EventPhase {
+function getEventPhase(
+    startsAt: string | null | undefined,
+    endsAt: string | null | undefined,
+    nowTs: number,
+): EventPhase {
     if (!startsAt) return 'upcoming';
 
     const start = new Date(startsAt);
@@ -147,7 +168,6 @@ function phaseCardAccentClass(phase: EventPhase) {
     }
 }
 
-
 function Section({
     phase,
     title,
@@ -163,16 +183,33 @@ function Section({
         <section className="space-y-4">
             <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                    <span className={cn('h-2.5 w-2.5 rounded-full', phaseDotClass(phase))} />
-                    <h2 className={cn('text-lg font-semibold', phaseTitleClass(phase))}>{title}</h2>
+                    <span
+                        className={cn(
+                            'h-2.5 w-2.5 rounded-full',
+                            phaseDotClass(phase),
+                        )}
+                    />
+                    <h2
+                        className={cn(
+                            'text-lg font-semibold',
+                            phaseTitleClass(phase),
+                        )}
+                    >
+                        {title}
+                    </h2>
                     <Badge
                         variant="outline"
-                        className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(phase))}
+                        className={cn(
+                            'text-[10px] tracking-wide uppercase',
+                            phaseBadgeClass(phase),
+                        )}
                     >
                         {phaseLabel(phase)}
                     </Badge>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {description}
+                </p>
             </div>
 
             {events.length === 0 ? (
@@ -202,15 +239,23 @@ function Section({
                                             </h3>
                                             <Badge
                                                 variant="outline"
-                                                className={cn('shrink-0 text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                                className={cn(
+                                                    'shrink-0 text-[10px] tracking-wide uppercase',
+                                                    phaseBadgeClass(
+                                                        event.phase,
+                                                    ),
+                                                )}
                                             >
                                                 {phaseLabel(event.phase)}
                                             </Badge>
                                         </div>
-                                        <div className="flex flex-col gap-2 text-sm text-slate-600 dark:text-slate-300 sm:flex-row sm:flex-wrap sm:items-center">
+                                        <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:items-center dark:text-slate-300">
                                             <span className="inline-flex items-center gap-2">
                                                 <CalendarDays className="h-4 w-4 text-slate-400" />
-                                                {formatEventWindow(event.starts_at, event.ends_at)}
+                                                {formatEventWindow(
+                                                    event.starts_at,
+                                                    event.ends_at,
+                                                )}
                                             </span>
                                             {event.location ? (
                                                 <span className="inline-flex items-center gap-2">
@@ -222,10 +267,11 @@ function Section({
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        <div className="flex flex-col items-start gap-1 text-xs text-slate-500 dark:text-slate-400 sm:items-end">
-                                            <span className="uppercase tracking-wide">Table assignment</span>
+                                        <div className="flex flex-col items-start gap-1 text-xs text-slate-500 sm:items-end dark:text-slate-400">
+                                            <span className="tracking-wide uppercase">
+                                                Table assignment
+                                            </span>
                                             {hasTable ? (
-
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <Badge
                                                         variant="outline"
@@ -235,17 +281,12 @@ function Section({
                                                             'dark:!border-amber-500/50 dark:!bg-slate-950 dark:!text-amber-200 dark:ring-amber-500/20',
                                                         )}
                                                     >
-                                                         {event.table?.table_number}
+                                                        {
+                                                            event.table
+                                                                ?.table_number
+                                                        }
                                                     </Badge>
-                                                    {event.table?.seat_number ? (
-                                                        <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-                                                            <Armchair className="mr-1 h-3.5 w-3.5" />
-                                                            Seat #{event.table.seat_number}
-                                                        </Badge>
-                                                    ) : null}
                                                 </div>
-
-
                                             ) : (
                                                 <Badge
                                                     variant="outline"
@@ -275,7 +316,11 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
         () =>
             events.map((event) => ({
                 ...event,
-                phase: getEventPhase(event.starts_at ?? null, event.ends_at ?? null, nowTs),
+                phase: getEventPhase(
+                    event.starts_at ?? null,
+                    event.ends_at ?? null,
+                    nowTs,
+                ),
             })),
         [events, nowTs],
     );
@@ -289,8 +334,12 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
 
     const grouped = React.useMemo(
         () => ({
-            ongoing: filteredEvents.filter((event) => event.phase === 'ongoing'),
-            upcoming: filteredEvents.filter((event) => event.phase === 'upcoming'),
+            ongoing: filteredEvents.filter(
+                (event) => event.phase === 'ongoing',
+            ),
+            upcoming: filteredEvents.filter(
+                (event) => event.phase === 'upcoming',
+            ),
             closed: filteredEvents.filter((event) => event.phase === 'closed'),
         }),
         [filteredEvents],
@@ -322,7 +371,7 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                 <Card className="border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="space-y-1">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            <p className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
                                 Filter event
                             </p>
 
@@ -331,17 +380,26 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                 <span
                                     className={cn(
                                         'h-2.5 w-2.5 rounded-full',
-                                        selectedEvent ? phaseDotClass(selectedEvent.phase) : 'bg-slate-300 dark:bg-slate-600',
+                                        selectedEvent
+                                            ? phaseDotClass(selectedEvent.phase)
+                                            : 'bg-slate-300 dark:bg-slate-600',
                                     )}
                                 />
                                 <p className="max-w-[min(520px,80vw)] truncate text-sm text-slate-700 dark:text-slate-200">
-                                    {selectedEvent ? selectedEvent.title : 'All joined events'}
+                                    {selectedEvent
+                                        ? selectedEvent.title
+                                        : 'All joined events'}
                                 </p>
 
                                 {selectedEvent ? (
                                     <Badge
                                         variant="outline"
-                                        className={cn('text-[10px] uppercase tracking-wide', phaseBadgeClass(selectedEvent.phase))}
+                                        className={cn(
+                                            'text-[10px] tracking-wide uppercase',
+                                            phaseBadgeClass(
+                                                selectedEvent.phase,
+                                            ),
+                                        )}
                                     >
                                         {phaseLabel(selectedEvent.phase)}
                                     </Badge>
@@ -369,11 +427,23 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                         <span
                                             className={cn(
                                                 'h-2.5 w-2.5 rounded-full',
-                                                selectedEvent ? phaseDotClass(selectedEvent.phase) : 'bg-slate-300 dark:bg-slate-600',
+                                                selectedEvent
+                                                    ? phaseDotClass(
+                                                          selectedEvent.phase,
+                                                      )
+                                                    : 'bg-slate-300 dark:bg-slate-600',
                                             )}
                                         />
-                                        <span className={cn('truncate', !selectedEvent && 'text-muted-foreground')}>
-                                            {selectedEvent ? selectedEvent.title : 'All events'}
+                                        <span
+                                            className={cn(
+                                                'truncate',
+                                                !selectedEvent &&
+                                                    'text-muted-foreground',
+                                            )}
+                                        >
+                                            {selectedEvent
+                                                ? selectedEvent.title
+                                                : 'All events'}
                                         </span>
                                     </span>
 
@@ -382,11 +452,15 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                             <Badge
                                                 variant="outline"
                                                 className={cn(
-                                                    'hidden text-[10px] uppercase tracking-wide sm:inline-flex',
-                                                    phaseBadgeClass(selectedEvent.phase),
+                                                    'hidden text-[10px] tracking-wide uppercase sm:inline-flex',
+                                                    phaseBadgeClass(
+                                                        selectedEvent.phase,
+                                                    ),
                                                 )}
                                             >
-                                                {phaseLabel(selectedEvent.phase)}
+                                                {phaseLabel(
+                                                    selectedEvent.phase,
+                                                )}
                                             </Badge>
                                         ) : null}
                                         <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -394,11 +468,16 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                 </Button>
                             </PopoverTrigger>
 
-                            <PopoverContent align="start" className="w-[min(var(--radix-popover-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] p-0">
+                            <PopoverContent
+                                align="start"
+                                className="w-[min(var(--radix-popover-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] p-0"
+                            >
                                 <Command>
                                     <CommandInput placeholder="Search event..." />
                                     <CommandList>
-                                        <CommandEmpty>No event found.</CommandEmpty>
+                                        <CommandEmpty>
+                                            No event found.
+                                        </CommandEmpty>
                                         <CommandGroup>
                                             <CommandItem
                                                 value="all events"
@@ -408,8 +487,17 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                                 }}
                                             >
                                                 <div className="flex w-full min-w-0 items-center gap-2">
-                                                    <Check className={cn('h-4 w-4', filterId === 'all' ? 'opacity-100' : 'opacity-0')} />
-                                                    <span className="min-w-0 flex-1 truncate">All events</span>
+                                                    <Check
+                                                        className={cn(
+                                                            'h-4 w-4',
+                                                            filterId === 'all'
+                                                                ? 'opacity-100'
+                                                                : 'opacity-0',
+                                                        )}
+                                                    />
+                                                    <span className="min-w-0 flex-1 truncate">
+                                                        All events
+                                                    </span>
                                                     <Badge
                                                         variant="outline"
                                                         className="shrink-0 border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600/30 dark:bg-slate-800/30 dark:text-slate-300"
@@ -424,7 +512,9 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                                     key={event.id}
                                                     value={`${event.title} ${event.id}`}
                                                     onSelect={() => {
-                                                        setFilterId(String(event.id));
+                                                        setFilterId(
+                                                            String(event.id),
+                                                        );
                                                         setOpen(false);
                                                     }}
                                                 >
@@ -432,16 +522,37 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                                                         <Check
                                                             className={cn(
                                                                 'h-4 w-4',
-                                                                filterId === String(event.id) ? 'opacity-100' : 'opacity-0',
+                                                                filterId ===
+                                                                    String(
+                                                                        event.id,
+                                                                    )
+                                                                    ? 'opacity-100'
+                                                                    : 'opacity-0',
                                                             )}
                                                         />
-                                                        <span className={cn('h-2 w-2 rounded-full', phaseDotClass(event.phase))} />
-                                                        <span className="min-w-0 flex-1 truncate">{event.title}</span>
+                                                        <span
+                                                            className={cn(
+                                                                'h-2 w-2 rounded-full',
+                                                                phaseDotClass(
+                                                                    event.phase,
+                                                                ),
+                                                            )}
+                                                        />
+                                                        <span className="min-w-0 flex-1 truncate">
+                                                            {event.title}
+                                                        </span>
                                                         <Badge
                                                             variant="outline"
-                                                            className={cn('shrink-0 text-[10px] uppercase tracking-wide', phaseBadgeClass(event.phase))}
+                                                            className={cn(
+                                                                'shrink-0 text-[10px] tracking-wide uppercase',
+                                                                phaseBadgeClass(
+                                                                    event.phase,
+                                                                ),
+                                                            )}
                                                         >
-                                                            {phaseLabel(event.phase)}
+                                                            {phaseLabel(
+                                                                event.phase,
+                                                            )}
                                                         </Badge>
                                                     </div>
                                                 </CommandItem>
@@ -457,7 +568,8 @@ export default function ParticipantTableAssignment({ events = [] }: PageProps) {
                 {eventsWithPhase.length === 0 ? (
                     <Card className="border-dashed">
                         <div className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
-                            No table assignments yet. Join an event to see your seating details.
+                            No table assignments yet. Join an event to see your
+                            seating details.
                         </div>
                     </Card>
                 ) : (
