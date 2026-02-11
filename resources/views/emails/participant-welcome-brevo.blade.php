@@ -17,15 +17,21 @@
                         </tr>
                         <tr>
                             <td style="padding: 0 28px 18px;">
-                                <h1 style="margin: 0 0 10px; font-size: 20px; line-height: 1.3; color: #0f172a;">
-                                    Thank you for registering for the CHED-Hosted Welcome Dinner. Your registration is confirmed.
-                                </h1>
                                 <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
-                                    Please log in to the registration portal to access your QR code, which will serve as your entry pass to the event.
+                                   Dear {{ $user->name }},
+                                   
+                                </p>
+                             
+                                 <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
+                                    Thank you for registering to the CHED-Hosted Welcome Dinner on February 12, 2026. Your registration is confirmed.
+                                   
+                                </p>
+                                <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
+                                    To complete your delegate profile, you are respectfully requested to log in to the event portal:
                                    
                                 </p>
                               <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #475569;">
-                                    <strong>System Link:</strong>
+                                    <strong>Portal Link:</strong>
                                     <a href="{{ $appUrl }}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">
                                         {{ $appUrl }}
                                     </a>
@@ -34,13 +40,25 @@
                                 </p>
 
                                 <p style="margin: 0 0 6px; font-size: 14px; line-height: 1.6; color: #64748b;">
-                                    Kindly save a copy of your QR code and present it for scanning at the registration desk upon arrival.
+                                    Please find below your system-generated participant ID. We kindly request that you present this digital pass upon arrival to facilitate your entry.
                                 </p>
                             </td>
                         </tr>
                         <tr>
                             <td style="padding: 0 28px 22px;">
-                                <h2 style="margin: 0 0 10px; font-size: 16px; color: #0f172a;">System-generated ID</h2>
+                               
+                                   <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.6;
+                                    color: #1e293b;
+                                    font-weight: 600;
+                                    font-style: bold;
+                                "
+                            >
+                              (System Generated ID / QR Code Section)
+                            </p>
                                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #dbeafe; border-radius: 16px; padding: 14px; background-color: #eff6ff;">
                                     <tr>
                                         <td style="padding-bottom: 10px;">
@@ -88,9 +106,31 @@
                         </tr>
                         <tr>
                             <td style="padding: 0 28px 24px;">
-                                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #1e293b; font-weight: 600;">
-                                   This is a system-generated message. Please do not reply to this email.
-                                </p>
+                                  <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.6;
+                                    color: #1e293b;
+                                    font-weight: 600;
+                                    font-style: bold;
+                                "
+                            >
+                                Welcome to ASEAN 2026 PH!
+                            </p>
+                               <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.6;
+                                    color: #1e293b;
+                                    font-weight: 600;
+                                    font-style: italic;
+                                "
+                            >
+                                * This is a system-generated message. Please do not reply to this email.
+                            </p>
+
                             </td>
                         </tr>
                     </table>
@@ -99,3 +139,5 @@
         </table>
     </body>
 </html>
+
+

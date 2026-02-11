@@ -26,7 +26,7 @@ class ParticipantWelcomeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Welcome to ASEAN PH 2026 — Your Registration Details',
+            subject: 'Registration Confirmed: ASEAN Philippines 2026 (Higher Education Sector) | CHED-Hosted Welcome Dinner on February 12, 2025',
         );
     }
 
@@ -54,7 +54,7 @@ class ParticipantWelcomeMail extends Mailable
 
         $assignments = $this->user->tableAssignments->keyBy('programme_id');
 
-        $appUrl = rtrim((string) config('app.url', 'https://asean.chedro12.com'), '/');
+        $appUrl = rtrim((string) config('app.url', 'https://asean-registration.ched.gov.ph'), '/');
         $bannerPath = public_path('img/asean_banner_logo.png');
         $logoPath = public_path('img/asean_logo.png');
         $bagongPilipinasPath = public_path('img/bagong_pilipinas.png');

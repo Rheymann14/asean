@@ -533,8 +533,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
             'Country',
             'Registrant Type',
             'Organization',
-            'Welcome Dinner YES',
-            'Transportation YES',
+            'Welcome Dinner',
+            'Transportation',
             'Table Assignment',
             'Vehicle Assignment',
             'Check-in Status',
@@ -829,7 +829,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                                Total Participants Attended
+                                Total Participants Attended (Checked In)
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -1068,10 +1068,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         </TableHead>
                                         <TableHead>Organization</TableHead>
                                         <TableHead>
-                                            Welcome Dinner YES
+                                            Welcome Dinner
                                         </TableHead>
                                         <TableHead>
-                                            Transportation YES
+                                            Transportation 
                                         </TableHead>
                                         <TableHead>Table Assignment</TableHead>
                                         <TableHead>
