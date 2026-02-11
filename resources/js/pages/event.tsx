@@ -73,7 +73,8 @@ function resolveImageUrl(imageUrl?: string | null) {
 function resolvePdfUrl(pdfUrl?: string | null) {
     if (!pdfUrl) return null;
     if (pdfUrl.startsWith('http') || pdfUrl.startsWith('/')) return pdfUrl;
-    return `/downloadables/${pdfUrl}`;
+    const normalized = pdfUrl.replace(/^\.?\/?downloadables\//i, '');
+    return `/downloadables/${normalized}`;
 }
 
 function useNowTs(intervalMs = 60_000) {
