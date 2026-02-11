@@ -5,6 +5,8 @@ namespace App\Actions\Fortify;
 use App\Models\User;
 use App\Models\UserType;
 use App\Services\WelcomeNotificationService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -81,6 +83,7 @@ class CreateNewUser implements CreatesNewUsers
             'emergency_contact_relationship' => ['nullable', 'string', 'max:255'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
             'emergency_contact_email' => ['nullable', 'email', 'max:255'],
+            'profile_photo' => ['nullable', 'image', 'max:5120'],
             'password' => $this->passwordRules(),
         ])->validate();
 
@@ -129,6 +132,7 @@ class CreateNewUser implements CreatesNewUsers
             'emergency_contact_relationship' => $input['emergency_contact_relationship'] ?? null,
             'emergency_contact_phone' => $input['emergency_contact_phone'] ?? null,
             'emergency_contact_email' => $input['emergency_contact_email'] ?? null,
+            'profile_photo_path' => $this->storeProfilePhoto($input['profile_photo'] ?? null),
         ])->refresh();
 
         $programmeIds = $input['programme_ids'] ?? [];
@@ -167,5 +171,24 @@ class CreateNewUser implements CreatesNewUsers
         }
 
         return Str::lower((string) $type->slug) === 'other' || Str::lower($type->name) === 'other';
+    }
+
+    private function storeProfilePhoto(mixed $profilePhoto): ?string
+    {
+        if (! $profilePhoto instanceof UploadedFile) {
+            return null;
+        }
+
+        $extension = $profilePhoto->getClientOriginalExtension() ?: 'jpg';
+        $filename = sprintf('%s.%s', Str::uuid(), $extension);
+        $directory = public_path('profile-image');
+
+        if (! File::exists($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+
+        $profilePhoto->move($directory, $filename);
+
+        return 'profile-image/'.$filename;
     }
 }

@@ -203,7 +203,7 @@ export default function Register({
         },
         {
             step: 2,
-            fields: ['password', 'password_confirmation'],
+            fields: ['password', 'password_confirmation', 'profile_photo'],
         },
         {
             step: 3,
@@ -677,6 +677,7 @@ export default function Register({
                 id="register-form"
                 key={formKey}
                 {...store.form()}
+                encType="multipart/form-data"
                 resetOnSuccess={['password', 'password_confirmation']}
                 className="flex flex-col gap-6"
                 noValidate
@@ -2177,6 +2178,29 @@ export default function Register({
                                                 message={
                                                     err.password_confirmation
                                                 }
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="profile_photo">
+                                                Profile image
+                                            </Label>
+                                            <Input
+                                                id="profile_photo"
+                                                type="file"
+                                                name="profile_photo"
+                                                accept="image/*"
+                                                className={cn(
+                                                    inputClass,
+                                                    'file:mr-3 file:rounded-md file:border-0 file:bg-[#0033A0]/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[#0033A0] hover:file:bg-[#0033A0]/20',
+                                                )}
+                                            />
+                                            <p className="text-xs text-slate-500">
+                                                Optional. Upload a clear photo
+                                                for your participant profile.
+                                            </p>
+                                            <InputError
+                                                message={err.profile_photo}
                                             />
                                         </div>
                                     </fieldset>
