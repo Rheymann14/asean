@@ -17,6 +17,7 @@ use App\Http\Controllers\VenueController;
 use App\Http\Controllers\VenueSectionController;
 use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\TableAssignmentController;
 use App\Http\Controllers\EventKitController;
 use App\Http\Controllers\VehicleAssignmentController;
@@ -157,6 +158,7 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         Route::resource('issuances', IssuanceController::class)->only(['store', 'update', 'destroy']);
 
         Route::get('contact-details', [ContactDetailController::class, 'index'])->name('contact-details');
+        Route::get('reports', [ReportsController::class, 'index'])->name('reports');
         Route::patch('contact-details/{contactDetail}', [ContactDetailController::class, 'update'])->name('contact-details.update');
 
         Route::get('event-management', [ProgrammeController::class, 'index'])->name('event-management');
