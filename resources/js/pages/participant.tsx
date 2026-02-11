@@ -3253,7 +3253,47 @@ export default function ParticipantPage(props: PageProps) {
                                                                             }
                                                                             className="px-6 py-3"
                                                                         >
-                                                                            <div className="grid gap-4 sm:grid-cols-2">
+                                                                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                                                                <div>
+                                                                                    <div className="mb-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                                                                                        Agency /
+                                                                                        Organization
+                                                                                        /
+                                                                                        Institution
+                                                                                    </div>
+                                                                                    {p.organization_name ? (
+                                                                                        <div className="text-sm text-slate-700 dark:text-slate-300">
+                                                                                            {
+                                                                                                p.organization_name
+                                                                                            }
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="text-xs text-slate-400">
+                                                                                            None
+                                                                                            specified
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                <div>
+                                                                                    <div className="mb-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                                                                                        Position /
+                                                                                        Designation
+                                                                                    </div>
+                                                                                    {p.position_title ? (
+                                                                                        <div className="text-sm text-slate-700 dark:text-slate-300">
+                                                                                            {
+                                                                                                p.position_title
+                                                                                            }
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="text-xs text-slate-400">
+                                                                                            None
+                                                                                            specified
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+
                                                                                 <div>
                                                                                     <div className="mb-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">
                                                                                         Dietary
