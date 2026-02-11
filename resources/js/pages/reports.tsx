@@ -80,6 +80,7 @@ type ReportRow = {
     vehicle_assignment_by_programme: Record<string, string | null>;
     vehicle_plate_number?: string | null;
     vehicle_plate_number_by_programme: Record<string, string | null>;
+    notification_sent_at_by_programme: Record<string, string | null>;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
@@ -100,6 +101,30 @@ type RegistrantTypeSort = 'none' | 'asc' | 'desc';
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 1000] as const;
 const ALL_EVENTS_VALUE = 'all';
+function readXsrfCookieToken() {
+    const cookieMatch = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/);
+
+    if (!cookieMatch?.[1]) return '';
+
+    try {
+        return decodeURIComponent(cookieMatch[1]).trim();
+    } catch {
+        return cookieMatch[1].trim();
+    }
+}
+
+function getCsrfTokens() {
+    const metaToken = document
+        .querySelector('meta[name="csrf-token"]')
+        ?.getAttribute('content')
+        ?.trim();
+    const cookieToken = readXsrfCookieToken();
+
+    return [metaToken, cookieToken].filter(
+        (token, index, tokens): token is string =>
+            Boolean(token) && tokens.indexOf(token) === index,
+    );
+}
 
 function resolveEventPhase(event: EventRow, nowTs: number): EventPhase {
     if (!event.is_active) return 'closed';
@@ -233,8 +258,13 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     >({});
     const [sendingNotificationByUser, setSendingNotificationByUser] =
         React.useState<Record<number, boolean>>({});
-    const [notificationSentAtByUser, setNotificationSentAtByUser] =
-        React.useState<Record<number, string>>({});
+    const [notificationSentAtByAssignment, setNotificationSentAtByAssignment] =
+        React.useState<Record<string, string>>({});
+
+    const getNotificationSentAtKey = React.useCallback(
+        (userId: number, eventId: number) => `${userId}:${eventId}`,
+        [],
+    );
 
     React.useEffect(() => {
         setWelcomeDinnerByUser(
@@ -250,7 +280,20 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 ]),
             ),
         );
-    }, [rows]);
+
+        setNotificationSentAtByAssignment(
+            Object.fromEntries(
+                rows.flatMap((row) =>
+                    Object.entries(row.notification_sent_at_by_programme ?? {})
+                        .filter(([, sentAt]) => Boolean(sentAt))
+                        .map(([eventId, sentAt]) => [
+                            getNotificationSentAtKey(row.id, Number(eventId)),
+                            sentAt as string,
+                        ]),
+                ),
+            ),
+        );
+    }, [getNotificationSentAtKey, rows]);
 
     const updateWelcomeDinnerPreferences = React.useCallback(
         (
@@ -283,7 +326,6 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         },
         [],
     );
-
 
     const referenceNowTs = React.useMemo(() => {
         const parsed = now_iso ? Date.parse(now_iso) : Number.NaN;
@@ -327,7 +369,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const getNotificationEventId = React.useCallback(
         (row: ReportRow) => {
             if (selectedEventId) {
-                const hasTable = Boolean(getTableAssignment(row, selectedEventId));
+                const hasTable = Boolean(
+                    getTableAssignment(row, selectedEventId),
+                );
                 const hasVehicle = Boolean(
                     getVehicleAssignment(row, selectedEventId),
                 );
@@ -359,34 +403,56 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 return;
             }
 
-            setSendingNotificationByUser((prev) => ({ ...prev, [row.id]: true }));
+            setSendingNotificationByUser((prev) => ({
+                ...prev,
+                [row.id]: true,
+            }));
 
-            const token = document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content');
+            const [primaryToken, fallbackToken] = getCsrfTokens();
 
-            try {
-                const response = await fetch(
-                    `/reports/${row.id}/assignment-notification`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Accept: 'application/json',
-                            ...(token ? { 'X-CSRF-TOKEN': token } : {}),
-                        },
-                        body: JSON.stringify({ event_id: notificationEventId }),
+            const sendRequest = (csrfToken?: string) =>
+                fetch(`/reports/${row.id}/assignment-notification`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...(csrfToken
+                            ? {
+                                  'X-CSRF-TOKEN': csrfToken,
+                                  'X-XSRF-TOKEN': csrfToken,
+                              }
+                            : {}),
                     },
-                );
+                    body: JSON.stringify({
+                        event_id: notificationEventId,
+                        ...(csrfToken ? { _token: csrfToken } : {}),
+                    }),
+                });
 
-                const payload = (await response.json().catch(() => ({}))) as {
+            const parsePayload = async (response: Response) =>
+                (await response.json().catch(() => ({}))) as {
                     message?: string;
                     sent_at?: string;
                     errors?: Record<string, string[]>;
                 };
 
+            try {
+                let response = await sendRequest(primaryToken);
+                let payload = await parsePayload(response);
+
+                if (!response.ok && response.status === 419 && fallbackToken) {
+                    response = await sendRequest(fallbackToken);
+                    payload = await parsePayload(response);
+                }
+
                 if (!response.ok) {
-                    if (response.status === 422) {
+                    if (response.status === 419) {
+                        toast.error(
+                            'Session expired. Please reload the page and try again.',
+                        );
+                    } else if (response.status === 422) {
                         toast.warning(
                             payload.message ??
                                 'Validation failed. Please check assignment data.',
@@ -401,12 +467,19 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 }
 
                 const sentAt = payload.sent_at ?? new Date().toISOString();
-                setNotificationSentAtByUser((prev) => ({
+                const sentAtKey = getNotificationSentAtKey(
+                    row.id,
+                    notificationEventId,
+                );
+
+                setNotificationSentAtByAssignment((prev) => ({
                     ...prev,
-                    [row.id]: sentAt,
+                    [sentAtKey]: sentAt,
                 }));
 
-                toast.success(payload.message ?? 'Notification sent successfully.');
+                toast.success(
+                    payload.message ?? 'Notification sent successfully.',
+                );
             } catch {
                 toast.error('Failed to send notification.');
             } finally {
@@ -417,7 +490,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 });
             }
         },
-        [getNotificationEventId],
+        [getNotificationEventId, getNotificationSentAtKey],
     );
 
     const rowsAfterEventFilter = React.useMemo(() => {
@@ -510,7 +583,6 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
             .map((row, index) => {
                 const scannedAt = getCheckinTime(row, selectedEventId);
                 const hasCheckin = Boolean(scannedAt);
-
                 return `
                     <tr>
                         <td>${index + 1}</td>
@@ -1182,12 +1254,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                             </Button>
                                         </TableHead>
                                         <TableHead>Organization</TableHead>
-                                        <TableHead>
-                                            Welcome Dinner
-                                        </TableHead>
-                                        <TableHead>
-                                            Transportation 
-                                        </TableHead>
+                                        <TableHead>Welcome Dinner</TableHead>
+                                        <TableHead>Transportation</TableHead>
                                         <TableHead>Table Assignment</TableHead>
                                         <TableHead>
                                             Vehicle Assignment
@@ -1227,6 +1295,35 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                             );
                                             const hasCheckin =
                                                 Boolean(scannedAt);
+                                            const notificationEventId =
+                                                getNotificationEventId(row);
+                                            const notificationSentAt =
+                                                notificationEventId
+                                                    ? notificationSentAtByAssignment[
+                                                          getNotificationSentAtKey(
+                                                              row.id,
+                                                              notificationEventId,
+                                                          )
+                                                      ]
+                                                    : null;
+                                            const hasAnyNotificationSentAt =
+                                                Object.entries(
+                                                    notificationSentAtByAssignment,
+                                                ).some(
+                                                    ([assignmentKey, sentAt]) =>
+                                                        assignmentKey.startsWith(
+                                                            `${row.id}:`,
+                                                        ) && Boolean(sentAt),
+                                                );
+                                            const disableNotificationButton =
+                                                Boolean(
+                                                    sendingNotificationByUser[
+                                                        row.id
+                                                    ],
+                                                ) ||
+                                                !notificationEventId ||
+                                                (!selectedEventId &&
+                                                    hasAnyNotificationSentAt);
 
                                             return (
                                                 <TableRow key={row.id}>
@@ -1399,7 +1496,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                             selectedEventId,
                                                         ) ?? '—'}
                                                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                            Plate: {getVehiclePlateNumber(row, selectedEventId) ?? '—'}
+                                                            Plate:{' '}
+                                                            {getVehiclePlateNumber(
+                                                                row,
+                                                                selectedEventId,
+                                                            ) ?? '—'}
                                                         </p>
                                                     </TableCell>
                                                     <TableCell>
@@ -1413,19 +1514,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                 )
                                                             }
                                                             disabled={
-                                                                Boolean(
-                                                                    sendingNotificationByUser[
-                                                                        row.id
-                                                                    ],
-                                                                ) ||
-                                                                !getNotificationEventId(
-                                                                    row,
-                                                                )
+                                                                disableNotificationButton
                                                             }
                                                             className={cn(
-                                                                notificationSentAtByUser[
-                                                                    row.id
-                                                                ]
+                                                                notificationSentAt
                                                                     ? 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white'
                                                                     : '',
                                                             )}
@@ -1436,14 +1528,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                 ? 'Sending...'
                                                                 : 'Email'}
                                                         </Button>
-                                                        {notificationSentAtByUser[
-                                                            row.id
-                                                        ] ? (
+                                                        {notificationSentAt ? (
                                                             <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
-                                                                Sent: {formatDateTime(
-                                                                    notificationSentAtByUser[
-                                                                        row.id
-                                                                    ],
+                                                                Sent:{' '}
+                                                                {formatDateTime(
+                                                                    notificationSentAt,
                                                                 )}
                                                             </p>
                                                         ) : null}
