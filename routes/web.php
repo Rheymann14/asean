@@ -161,6 +161,8 @@ Route::get('/issuances', [IssuanceController::class, 'publicIndex'])->name('issu
         Route::get('reports', [ReportsController::class, 'index'])->name('reports');
         Route::patch('reports/{user}/welcome-dinner-preferences', [ReportsController::class, 'updateWelcomeDinnerPreferences'])
             ->name('reports.welcome-dinner-preferences.update');
+        Route::post('reports/{user}/assignment-notification', [ReportsController::class, 'sendAssignmentNotification'])
+            ->name('reports.assignment-notification.send');
         Route::patch('contact-details/{contactDetail}', [ContactDetailController::class, 'update'])->name('contact-details.update');
 
         Route::get('event-management', [ProgrammeController::class, 'index'])->name('event-management');
