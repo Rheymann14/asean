@@ -300,6 +300,14 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     }, [filteredRows, selectedEventId, checkinSort, registrantTypeSort]);
 
     const handlePrintPdf = React.useCallback(() => {
+        const escapeHtml = (value: string) =>
+            value
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+
         const rowsForPrint = sortedRows
             .map((row, index) => {
                 const scannedAt = getCheckinTime(row, selectedEventId);
@@ -308,25 +316,18 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 return `
                     <tr>
                         <td>${index + 1}</td>
-                        <td>${buildDisplayName(row)}</td>
-                        <td>${row.country_name ?? '—'}</td>
-                        <td>${displayRegistrantType(row)}</td>
-                        <td>${row.organization_name ?? '—'}</td>
+                        <td>${escapeHtml(buildDisplayName(row))}</td>
+                        <td>${escapeHtml(row.country_name ?? '—')}</td>
+                        <td>${escapeHtml(displayRegistrantType(row))}</td>
+                        <td>${escapeHtml(row.organization_name ?? '—')}</td>
                         <td>${hasCheckin ? 'Checked In' : 'Did Not Join'}</td>
-                        <td>${hasCheckin ? formatDateTime(scannedAt) : '—'}</td>
+                        <td>${escapeHtml(hasCheckin ? formatDateTime(scannedAt) : '—')}</td>
                     </tr>
                 `;
             })
             .join('');
 
-        const printWindow = window.open(
-            '',
-            '_blank',
-            'noopener,noreferrer,width=1100,height=800',
-        );
-        if (!printWindow) return;
-
-        printWindow.document.write(`
+        const printHtml = `
             <html>
                 <head>
                     <title>Participants Report</title>
@@ -362,11 +363,39 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                     </table>
                 </body>
             </html>
-        `);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
+        `;
+
+        const blob = new Blob([printHtml], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+        const printFrame = document.createElement('iframe');
+
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        printFrame.src = blobUrl;
+
+        const cleanup = () => {
+            URL.revokeObjectURL(blobUrl);
+            printFrame.remove();
+        };
+
+        printFrame.onload = () => {
+            const frameWindow = printFrame.contentWindow;
+            if (!frameWindow) {
+                cleanup();
+                return;
+            }
+
+            frameWindow.focus();
+            frameWindow.print();
+
+            setTimeout(cleanup, 1000);
+        };
+
+        document.body.appendChild(printFrame);
     }, [selectedEventId, sortedRows]);
 
     const handleExportXlsx = React.useCallback(() => {
