@@ -99,12 +99,12 @@ const ACCESSIBILITY_NEEDS_OPTIONS = [
 ] as const;
 
 const HONORIFIC_OPTIONS = [
-    { value: 'mr', label: 'Mr.' },
-    { value: 'mrs', label: 'Mrs.' },
-    { value: 'ms', label: 'Ms.' },
-    { value: 'miss', label: 'Miss' },
-    { value: 'dr', label: 'Dr.' },
-    { value: 'prof', label: 'Prof.' },
+    { value: 'Mr.', label: 'Mr.' },
+    { value: 'Mrs.', label: 'Mrs.' },
+    { value: 'Ms.', label: 'Ms.' },
+    { value: 'Miss', label: 'Miss' },
+    { value: 'Dr.', label: 'Dr.' },
+    { value: 'Prof.', label: 'Prof.' },
     { value: 'other', label: 'Other' },
 ] as const;
 
