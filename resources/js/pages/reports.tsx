@@ -291,16 +291,112 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     }, [filteredRows, selectedEventId, checkinSort, registrantTypeSort]);
 
     const handlePrintPdf = React.useCallback(() => {
-        window.print();
-    }, []);
+        const rowsForPrint = sortedRows
+            .map((row, index) => {
+                const scannedAt = getCheckinTime(row, selectedEventId);
+                const hasCheckin = Boolean(scannedAt);
+
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${buildDisplayName(row)}</td>
+                        <td>${row.country_name ?? '—'}</td>
+                        <td>${row.registrant_type ?? '—'}</td>
+                        <td>${row.organization_name ?? '—'}</td>
+                        <td>${hasCheckin ? 'Checked In' : 'Did Not Join'}</td>
+                        <td>${hasCheckin ? formatDateTime(scannedAt) : '—'}</td>
+                    </tr>
+                `;
+            })
+            .join('');
+
+        const printWindow = window.open(
+            '',
+            '_blank',
+            'noopener,noreferrer,width=1100,height=800',
+        );
+        if (!printWindow) return;
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Participants Report</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
+                        h1 { margin-bottom: 12px; font-size: 20px; }
+                        p { margin: 0 0 16px; color: #475569; font-size: 12px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #cbd5e1; padding: 8px; font-size: 12px; vertical-align: top; text-align: left; }
+                        th { background: #f1f5f9; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Participants Report</h1>
+                    <p>Generated: ${formatDateTime(new Date().toISOString())}</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Seq</th>
+                                <th>Name</th>
+                                <th>Country</th>
+                                <th>Registrant Type</th>
+                                <th>Organization</th>
+                                <th>Check-in Status</th>
+                                <th>Check-in Date and Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsForPrint || '<tr><td colspan="7">No participants found.</td></tr>'}
+                        </tbody>
+                    </table>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+    }, [selectedEventId, sortedRows]);
 
     const handleExportXlsx = React.useCallback(() => {
-        const escapeCsv = (value: string | number) => {
-            const normalized = String(value).replaceAll('"', '""');
-            return /[",\n]/.test(normalized) ? `"${normalized}"` : normalized;
+        const encoder = new TextEncoder();
+
+        const escapeXml = (value: string | number) =>
+            String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&apos;');
+
+        const cellRef = (colIndex: number, rowIndex: number) => {
+            let dividend = colIndex + 1;
+            let columnName = '';
+
+            while (dividend > 0) {
+                const modulo = (dividend - 1) % 26;
+                columnName = String.fromCharCode(65 + modulo) + columnName;
+                dividend = Math.floor((dividend - modulo) / 26);
+            }
+
+            return `${columnName}${rowIndex + 1}`;
         };
 
-        const headers = [
+        const toSheetRowXml = (
+            rowValues: Array<string | number>,
+            rowIndex: number,
+        ) => {
+            const cells = rowValues
+                .map(
+                    (value, colIndex) =>
+                        `<c r="${cellRef(colIndex, rowIndex)}" t="inlineStr"><is><t>${escapeXml(value)}</t></is></c>`,
+                )
+                .join('');
+
+            return `<row r="${rowIndex + 1}">${cells}</row>`;
+        };
+
+        const headerRow = [
             'Seq',
             'Name',
             'Country',
@@ -310,7 +406,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
             'Check-in Date and Time',
         ];
 
-        const csvRows = sortedRows.map((row, index) => {
+        const dataRows = sortedRows.map((row, index) => {
             const scannedAt = getCheckinTime(row, selectedEventId);
             const hasCheckin = Boolean(scannedAt);
 
@@ -322,20 +418,196 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 row.organization_name ?? '—',
                 hasCheckin ? 'Checked In' : 'Did Not Join',
                 hasCheckin ? formatDateTime(scannedAt) : '—',
-            ]
-                .map(escapeCsv)
-                .join(',');
+            ];
         });
 
-        const csvContent = [headers.map(escapeCsv).join(','), ...csvRows].join(
-            '\n',
+        const sheetRowsXml = [headerRow, ...dataRows]
+            .map((rowValues, rowIndex) => toSheetRowXml(rowValues, rowIndex))
+            .join('');
+
+        const files = [
+            {
+                name: '[Content_Types].xml',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+                    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+                    '<Default Extension="xml" ContentType="application/xml"/>' +
+                    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+                    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+                    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+                    '</Types>',
+            },
+            {
+                name: '_rels/.rels',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+                    '</Relationships>',
+            },
+            {
+                name: 'xl/workbook.xml',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<sheets><sheet name="Participants Report" sheetId="1" r:id="rId1"/></sheets>' +
+                    '</workbook>',
+            },
+            {
+                name: 'xl/_rels/workbook.xml.rels',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+                    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+                    '</Relationships>',
+            },
+            {
+                name: 'xl/styles.xml',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                    '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>' +
+                    '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>' +
+                    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+                    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+                    '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>' +
+                    '</styleSheet>',
+            },
+            {
+                name: 'xl/worksheets/sheet1.xml',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                    '<sheetData>' +
+                    sheetRowsXml +
+                    '</sheetData>' +
+                    '</worksheet>',
+            },
+        ];
+
+        const crcTable = (() => {
+            const table = new Uint32Array(256);
+            for (let i = 0; i < 256; i += 1) {
+                let c = i;
+                for (let j = 0; j < 8; j += 1) {
+                    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+                }
+                table[i] = c >>> 0;
+            }
+            return table;
+        })();
+
+        const crc32 = (bytes: Uint8Array) => {
+            let crc = 0xffffffff;
+            for (let i = 0; i < bytes.length; i += 1) {
+                crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+            }
+            return (crc ^ 0xffffffff) >>> 0;
+        };
+
+        const writeUint16 = (view: DataView, offset: number, value: number) => {
+            view.setUint16(offset, value, true);
+        };
+
+        const writeUint32 = (view: DataView, offset: number, value: number) => {
+            view.setUint32(offset, value >>> 0, true);
+        };
+
+        const fileEntries = files.map((file) => {
+            const nameBytes = encoder.encode(file.name);
+            const dataBytes = encoder.encode(file.content);
+
+            return {
+                ...file,
+                nameBytes,
+                dataBytes,
+                crc: crc32(dataBytes),
+                compressedSize: dataBytes.length,
+                uncompressedSize: dataBytes.length,
+            };
+        });
+
+        const localParts: Uint8Array[] = [];
+        const centralParts: Uint8Array[] = [];
+        let offset = 0;
+
+        fileEntries.forEach((entry) => {
+            const localHeader = new Uint8Array(30 + entry.nameBytes.length);
+            const localView = new DataView(localHeader.buffer);
+            writeUint32(localView, 0, 0x04034b50);
+            writeUint16(localView, 4, 20);
+            writeUint16(localView, 6, 0);
+            writeUint16(localView, 8, 0);
+            writeUint16(localView, 10, 0);
+            writeUint16(localView, 12, 0);
+            writeUint32(localView, 14, entry.crc);
+            writeUint32(localView, 18, entry.compressedSize);
+            writeUint32(localView, 22, entry.uncompressedSize);
+            writeUint16(localView, 26, entry.nameBytes.length);
+            writeUint16(localView, 28, 0);
+            localHeader.set(entry.nameBytes, 30);
+
+            localParts.push(localHeader, entry.dataBytes);
+
+            const centralHeader = new Uint8Array(46 + entry.nameBytes.length);
+            const centralView = new DataView(centralHeader.buffer);
+            writeUint32(centralView, 0, 0x02014b50);
+            writeUint16(centralView, 4, 20);
+            writeUint16(centralView, 6, 20);
+            writeUint16(centralView, 8, 0);
+            writeUint16(centralView, 10, 0);
+            writeUint16(centralView, 12, 0);
+            writeUint16(centralView, 14, 0);
+            writeUint32(centralView, 16, entry.crc);
+            writeUint32(centralView, 20, entry.compressedSize);
+            writeUint32(centralView, 24, entry.uncompressedSize);
+            writeUint16(centralView, 28, entry.nameBytes.length);
+            writeUint16(centralView, 30, 0);
+            writeUint16(centralView, 32, 0);
+            writeUint16(centralView, 34, 0);
+            writeUint16(centralView, 36, 0);
+            writeUint32(centralView, 38, 0);
+            writeUint32(centralView, 42, offset);
+            centralHeader.set(entry.nameBytes, 46);
+            centralParts.push(centralHeader);
+
+            offset += localHeader.length + entry.dataBytes.length;
+        });
+
+        const centralSize = centralParts.reduce(
+            (sum, part) => sum + part.length,
+            0,
         );
-        const blob = new Blob([csvContent], {
+        const endHeader = new Uint8Array(22);
+        const endView = new DataView(endHeader.buffer);
+        writeUint32(endView, 0, 0x06054b50);
+        writeUint16(endView, 4, 0);
+        writeUint16(endView, 6, 0);
+        writeUint16(endView, 8, fileEntries.length);
+        writeUint16(endView, 10, fileEntries.length);
+        writeUint32(endView, 12, centralSize);
+        writeUint32(endView, 16, offset);
+        writeUint16(endView, 20, 0);
+
+        const toArrayBuffer = (part: Uint8Array) =>
+            part.buffer.slice(
+                part.byteOffset,
+                part.byteOffset + part.byteLength,
+            ) as ArrayBuffer;
+
+        const xlsxParts = [...localParts, ...centralParts, endHeader].map(
+            toArrayBuffer,
+        );
+
+        const xlsxBlob = new Blob(xlsxParts, {
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
+
         const dateLabel = new Date().toISOString().slice(0, 10);
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(xlsxBlob);
 
         link.href = url;
         link.download = `participants-report-${dateLabel}.xlsx`;
