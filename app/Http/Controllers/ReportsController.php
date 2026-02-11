@@ -92,6 +92,7 @@ class ReportsController extends Controller
                 'users.suffix',
                 'users.name',
                 'users.organization_name',
+                'users.other_user_type',
                 'countries.name as country_name',
                 'user_types.name as registrant_type',
             ])
@@ -128,6 +129,7 @@ class ReportsController extends Controller
                     'country_name' => $row->country_name,
                     'registrant_type' => $row->registrant_type,
                     'organization_name' => $row->organization_name,
+                    'other_user_type' => $row->other_user_type,
                     'has_attended' => $attendedProgrammeIds->isNotEmpty(),
                     'joined_programme_ids' => $joinedProgrammeIds,
                     'attended_programme_ids' => $attendedProgrammeIds,

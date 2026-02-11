@@ -1,22 +1,6 @@
-import * as React from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
-import { type BreadcrumbItem } from '@/types';
-import { toDateOnlyTimestamp, cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Command,
     CommandEmpty,
@@ -25,7 +9,39 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import { ArrowUpDown, Check, ChevronsUpDown } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import { cn, toDateOnlyTimestamp } from '@/lib/utils';
+import { type BreadcrumbItem } from '@/types';
+import { Head } from '@inertiajs/react';
+import {
+    ArrowUpDown,
+    Check,
+    ChevronsUpDown,
+    FileDown,
+    Printer,
+} from 'lucide-react';
+import * as React from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Reports', href: '/reports' }];
 
@@ -53,6 +69,7 @@ type ReportRow = {
     country_name?: string | null;
     registrant_type?: string | null;
     organization_name?: string | null;
+    other_user_type?: string | null;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
@@ -69,6 +86,7 @@ type PageProps = {
 
 type EventPhase = 'ongoing' | 'upcoming' | 'closed';
 type CheckinSort = 'desc' | 'asc';
+type RegistrantTypeSort = 'none' | 'asc' | 'desc';
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 1000] as const;
 const ALL_EVENTS_VALUE = 'all';
@@ -89,7 +107,11 @@ function resolveEventPhase(event: EventRow, nowTs: number): EventPhase {
 }
 
 function phaseLabel(phase: EventPhase) {
-    return phase === 'ongoing' ? 'Ongoing' : phase === 'upcoming' ? 'Upcoming' : 'Closed';
+    return phase === 'ongoing'
+        ? 'Ongoing'
+        : phase === 'upcoming'
+          ? 'Upcoming'
+          : 'Closed';
 }
 
 function phaseBadgeClass(phase: EventPhase) {
@@ -119,7 +141,12 @@ function formatDateTime(value?: string | null) {
 }
 
 function buildDisplayName(row: ReportRow) {
-    const parts = [row.honorific_title, row.given_name, row.family_name, row.suffix]
+    const parts = [
+        row.honorific_title,
+        row.given_name,
+        row.family_name,
+        row.suffix,
+    ]
         .map((item) => (item ?? '').trim())
         .filter(Boolean);
 
@@ -128,17 +155,32 @@ function buildDisplayName(row: ReportRow) {
     return row.name;
 }
 
-function getCheckinTime(row: ReportRow, selectedEventId: number | null): string | null | undefined {
-    if (selectedEventId) return row.attendance_by_programme?.[String(selectedEventId)];
+function displayRegistrantType(row: ReportRow) {
+    if ((row.registrant_type ?? '').trim().toLowerCase() === 'other') {
+        return row.other_user_type?.trim() || 'Other';
+    }
+
+    return row.registrant_type ?? '—';
+}
+
+function getCheckinTime(
+    row: ReportRow,
+    selectedEventId: number | null,
+): string | null | undefined {
+    if (selectedEventId)
+        return row.attendance_by_programme?.[String(selectedEventId)];
     return row.latest_attendance_at;
 }
 
 export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [search, setSearch] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
-    const [selectedEvent, setSelectedEvent] = React.useState<string>(ALL_EVENTS_VALUE);
+    const [selectedEvent, setSelectedEvent] =
+        React.useState<string>(ALL_EVENTS_VALUE);
     const [eventsOpen, setEventsOpen] = React.useState(false);
     const [checkinSort, setCheckinSort] = React.useState<CheckinSort>('desc');
+    const [registrantTypeSort, setRegistrantTypeSort] =
+        React.useState<RegistrantTypeSort>('none');
     const [entriesPerPage, setEntriesPerPage] = React.useState<number>(10);
 
     const referenceNowTs = React.useMemo(() => {
@@ -157,13 +199,20 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 };
             })
             .sort((a, b) => {
-                const order: Record<EventPhase, number> = { ongoing: 0, upcoming: 1, closed: 2 };
+                const order: Record<EventPhase, number> = {
+                    ongoing: 0,
+                    upcoming: 1,
+                    closed: 2,
+                };
                 return order[a.phase] - order[b.phase];
             });
     }, [events, referenceNowTs]);
 
     const selectedEventData = React.useMemo(
-        () => eventOptionItems.find((event) => String(event.id) === selectedEvent) ?? null,
+        () =>
+            eventOptionItems.find(
+                (event) => String(event.id) === selectedEvent,
+            ) ?? null,
         [eventOptionItems, selectedEvent],
     );
 
@@ -176,8 +225,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const rowsAfterEventFilter = React.useMemo(() => {
         if (!selectedEventId) return rows;
 
-        return rows.filter((row) =>
-            row.joined_programme_ids.includes(selectedEventId) || row.attended_programme_ids.includes(selectedEventId),
+        return rows.filter(
+            (row) =>
+                row.joined_programme_ids.includes(selectedEventId) ||
+                row.attended_programme_ids.includes(selectedEventId),
         );
     }, [rows, selectedEventId]);
 
@@ -192,13 +243,13 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                     ? 'checked in attended'
                     : 'did not join'
                 : row.has_attended
-                    ? 'checked in attended'
-                    : 'did not join';
+                  ? 'checked in attended'
+                  : 'did not join';
 
             return [
                 buildDisplayName(row),
                 row.country_name ?? '',
-                row.registrant_type ?? '',
+                displayRegistrantType(row),
                 row.organization_name ?? '',
                 checkinLabel,
             ]
@@ -212,25 +263,384 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         const rowsCopy = [...filteredRows];
 
         return rowsCopy.sort((a, b) => {
+            if (registrantTypeSort !== 'none') {
+                const typeOrder = displayRegistrantType(a).localeCompare(
+                    displayRegistrantType(b),
+                    undefined,
+                    {
+                        sensitivity: 'base',
+                    },
+                );
+
+                if (typeOrder !== 0)
+                    return registrantTypeSort === 'asc'
+                        ? typeOrder
+                        : -typeOrder;
+            }
+
             const aScan = getCheckinTime(a, selectedEventId);
             const bScan = getCheckinTime(b, selectedEventId);
             const aParsed = aScan ? Date.parse(aScan) : Number.NaN;
             const bParsed = bScan ? Date.parse(bScan) : Number.NaN;
-            const aTs = Number.isNaN(aParsed) ? (checkinSort === 'desc' ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : aParsed;
-            const bTs = Number.isNaN(bParsed) ? (checkinSort === 'desc' ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : bParsed;
+            const aTs = Number.isNaN(aParsed)
+                ? checkinSort === 'desc'
+                    ? Number.NEGATIVE_INFINITY
+                    : Number.POSITIVE_INFINITY
+                : aParsed;
+            const bTs = Number.isNaN(bParsed)
+                ? checkinSort === 'desc'
+                    ? Number.NEGATIVE_INFINITY
+                    : Number.POSITIVE_INFINITY
+                : bParsed;
 
-            if (aTs === bTs) return buildDisplayName(a).localeCompare(buildDisplayName(b));
+            if (aTs === bTs)
+                return buildDisplayName(a).localeCompare(buildDisplayName(b));
             return checkinSort === 'desc' ? bTs - aTs : aTs - bTs;
         });
-    }, [filteredRows, selectedEventId, checkinSort]);
+    }, [filteredRows, selectedEventId, checkinSort, registrantTypeSort]);
+
+    const handlePrintPdf = React.useCallback(() => {
+        const rowsForPrint = sortedRows
+            .map((row, index) => {
+                const scannedAt = getCheckinTime(row, selectedEventId);
+                const hasCheckin = Boolean(scannedAt);
+
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${buildDisplayName(row)}</td>
+                        <td>${row.country_name ?? '—'}</td>
+                        <td>${displayRegistrantType(row)}</td>
+                        <td>${row.organization_name ?? '—'}</td>
+                        <td>${hasCheckin ? 'Checked In' : 'Did Not Join'}</td>
+                        <td>${hasCheckin ? formatDateTime(scannedAt) : '—'}</td>
+                    </tr>
+                `;
+            })
+            .join('');
+
+        const printWindow = window.open(
+            '',
+            '_blank',
+            'noopener,noreferrer,width=1100,height=800',
+        );
+        if (!printWindow) return;
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Participants Report</title>
+                    <style>
+                        @page { margin: 14mm; }
+                        html, body { background: #ffffff !important; color: #0f172a !important; }
+                        body { font-family: Arial, sans-serif; margin: 0; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        h1 { margin-bottom: 12px; font-size: 20px; color: #0f172a; }
+                        p { margin: 0 0 16px; color: #475569; font-size: 12px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #cbd5e1; padding: 8px; font-size: 12px; vertical-align: top; text-align: left; }
+                        th { background: #ffffff; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Participants Report</h1>
+                    <p>Generated: ${formatDateTime(new Date().toISOString())}</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Seq</th>
+                                <th>Name</th>
+                                <th>Country</th>
+                                <th>Registrant Type</th>
+                                <th>Organization</th>
+                                <th>Check-in Status</th>
+                                <th>Check-in Date and Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsForPrint || '<tr><td colspan="7">No participants found.</td></tr>'}
+                        </tbody>
+                    </table>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+    }, [selectedEventId, sortedRows]);
+
+    const handleExportXlsx = React.useCallback(() => {
+        const encoder = new TextEncoder();
+
+        const escapeXml = (value: string | number) =>
+            String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&apos;');
+
+        const cellRef = (colIndex: number, rowIndex: number) => {
+            let dividend = colIndex + 1;
+            let columnName = '';
+
+            while (dividend > 0) {
+                const modulo = (dividend - 1) % 26;
+                columnName = String.fromCharCode(65 + modulo) + columnName;
+                dividend = Math.floor((dividend - modulo) / 26);
+            }
+
+            return `${columnName}${rowIndex + 1}`;
+        };
+
+        const toSheetRowXml = (
+            rowValues: Array<string | number>,
+            rowIndex: number,
+        ) => {
+            const cells = rowValues
+                .map(
+                    (value, colIndex) =>
+                        `<c r="${cellRef(colIndex, rowIndex)}" t="inlineStr"><is><t>${escapeXml(value)}</t></is></c>`,
+                )
+                .join('');
+
+            return `<row r="${rowIndex + 1}">${cells}</row>`;
+        };
+
+        const headerRow = [
+            'Seq',
+            'Name',
+            'Country',
+            'Registrant Type',
+            'Organization',
+            'Check-in Status',
+            'Check-in Date and Time',
+        ];
+
+        const dataRows = sortedRows.map((row, index) => {
+            const scannedAt = getCheckinTime(row, selectedEventId);
+            const hasCheckin = Boolean(scannedAt);
+
+            return [
+                index + 1,
+                buildDisplayName(row),
+                row.country_name ?? '—',
+                displayRegistrantType(row),
+                row.organization_name ?? '—',
+                hasCheckin ? 'Checked In' : 'Did Not Join',
+                hasCheckin ? formatDateTime(scannedAt) : '—',
+            ];
+        });
+
+        const sheetRowsXml = [headerRow, ...dataRows]
+            .map((rowValues, rowIndex) => toSheetRowXml(rowValues, rowIndex))
+            .join('');
+
+        const files = [
+            {
+                name: '[Content_Types].xml',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+                    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+                    '<Default Extension="xml" ContentType="application/xml"/>' +
+                    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+                    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+                    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+                    '</Types>',
+            },
+            {
+                name: '_rels/.rels',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+                    '</Relationships>',
+            },
+            {
+                name: 'xl/workbook.xml',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<sheets><sheet name="Participants Report" sheetId="1" r:id="rId1"/></sheets>' +
+                    '</workbook>',
+            },
+            {
+                name: 'xl/_rels/workbook.xml.rels',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+                    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+                    '</Relationships>',
+            },
+            {
+                name: 'xl/styles.xml',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                    '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>' +
+                    '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>' +
+                    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+                    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+                    '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>' +
+                    '</styleSheet>',
+            },
+            {
+                name: 'xl/worksheets/sheet1.xml',
+                content:
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                    '<sheetData>' +
+                    sheetRowsXml +
+                    '</sheetData>' +
+                    '</worksheet>',
+            },
+        ];
+
+        const crcTable = (() => {
+            const table = new Uint32Array(256);
+            for (let i = 0; i < 256; i += 1) {
+                let c = i;
+                for (let j = 0; j < 8; j += 1) {
+                    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+                }
+                table[i] = c >>> 0;
+            }
+            return table;
+        })();
+
+        const crc32 = (bytes: Uint8Array) => {
+            let crc = 0xffffffff;
+            for (let i = 0; i < bytes.length; i += 1) {
+                crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+            }
+            return (crc ^ 0xffffffff) >>> 0;
+        };
+
+        const writeUint16 = (view: DataView, offset: number, value: number) => {
+            view.setUint16(offset, value, true);
+        };
+
+        const writeUint32 = (view: DataView, offset: number, value: number) => {
+            view.setUint32(offset, value >>> 0, true);
+        };
+
+        const fileEntries = files.map((file) => {
+            const nameBytes = encoder.encode(file.name);
+            const dataBytes = encoder.encode(file.content);
+
+            return {
+                ...file,
+                nameBytes,
+                dataBytes,
+                crc: crc32(dataBytes),
+                compressedSize: dataBytes.length,
+                uncompressedSize: dataBytes.length,
+            };
+        });
+
+        const localParts: Uint8Array[] = [];
+        const centralParts: Uint8Array[] = [];
+        let offset = 0;
+
+        fileEntries.forEach((entry) => {
+            const localHeader = new Uint8Array(30 + entry.nameBytes.length);
+            const localView = new DataView(localHeader.buffer);
+            writeUint32(localView, 0, 0x04034b50);
+            writeUint16(localView, 4, 20);
+            writeUint16(localView, 6, 0);
+            writeUint16(localView, 8, 0);
+            writeUint16(localView, 10, 0);
+            writeUint16(localView, 12, 0);
+            writeUint32(localView, 14, entry.crc);
+            writeUint32(localView, 18, entry.compressedSize);
+            writeUint32(localView, 22, entry.uncompressedSize);
+            writeUint16(localView, 26, entry.nameBytes.length);
+            writeUint16(localView, 28, 0);
+            localHeader.set(entry.nameBytes, 30);
+
+            localParts.push(localHeader, entry.dataBytes);
+
+            const centralHeader = new Uint8Array(46 + entry.nameBytes.length);
+            const centralView = new DataView(centralHeader.buffer);
+            writeUint32(centralView, 0, 0x02014b50);
+            writeUint16(centralView, 4, 20);
+            writeUint16(centralView, 6, 20);
+            writeUint16(centralView, 8, 0);
+            writeUint16(centralView, 10, 0);
+            writeUint16(centralView, 12, 0);
+            writeUint16(centralView, 14, 0);
+            writeUint32(centralView, 16, entry.crc);
+            writeUint32(centralView, 20, entry.compressedSize);
+            writeUint32(centralView, 24, entry.uncompressedSize);
+            writeUint16(centralView, 28, entry.nameBytes.length);
+            writeUint16(centralView, 30, 0);
+            writeUint16(centralView, 32, 0);
+            writeUint16(centralView, 34, 0);
+            writeUint16(centralView, 36, 0);
+            writeUint32(centralView, 38, 0);
+            writeUint32(centralView, 42, offset);
+            centralHeader.set(entry.nameBytes, 46);
+            centralParts.push(centralHeader);
+
+            offset += localHeader.length + entry.dataBytes.length;
+        });
+
+        const centralSize = centralParts.reduce(
+            (sum, part) => sum + part.length,
+            0,
+        );
+        const endHeader = new Uint8Array(22);
+        const endView = new DataView(endHeader.buffer);
+        writeUint32(endView, 0, 0x06054b50);
+        writeUint16(endView, 4, 0);
+        writeUint16(endView, 6, 0);
+        writeUint16(endView, 8, fileEntries.length);
+        writeUint16(endView, 10, fileEntries.length);
+        writeUint32(endView, 12, centralSize);
+        writeUint32(endView, 16, offset);
+        writeUint16(endView, 20, 0);
+
+        const toArrayBuffer = (part: Uint8Array) =>
+            part.buffer.slice(
+                part.byteOffset,
+                part.byteOffset + part.byteLength,
+            ) as ArrayBuffer;
+
+        const xlsxParts = [...localParts, ...centralParts, endHeader].map(
+            toArrayBuffer,
+        );
+
+        const xlsxBlob = new Blob(xlsxParts, {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+
+        const dateLabel = new Date().toISOString().slice(0, 10);
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(xlsxBlob);
+
+        link.href = url;
+        link.download = `participants-report-${dateLabel}.xlsx`;
+        link.click();
+
+        URL.revokeObjectURL(url);
+    }, [selectedEventId, sortedRows]);
 
     const summaryCards = React.useMemo(() => {
         if (selectedEvent === ALL_EVENTS_VALUE) return summary;
 
         const selectedId = Number(selectedEvent);
-        const totalRegisteredParticipants = rows.filter((row) => row.joined_programme_ids.includes(selectedId)).length;
-        const totalParticipantsAttended = rows.filter((row) => row.attended_programme_ids.includes(selectedId)).length;
-        const totalParticipantsDidNotJoin = Math.max(0, totalRegisteredParticipants - totalParticipantsAttended);
+        const totalRegisteredParticipants = rows.filter((row) =>
+            row.joined_programme_ids.includes(selectedId),
+        ).length;
+        const totalParticipantsAttended = rows.filter((row) =>
+            row.attended_programme_ids.includes(selectedId),
+        ).length;
+        const totalParticipantsDidNotJoin = Math.max(
+            0,
+            totalRegisteredParticipants - totalParticipantsAttended,
+        );
 
         return {
             total_registered_participants: totalRegisteredParticipants,
@@ -239,11 +649,20 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         };
     }, [rows, selectedEvent, summary]);
 
-    const totalPages = Math.max(1, Math.ceil(sortedRows.length / entriesPerPage));
+    const totalPages = Math.max(
+        1,
+        Math.ceil(sortedRows.length / entriesPerPage),
+    );
 
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [search, selectedEvent, checkinSort, entriesPerPage]);
+    }, [
+        search,
+        selectedEvent,
+        checkinSort,
+        registrantTypeSort,
+        entriesPerPage,
+    ]);
 
     React.useEffect(() => {
         if (currentPage > totalPages) {
@@ -261,7 +680,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
             <Head title="Reports" />
 
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Reports</h1>
+                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                    Reports
+                </h1>
 
                 <div className="grid gap-4 md:grid-cols-3">
                     <Card>
@@ -271,7 +692,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">{summaryCards.total_registered_participants.toLocaleString()}</p>
+                            <p className="text-2xl font-bold">
+                                {summaryCards.total_registered_participants.toLocaleString()}
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -282,7 +705,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">{summaryCards.total_participants_attended.toLocaleString()}</p>
+                            <p className="text-2xl font-bold">
+                                {summaryCards.total_participants_attended.toLocaleString()}
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -293,7 +718,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">{summaryCards.total_participants_did_not_join.toLocaleString()}</p>
+                            <p className="text-2xl font-bold">
+                                {summaryCards.total_participants_did_not_join.toLocaleString()}
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -304,21 +731,22 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             <CardTitle>Participants Report</CardTitle>
 
                             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
-                                <Popover open={eventsOpen} onOpenChange={setEventsOpen}>
+                                <Popover
+                                    open={eventsOpen}
+                                    onOpenChange={setEventsOpen}
+                                >
                                     <PopoverTrigger asChild>
                                         <Button
                                             type="button"
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={eventsOpen}
-                                            className="
-                h-auto w-full justify-between gap-2 py-2
-                sm:max-w-[420px]
-                md:w-[260px] md:max-w-none
-            "
+                                            className="h-auto w-full justify-between gap-2 py-2 sm:max-w-[420px] md:w-[260px] md:max-w-none"
                                         >
-                                            <span className="min-w-0 break-words whitespace-normal text-left leading-tight md:overflow-hidden md:text-ellipsis md:whitespace-nowrap">
-                                                {selectedEventData ? selectedEventData.title : 'All Events'}
+                                            <span className="min-w-0 text-left leading-tight break-words whitespace-normal md:overflow-hidden md:text-ellipsis md:whitespace-nowrap">
+                                                {selectedEventData
+                                                    ? selectedEventData.title
+                                                    : 'All Events'}
                                             </span>
                                             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" />
                                         </Button>
@@ -327,84 +755,147 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     <PopoverContent
                                         align="start"
                                         sideOffset={8}
-                                        className="
-            p-0
-            w-[min(420px,calc(100vw-1.5rem))]
-            max-h-[70vh] overflow-hidden
-            md:w-[--radix-popover-trigger-width]
-        "
+                                        className="max-h-[70vh] w-[min(420px,calc(100vw-1.5rem))] overflow-hidden p-0 md:w-[--radix-popover-trigger-width]"
                                     >
                                         <Command className="w-full">
                                             <CommandInput placeholder="Search event..." />
-                                            <CommandEmpty>No event found.</CommandEmpty>
+                                            <CommandEmpty>
+                                                No event found.
+                                            </CommandEmpty>
 
                                             <CommandList className="max-h-[60vh] overflow-auto">
                                                 <CommandGroup>
                                                     <CommandItem
                                                         value="all events"
                                                         onSelect={() => {
-                                                            setSelectedEvent(ALL_EVENTS_VALUE);
-                                                            setEventsOpen(false);
+                                                            setSelectedEvent(
+                                                                ALL_EVENTS_VALUE,
+                                                            );
+                                                            setEventsOpen(
+                                                                false,
+                                                            );
                                                         }}
                                                     >
                                                         <Check
                                                             className={cn(
                                                                 'mr-2 h-4 w-4',
-                                                                selectedEvent === ALL_EVENTS_VALUE ? 'opacity-100' : 'opacity-0',
+                                                                selectedEvent ===
+                                                                    ALL_EVENTS_VALUE
+                                                                    ? 'opacity-100'
+                                                                    : 'opacity-0',
                                                             )}
                                                         />
-                                                        <span className="truncate">All Events</span>
+                                                        <span className="truncate">
+                                                            All Events
+                                                        </span>
                                                     </CommandItem>
 
-                                                    {eventOptionItems.map((event) => (
-                                                        <CommandItem
-                                                            key={event.id}
-                                                            value={`${event.title} ${event.phase_label}`}
-                                                            onSelect={() => {
-                                                                setSelectedEvent(String(event.id));
-                                                                setEventsOpen(false);
-                                                            }}
-                                                            className="flex items-start justify-between gap-2"
-                                                        >
-                                                            <div className="flex min-w-0 items-start gap-2">
-                                                                <Check
-                                                                    className={cn(
-                                                                        'mt-0.5 h-4 w-4 shrink-0',
-                                                                        selectedEvent === String(event.id) ? 'opacity-100' : 'opacity-0',
-                                                                    )}
-                                                                />
-                                                                <div className="min-w-0">
-                                                                    <p className="truncate text-sm font-medium">{event.title}</p>
-                                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                                        {formatDateTime(event.starts_at)}
-                                                                    </p>
+                                                    {eventOptionItems.map(
+                                                        (event) => (
+                                                            <CommandItem
+                                                                key={event.id}
+                                                                value={`${event.title} ${event.phase_label}`}
+                                                                onSelect={() => {
+                                                                    setSelectedEvent(
+                                                                        String(
+                                                                            event.id,
+                                                                        ),
+                                                                    );
+                                                                    setEventsOpen(
+                                                                        false,
+                                                                    );
+                                                                }}
+                                                                className="flex items-start justify-between gap-2"
+                                                            >
+                                                                <div className="flex min-w-0 items-start gap-2">
+                                                                    <Check
+                                                                        className={cn(
+                                                                            'mt-0.5 h-4 w-4 shrink-0',
+                                                                            selectedEvent ===
+                                                                                String(
+                                                                                    event.id,
+                                                                                )
+                                                                                ? 'opacity-100'
+                                                                                : 'opacity-0',
+                                                                        )}
+                                                                    />
+                                                                    <div className="min-w-0">
+                                                                        <p className="truncate text-sm font-medium">
+                                                                            {
+                                                                                event.title
+                                                                            }
+                                                                        </p>
+                                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                                            {formatDateTime(
+                                                                                event.starts_at,
+                                                                            )}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <Badge className={cn('shrink-0', phaseBadgeClass(event.phase))}>
-                                                                {event.phase_label}
-                                                            </Badge>
-                                                        </CommandItem>
-                                                    ))}
+                                                                <Badge
+                                                                    className={cn(
+                                                                        'shrink-0',
+                                                                        phaseBadgeClass(
+                                                                            event.phase,
+                                                                        ),
+                                                                    )}
+                                                                >
+                                                                    {
+                                                                        event.phase_label
+                                                                    }
+                                                                </Badge>
+                                                            </CommandItem>
+                                                        ),
+                                                    )}
                                                 </CommandGroup>
                                             </CommandList>
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
 
-
                                 <Input
                                     value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    onChange={(event) =>
+                                        setSearch(event.target.value)
+                                    }
                                     placeholder="Search name, country, registrant type, organization, or check-in"
                                     className="w-full md:w-80"
                                 />
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handlePrintPdf}
+                                    className="gap-2"
+                                >
+                                    <Printer className="h-4 w-4" />
+                                    Print PDF
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    onClick={handleExportXlsx}
+                                    className="gap-2"
+                                >
+                                    <FileDown className="h-4 w-4" />
+                                    Export XLSX
+                                </Button>
                             </div>
                         </div>
 
                         {selectedEventData ? (
                             <p className="text-sm text-slate-600 dark:text-slate-300">
-                                Filtered by: <span className="font-medium">{selectedEventData.title}</span>{' '}
-                                <Badge className={phaseBadgeClass(selectedEventData.phase)}>{selectedEventData.phase_label}</Badge>
+                                Filtered by:{' '}
+                                <span className="font-medium">
+                                    {selectedEventData.title}
+                                </span>{' '}
+                                <Badge
+                                    className={phaseBadgeClass(
+                                        selectedEventData.phase,
+                                    )}
+                                >
+                                    {selectedEventData.phase_label}
+                                </Badge>
                             </p>
                         ) : null}
                     </CardHeader>
@@ -413,9 +904,40 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-16">Seq</TableHead>
+                                        <TableHead className="w-16">
+                                            Seq
+                                        </TableHead>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Registrant Type</TableHead>
+                                        <TableHead>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="-ml-3 h-8 gap-1 px-3 font-semibold"
+                                                onClick={() =>
+                                                    setRegistrantTypeSort(
+                                                        (prev) =>
+                                                            prev === 'none'
+                                                                ? 'asc'
+                                                                : prev === 'asc'
+                                                                  ? 'desc'
+                                                                  : 'none',
+                                                    )
+                                                }
+                                            >
+                                                Registrant Type
+                                                <ArrowUpDown className="h-3.5 w-3.5" />
+                                                <span className="text-[11px] text-slate-500">
+                                                    {registrantTypeSort ===
+                                                    'none'
+                                                        ? 'Default'
+                                                        : registrantTypeSort ===
+                                                            'asc'
+                                                          ? 'A-Z'
+                                                          : 'Z-A'}
+                                                </span>
+                                            </Button>
+                                        </TableHead>
                                         <TableHead>Organization</TableHead>
                                         <TableHead>
                                             <Button
@@ -423,12 +945,20 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="-ml-3 h-8 gap-1 px-3 font-semibold"
-                                                onClick={() => setCheckinSort((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                                                onClick={() =>
+                                                    setCheckinSort((prev) =>
+                                                        prev === 'desc'
+                                                            ? 'asc'
+                                                            : 'desc',
+                                                    )
+                                                }
                                             >
                                                 Check-in (Date and Time)
                                                 <ArrowUpDown className="h-3.5 w-3.5" />
                                                 <span className="text-[11px] text-slate-500">
-                                                    {checkinSort === 'desc' ? 'Newest' : 'Oldest'}
+                                                    {checkinSort === 'desc'
+                                                        ? 'Newest'
+                                                        : 'Oldest'}
                                                 </span>
                                             </Button>
                                         </TableHead>
@@ -437,20 +967,43 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                 <TableBody>
                                     {paginatedRows.length ? (
                                         paginatedRows.map((row, index) => {
-                                            const scannedAt = getCheckinTime(row, selectedEventId);
-                                            const hasCheckin = Boolean(scannedAt);
+                                            const scannedAt = getCheckinTime(
+                                                row,
+                                                selectedEventId,
+                                            );
+                                            const hasCheckin =
+                                                Boolean(scannedAt);
 
                                             return (
                                                 <TableRow key={row.id}>
-                                                    <TableCell>{(currentPage - 1) * entriesPerPage + index + 1}</TableCell>
+                                                    <TableCell>
+                                                        {(currentPage - 1) *
+                                                            entriesPerPage +
+                                                            index +
+                                                            1}
+                                                    </TableCell>
                                                     <TableCell>
                                                         <div className="min-w-[240px]">
-                                                            <p className="font-medium text-slate-900 dark:text-slate-100">{buildDisplayName(row)}</p>
-                                                            <p className="text-xs text-slate-500 dark:text-slate-400">{row.country_name ?? '—'}</p>
+                                                            <p className="font-medium text-slate-900 dark:text-slate-100">
+                                                                {buildDisplayName(
+                                                                    row,
+                                                                )}
+                                                            </p>
+                                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                                {row.country_name ??
+                                                                    '—'}
+                                                            </p>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell>{row.registrant_type ?? '—'}</TableCell>
-                                                    <TableCell>{row.organization_name ?? '—'}</TableCell>
+                                                    <TableCell>
+                                                        {displayRegistrantType(
+                                                            row,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {row.organization_name ??
+                                                            '—'}
+                                                    </TableCell>
                                                     <TableCell>
                                                         {hasCheckin ? (
                                                             <div className="flex flex-col gap-1">
@@ -458,7 +1011,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                     Checked In
                                                                 </Badge>
                                                                 <span className="text-xs text-slate-600 dark:text-slate-300">
-                                                                    {formatDateTime(scannedAt)}
+                                                                    {formatDateTime(
+                                                                        scannedAt,
+                                                                    )}
                                                                 </span>
                                                             </div>
                                                         ) : (
@@ -472,7 +1027,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         })
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center text-slate-500">
+                                            <TableCell
+                                                colSpan={5}
+                                                className="text-center text-slate-500"
+                                            >
                                                 No participants found.
                                             </TableCell>
                                         </TableRow>
@@ -487,14 +1045,19 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     <span>Show entries</span>
                                     <Select
                                         value={String(entriesPerPage)}
-                                        onValueChange={(value) => setEntriesPerPage(Number(value))}
+                                        onValueChange={(value) =>
+                                            setEntriesPerPage(Number(value))
+                                        }
                                     >
                                         <SelectTrigger className="h-8 w-[90px]">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {PAGE_SIZE_OPTIONS.map((size) => (
-                                                <SelectItem key={size} value={String(size)}>
+                                                <SelectItem
+                                                    key={size}
+                                                    value={String(size)}
+                                                >
                                                     {size}
                                                 </SelectItem>
                                             ))}
@@ -502,8 +1065,13 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     </Select>
                                 </div>
                                 <p>
-                                    Showing {(currentPage - 1) * entriesPerPage + (paginatedRows.length ? 1 : 0)} to{' '}
-                                    {(currentPage - 1) * entriesPerPage + paginatedRows.length} of {sortedRows.length} entries
+                                    Showing{' '}
+                                    {(currentPage - 1) * entriesPerPage +
+                                        (paginatedRows.length ? 1 : 0)}{' '}
+                                    to{' '}
+                                    {(currentPage - 1) * entriesPerPage +
+                                        paginatedRows.length}{' '}
+                                    of {sortedRows.length} entries
                                 </p>
                             </div>
 
@@ -512,7 +1080,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     variant="outline"
                                     size="sm"
                                     disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                                    onClick={() =>
+                                        setCurrentPage((page) =>
+                                            Math.max(1, page - 1),
+                                        )
+                                    }
                                 >
                                     Previous
                                 </Button>
@@ -523,7 +1095,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     variant="outline"
                                     size="sm"
                                     disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                                    onClick={() =>
+                                        setCurrentPage((page) =>
+                                            Math.min(totalPages, page + 1),
+                                        )
+                                    }
                                 >
                                     Next
                                 </Button>
