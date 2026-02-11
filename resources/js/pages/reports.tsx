@@ -44,13 +44,19 @@ type EventRow = {
 
 type ReportRow = {
     id: number;
-    display_id: string | null;
+    honorific_title?: string | null;
+    given_name?: string | null;
+    family_name?: string | null;
+    suffix?: string | null;
     name: string;
-    email: string;
-    country_name: string | null;
+    country_name?: string | null;
+    registrant_type?: string | null;
+    organization_name?: string | null;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
+    attendance_by_programme: Record<string, string | null>;
+    latest_attendance_at?: string | null;
 };
 
 type PageProps = {
@@ -96,10 +102,10 @@ function phaseBadgeClass(phase: EventPhase) {
 }
 
 function formatDateTime(value?: string | null) {
-    if (!value) return 'Schedule TBA';
+    if (!value) return '—';
 
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Schedule TBA';
+    if (Number.isNaN(date.getTime())) return '—';
 
     return new Intl.DateTimeFormat('en-PH', {
         year: 'numeric',
@@ -110,11 +116,22 @@ function formatDateTime(value?: string | null) {
     }).format(date);
 }
 
+function buildDisplayName(row: ReportRow) {
+    const parts = [row.honorific_title, row.given_name, row.family_name, row.suffix]
+        .map((item) => (item ?? '').trim())
+        .filter(Boolean);
+
+    if (parts.length) return parts.join(' ');
+
+    return row.name;
+}
+
 export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [search, setSearch] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
     const [selectedEvent, setSelectedEvent] = React.useState<string>(ALL_EVENTS_VALUE);
     const [eventsOpen, setEventsOpen] = React.useState(false);
+
     const referenceNowTs = React.useMemo(() => {
         const parsed = now_iso ? Date.parse(now_iso) : Number.NaN;
         return Number.isNaN(parsed) ? 0 : parsed;
@@ -142,14 +159,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     );
 
     const rowsAfterEventFilter = React.useMemo(() => {
-        if (selectedEvent === ALL_EVENTS_VALUE) {
-            return rows;
-        }
+        if (selectedEvent === ALL_EVENTS_VALUE) return rows;
 
         const selectedEventId = Number(selectedEvent);
-        if (!selectedEventId) {
-            return rows;
-        }
+        if (!selectedEventId) return rows;
 
         return rows.filter((row) =>
             row.joined_programme_ids.includes(selectedEventId) || row.attended_programme_ids.includes(selectedEventId),
@@ -163,16 +176,21 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
 
         return rowsAfterEventFilter.filter((row) => {
             const selectedEventId = selectedEvent === ALL_EVENTS_VALUE ? null : Number(selectedEvent);
-            const statusLabel =
-                selectedEventId === null
-                    ? row.has_attended
-                        ? 'attended'
-                        : 'did not join'
-                    : row.attended_programme_ids.includes(selectedEventId)
-                      ? 'attended'
-                      : 'did not join';
+            const checkinLabel = selectedEventId
+                ? row.attended_programme_ids.includes(selectedEventId)
+                    ? 'checked in attended'
+                    : 'did not join'
+                : row.has_attended
+                  ? 'checked in attended'
+                  : 'did not join';
 
-            return [row.display_id ?? '', row.name, row.email, row.country_name ?? '', statusLabel]
+            return [
+                buildDisplayName(row),
+                row.country_name ?? '',
+                row.registrant_type ?? '',
+                row.organization_name ?? '',
+                checkinLabel,
+            ]
                 .join(' ')
                 .toLowerCase()
                 .includes(keyword);
@@ -180,12 +198,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     }, [rowsAfterEventFilter, search, selectedEvent]);
 
     const summaryCards = React.useMemo(() => {
-        if (selectedEvent === ALL_EVENTS_VALUE) {
-            return summary;
-        }
+        if (selectedEvent === ALL_EVENTS_VALUE) return summary;
 
         const selectedEventId = Number(selectedEvent);
-
         const totalRegisteredParticipants = rows.filter((row) => row.joined_programme_ids.includes(selectedEventId)).length;
         const totalParticipantsAttended = rows.filter((row) => row.attended_programme_ids.includes(selectedEventId)).length;
         const totalParticipantsDidNotJoin = Math.max(0, totalRegisteredParticipants - totalParticipantsAttended);
@@ -269,7 +284,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={eventsOpen}
-                                            className="w-full justify-between gap-2 md:w-[340px]"
+                                            className="w-full justify-between gap-2 md:w-[260px]"
                                         >
                                             <span className="min-w-0 truncate text-left">
                                                 {selectedEventData ? selectedEventData.title : 'All Events'}
@@ -336,7 +351,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                 <Input
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
-                                    placeholder="Search by ID, name, email, country, or status"
+                                    placeholder="Search name, country, registrant type, organization, or check-in"
                                     className="w-full md:w-80"
                                 />
                             </div>
@@ -354,29 +369,49 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>ID</TableHead>
+                                        <TableHead className="w-16">Seq</TableHead>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Country</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        <TableHead>Registrant Type</TableHead>
+                                        <TableHead>Organization</TableHead>
+                                        <TableHead>Check-in (Date and Time)</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {paginatedRows.length ? (
-                                        paginatedRows.map((row) => {
+                                        paginatedRows.map((row, index) => {
                                             const selectedEventId = selectedEvent === ALL_EVENTS_VALUE ? null : Number(selectedEvent);
-                                            const hasAttendedSelectedEvent =
-                                                selectedEventId === null
-                                                    ? row.has_attended
-                                                    : row.attended_programme_ids.includes(selectedEventId);
+                                            const scannedAt = selectedEventId
+                                                ? row.attendance_by_programme?.[String(selectedEventId)]
+                                                : row.latest_attendance_at;
+                                            const hasCheckin = Boolean(scannedAt);
 
                                             return (
                                                 <TableRow key={row.id}>
-                                                    <TableCell>{row.display_id ?? '-'}</TableCell>
-                                                    <TableCell>{row.name}</TableCell>
-                                                    <TableCell>{row.email}</TableCell>
-                                                    <TableCell>{row.country_name ?? '-'}</TableCell>
-                                                    <TableCell>{hasAttendedSelectedEvent ? 'Attended' : 'Did Not Join'}</TableCell>
+                                                    <TableCell>{(currentPage - 1) * PER_PAGE + index + 1}</TableCell>
+                                                    <TableCell>
+                                                        <div className="min-w-[240px]">
+                                                            <p className="font-medium text-slate-900 dark:text-slate-100">{buildDisplayName(row)}</p>
+                                                            <p className="text-xs text-slate-500 dark:text-slate-400">{row.country_name ?? '—'}</p>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>{row.registrant_type ?? '—'}</TableCell>
+                                                    <TableCell>{row.organization_name ?? '—'}</TableCell>
+                                                    <TableCell>
+                                                        {hasCheckin ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <Badge className="w-fit bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                                                                    Checked In
+                                                                </Badge>
+                                                                <span className="text-xs text-slate-600 dark:text-slate-300">
+                                                                    {formatDateTime(scannedAt)}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                                                                Did Not Join
+                                                            </Badge>
+                                                        )}
+                                                    </TableCell>
                                                 </TableRow>
                                             );
                                         })

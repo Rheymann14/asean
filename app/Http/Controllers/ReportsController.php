@@ -56,7 +56,6 @@ class ReportsController extends Controller
             ->pluck('participant_attendances.user_id');
 
         $totalParticipantsAttended = $attendedParticipantIds->count();
-
         $totalParticipantsDidNotJoin = max(0, $totalRegisteredParticipants - $totalParticipantsAttended);
 
         $joinedByUser = DB::table('participant_programmes')
@@ -68,45 +67,72 @@ class ReportsController extends Controller
             ->groupBy('user_id')
             ->map(fn ($group) => $group->pluck('programme_id')->map(fn ($id) => (int) $id)->values());
 
-        $attendedByUser = ParticipantAttendance::query()
+        $attendanceEntriesByUser = ParticipantAttendance::query()
             ->join('users', 'participant_attendances.user_id', '=', 'users.id')
             ->where('users.is_active', true)
             ->whereNotNull('participant_attendances.scanned_at')
             ->tap(function ($query) use ($excludeAdmin) {
                 $excludeAdmin($query);
             })
-            ->select('participant_attendances.user_id', 'participant_attendances.programme_id')
-            ->distinct()
+            ->select('participant_attendances.user_id', 'participant_attendances.programme_id', 'participant_attendances.scanned_at')
+            ->orderBy('participant_attendances.scanned_at')
             ->get()
-            ->groupBy('user_id')
-            ->map(fn ($group) => $group->pluck('programme_id')->map(fn ($id) => (int) $id)->values());
+            ->groupBy('user_id');
 
         $rows = User::query()
             ->leftJoin('countries', 'users.country_id', '=', 'countries.id')
+            ->leftJoin('user_types', 'users.user_type_id', '=', 'user_types.id')
             ->where('users.is_active', true)
             ->tap($excludeAdmin)
             ->select([
                 'users.id',
-                'users.display_id',
+                'users.honorific_title',
+                'users.given_name',
+                'users.family_name',
+                'users.suffix',
                 'users.name',
-                'users.email',
+                'users.organization_name',
                 'countries.name as country_name',
+                'user_types.name as registrant_type',
             ])
             ->orderBy('users.name')
             ->get()
-            ->map(function ($row) use ($joinedByUser, $attendedByUser) {
+            ->map(function ($row) use ($joinedByUser, $attendanceEntriesByUser) {
                 $joinedProgrammeIds = ($joinedByUser->get($row->id) ?? collect())->values();
-                $attendedProgrammeIds = ($attendedByUser->get($row->id) ?? collect())->values();
+                $attendanceEntries = $attendanceEntriesByUser->get($row->id, collect());
+
+                $attendedProgrammeIds = $attendanceEntries
+                    ->pluck('programme_id')
+                    ->unique()
+                    ->map(fn ($id) => (int) $id)
+                    ->values();
+
+                $attendanceByProgramme = $attendanceEntries
+                    ->groupBy('programme_id')
+                    ->map(function ($entries) {
+                        $latest = $entries->last();
+
+                        return $latest?->scanned_at?->toISOString();
+                    })
+                    ->all();
+
+                $latestAttendance = $attendanceEntries->last();
 
                 return [
                     'id' => $row->id,
-                    'display_id' => $row->display_id,
+                    'honorific_title' => $row->honorific_title,
+                    'given_name' => $row->given_name,
+                    'family_name' => $row->family_name,
+                    'suffix' => $row->suffix,
                     'name' => $row->name,
-                    'email' => $row->email,
                     'country_name' => $row->country_name,
+                    'registrant_type' => $row->registrant_type,
+                    'organization_name' => $row->organization_name,
                     'has_attended' => $attendedProgrammeIds->isNotEmpty(),
                     'joined_programme_ids' => $joinedProgrammeIds,
                     'attended_programme_ids' => $attendedProgrammeIds,
+                    'attendance_by_programme' => $attendanceByProgramme,
+                    'latest_attendance_at' => $latestAttendance?->scanned_at?->toISOString(),
                 ];
             })
             ->values();
