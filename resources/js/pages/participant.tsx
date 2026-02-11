@@ -282,6 +282,19 @@ const PHONE_CODE_OPTIONS = [
     { value: '+44', label: 'United Kingdom (+44)' },
     { value: '+84', label: 'Vietnam (+84)' },
     { value: '+670', label: 'Timor-Leste (+670)' },
+    { value: '+86', label: 'China (+86)' },
+    { value: '+420', label: 'Czech Republic (+420)' },
+    { value: '+358', label: 'Finland (+358)' },
+    { value: '+33', label: 'France (+33)' },
+    { value: '+49', label: 'Germany (+49)' },
+    { value: '+36', label: 'Hungary (+36)' },
+    { value: '+353', label: 'Ireland (+353)' },
+    { value: '+39', label: 'Italy (+39)' },
+    { value: '+31', label: 'Netherlands (+31)' },
+    { value: '+48', label: 'Poland (+48)' },
+    { value: '+386', label: 'Slovenia (+386)' },
+    { value: '+34', label: 'Spain (+34)' },
+    { value: '+44', label: 'United Kingdom (+44)' },
 ] as const;
 
 const PARTICIPANT_FORM_STEPS = [
@@ -4924,44 +4937,48 @@ export default function ParticipantPage(props: PageProps) {
                                                                 No country code
                                                                 found.
                                                             </CommandEmpty>
-                                                            <CommandGroup>
-                                                                {PHONE_CODE_OPTIONS.map(
-                                                                    (item) => (
-                                                                        <CommandItem
-                                                                            key={
-                                                                                item.value
-                                                                            }
-                                                                            value={
-                                                                                item.value
-                                                                            }
-                                                                            onSelect={() => {
-                                                                                participantForm.setData(
-                                                                                    'contact_country_code',
-                                                                                    item.value,
-                                                                                );
-                                                                                setParticipantFormPhoneCodeOpen(
-                                                                                    false,
-                                                                                );
-                                                                            }}
-                                                                        >
-                                                                            {
-                                                                                item.label
-                                                                            }
-                                                                            <Check
-                                                                                className={cn(
-                                                                                    'ml-auto h-4 w-4',
-                                                                                    participantForm
-                                                                                        .data
-                                                                                        .contact_country_code ===
-                                                                                        item.value
-                                                                                        ? 'opacity-100'
-                                                                                        : 'opacity-0',
-                                                                                )}
-                                                                            />
-                                                                        </CommandItem>
-                                                                    ),
-                                                                )}
-                                                            </CommandGroup>
+                                                            <CommandList className="max-h-[240px] overflow-auto">
+                                                                <CommandGroup>
+                                                                    {PHONE_CODE_OPTIONS.map(
+                                                                        (
+                                                                            item,
+                                                                        ) => (
+                                                                            <CommandItem
+                                                                                key={
+                                                                                    item.value
+                                                                                }
+                                                                                value={
+                                                                                    item.value
+                                                                                }
+                                                                                onSelect={() => {
+                                                                                    participantForm.setData(
+                                                                                        'contact_country_code',
+                                                                                        item.value,
+                                                                                    );
+                                                                                    setParticipantFormPhoneCodeOpen(
+                                                                                        false,
+                                                                                    );
+                                                                                }}
+                                                                            >
+                                                                                {
+                                                                                    item.label
+                                                                                }
+                                                                                <Check
+                                                                                    className={cn(
+                                                                                        'ml-auto h-4 w-4',
+                                                                                        participantForm
+                                                                                            .data
+                                                                                            .contact_country_code ===
+                                                                                            item.value
+                                                                                            ? 'opacity-100'
+                                                                                            : 'opacity-0',
+                                                                                    )}
+                                                                                />
+                                                                            </CommandItem>
+                                                                        ),
+                                                                    )}
+                                                                </CommandGroup>
+                                                            </CommandList>
                                                         </Command>
                                                     </PopoverContent>
                                                 </Popover>
