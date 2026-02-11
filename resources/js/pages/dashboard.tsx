@@ -22,7 +22,9 @@ import {
     CommandGroup,
     CommandInput,
     CommandItem,
+    CommandList,
 } from '@/components/ui/command';
+
 import {
     Popover,
     PopoverContent,
@@ -274,8 +276,8 @@ export default function Dashboard() {
         return events.map((event) => {
             const filtered = countryId
                 ? event.participants.filter(
-                      (participant) => participant.country_id === countryId,
-                  )
+                    (participant) => participant.country_id === countryId,
+                )
                 : event.participants;
 
             return {
@@ -502,115 +504,92 @@ export default function Dashboard() {
                                     <CommandInput placeholder="Search country..." />
                                     <CommandEmpty>No results.</CommandEmpty>
 
-                                    <CommandGroup>
-                                        <CommandItem
-                                            value="__all__"
-                                            onSelect={() => {
-                                                setCountry(null);
-                                                setOpen(false);
-                                            }}
-                                            className="gap-2"
-                                        >
-                                            <span className="inline-flex size-4 items-center justify-center">
-                                                {!country ? (
-                                                    <Check className="size-4" />
-                                                ) : null}
-                                            </span>
-                                            <span>All countries</span>
-                                        </CommandItem>
-                                    </CommandGroup>
+                                    {/* ✅ scrollable countries list */}
+                                    <CommandList className="max-h-[320px] overflow-auto overscroll-contain">
+                                        <CommandGroup>
+                                            <CommandItem
+                                                value="__all__"
+                                                onSelect={() => {
+                                                    setCountry(null);
+                                                    setOpen(false);
+                                                }}
+                                                className="gap-2"
+                                            >
+                                                <span className="inline-flex size-4 items-center justify-center">
+                                                    {!country ? <Check className="size-4" /> : null}
+                                                </span>
+                                                <span>All countries</span>
+                                            </CommandItem>
+                                        </CommandGroup>
 
-                                    <CommandGroup heading="ASEAN Countries">
-                                        {groupedCountries.asean.map((c) => {
-                                            const participantCount =
-                                                countryStats?.[String(c.id)]
-                                                    ?.participants ?? 0;
+                                        <CommandGroup heading="ASEAN Countries">
+                                            {groupedCountries.asean.map((c) => {
+                                                const participantCount =
+                                                    countryStats?.[String(c.id)]?.participants ?? 0;
 
-                                            return (
-                                                <CommandItem
-                                                    key={c.id}
-                                                    value={String(c.id)}
-                                                    onSelect={() => {
-                                                        setCountry(
-                                                            String(c.id),
-                                                        );
-                                                        setOpen(false);
-                                                    }}
-                                                    className="gap-2"
-                                                >
-                                                    <span className="inline-flex size-4 items-center justify-center">
-                                                        {country ===
-                                                        String(c.id) ? (
-                                                            <Check className="size-4" />
-                                                        ) : null}
-                                                    </span>
-                                                    {getFlagSrc(c) ? (
-                                                        <img
-                                                            src={
-                                                                getFlagSrc(c) ??
-                                                                ''
-                                                            }
-                                                            alt=""
-                                                            className="size-5 rounded-full object-cover"
-                                                        />
-                                                    ) : null}
-                                                    <span className="truncate">
-                                                        {c.name}
-                                                    </span>
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="ml-auto rounded-full text-[11px]"
+                                                return (
+                                                    <CommandItem
+                                                        key={c.id}
+                                                        value={String(c.id)}
+                                                        onSelect={() => {
+                                                            setCountry(String(c.id));
+                                                            setOpen(false);
+                                                        }}
+                                                        className="gap-2"
                                                     >
-                                                        {participantCount.toLocaleString()}
-                                                    </Badge>
-                                                </CommandItem>
-                                            );
-                                        })}
-                                    </CommandGroup>
+                                                        <span className="inline-flex size-4 items-center justify-center">
+                                                            {country === String(c.id) ? (
+                                                                <Check className="size-4" />
+                                                            ) : null}
+                                                        </span>
+                                                        {getFlagSrc(c) ? (
+                                                            <img
+                                                                src={getFlagSrc(c) ?? ''}
+                                                                alt=""
+                                                                className="size-5 rounded-full object-cover"
+                                                            />
+                                                        ) : null}
+                                                        <span className="truncate">{c.name}</span>
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="ml-auto rounded-full text-[11px]"
+                                                        >
+                                                            {participantCount.toLocaleString()}
+                                                        </Badge>
+                                                    </CommandItem>
+                                                );
+                                            })}
+                                        </CommandGroup>
 
-                                    {groupedCountries.nonAsean.length > 0 ? (
-                                        <CommandGroup heading="Non-ASEAN Countries">
-                                            {groupedCountries.nonAsean.map(
-                                                (c) => {
+                                        {groupedCountries.nonAsean.length > 0 ? (
+                                            <CommandGroup heading="Non-ASEAN Countries">
+                                                {groupedCountries.nonAsean.map((c) => {
                                                     const participantCount =
-                                                        countryStats?.[
-                                                            String(c.id)
-                                                        ]?.participants ?? 0;
+                                                        countryStats?.[String(c.id)]?.participants ?? 0;
 
                                                     return (
                                                         <CommandItem
                                                             key={c.id}
                                                             value={String(c.id)}
                                                             onSelect={() => {
-                                                                setCountry(
-                                                                    String(
-                                                                        c.id,
-                                                                    ),
-                                                                );
+                                                                setCountry(String(c.id));
                                                                 setOpen(false);
                                                             }}
                                                             className="gap-2"
                                                         >
                                                             <span className="inline-flex size-4 items-center justify-center">
-                                                                {country ===
-                                                                String(c.id) ? (
+                                                                {country === String(c.id) ? (
                                                                     <Check className="size-4" />
                                                                 ) : null}
                                                             </span>
                                                             {getFlagSrc(c) ? (
                                                                 <img
-                                                                    src={
-                                                                        getFlagSrc(
-                                                                            c,
-                                                                        ) ?? ''
-                                                                    }
+                                                                    src={getFlagSrc(c) ?? ''}
                                                                     alt=""
                                                                     className="size-5 rounded-full object-cover"
                                                                 />
                                                             ) : null}
-                                                            <span className="truncate">
-                                                                {c.name}
-                                                            </span>
+                                                            <span className="truncate">{c.name}</span>
                                                             <Badge
                                                                 variant="secondary"
                                                                 className="ml-auto rounded-full text-[11px]"
@@ -619,11 +598,12 @@ export default function Dashboard() {
                                                             </Badge>
                                                         </CommandItem>
                                                     );
-                                                },
-                                            )}
-                                        </CommandGroup>
-                                    ) : null}
+                                                })}
+                                            </CommandGroup>
+                                        ) : null}
+                                    </CommandList>
                                 </Command>
+
                             </PopoverContent>
                         </Popover>
                     </div>
@@ -743,7 +723,7 @@ export default function Dashboard() {
                                                             {Number(
                                                                 payload[0]
                                                                     ?.value ??
-                                                                    0,
+                                                                0,
                                                             ).toLocaleString()}
                                                         </span>{' '}
                                                         scans
@@ -856,7 +836,7 @@ export default function Dashboard() {
                                                                     {Number(
                                                                         payload[0]
                                                                             ?.value ??
-                                                                            0,
+                                                                        0,
                                                                     ).toLocaleString()}
                                                                 </span>{' '}
                                                                 joined
@@ -923,7 +903,7 @@ export default function Dashboard() {
                                                         <span className="font-semibold text-foreground">
                                                             {Number(
                                                                 item?.value ??
-                                                                    0,
+                                                                0,
                                                             ).toLocaleString()}
                                                         </span>
                                                     </div>
@@ -1028,7 +1008,7 @@ export default function Dashboard() {
                                                         Math.round(
                                                             (ev.attendance /
                                                                 maxScanned) *
-                                                                100,
+                                                            100,
                                                         ),
                                                     ),
                                                 );
@@ -1194,14 +1174,14 @@ export default function Dashboard() {
                                                     <span className="text-[11px] text-muted-foreground">
                                                         {entry.created_at
                                                             ? formatShortDate(
-                                                                  entry.created_at,
-                                                              )
+                                                                entry.created_at,
+                                                            )
                                                             : '—'}
                                                     </span>
                                                 </div>
                                                 <div className="mt-2 flex flex-wrap gap-2">
                                                     {entry.user_experience_rating !==
-                                                    null ? (
+                                                        null ? (
                                                         <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-foreground">
                                                             UX
                                                             <StarRating
