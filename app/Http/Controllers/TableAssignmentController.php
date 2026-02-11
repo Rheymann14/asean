@@ -218,6 +218,8 @@ class TableAssignmentController extends Controller
 
     public function storeTable(Request $request)
     {
+        $minimumCapacity = $this->isAdmin($request->user()) ? 0 : 1;
+
         $validated = $request->validate([
             'programme_id' => ['required', 'exists:programmes,id'],
             'table_number' => [
@@ -226,7 +228,7 @@ class TableAssignmentController extends Controller
                 'max:50',
                 Rule::unique('participant_tables', 'table_number')->where('programme_id', $request->input('programme_id')),
             ],
-            'capacity' => ['required', 'integer', 'min:1'],
+            'capacity' => ['required', 'integer', "min:{$minimumCapacity}"],
         ]);
 
         $validated['table_number'] = trim($validated['table_number']);
@@ -238,6 +240,8 @@ class TableAssignmentController extends Controller
 
     public function updateTable(Request $request, ParticipantTable $participantTable)
     {
+        $minimumCapacity = $this->isAdmin($request->user()) ? 0 : 1;
+
         $validated = $request->validate([
             'table_number' => [
                 'sometimes',
@@ -247,7 +251,7 @@ class TableAssignmentController extends Controller
                     ->where('programme_id', $participantTable->programme_id)
                     ->ignore($participantTable->id),
             ],
-            'capacity' => ['required', 'integer', 'min:1'],
+            'capacity' => ['required', 'integer', "min:{$minimumCapacity}"],
         ]);
 
         $payload = [
@@ -461,6 +465,17 @@ class TableAssignmentController extends Controller
             ->trim();
 
         return $value === 'CHED' || $value->startsWith('CHED ');
+    }
+
+    private function isAdmin(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $user->loadMissing('userType');
+
+        return strtoupper((string) ($user->userType->slug ?? $user->userType->name)) === 'ADMIN';
     }
 
     private function isProgrammeOpen(Programme $event, $now): bool
