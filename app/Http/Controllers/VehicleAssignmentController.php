@@ -34,7 +34,7 @@ class VehicleAssignmentController extends Controller
     public function managementIndex(Request $request)
     {
         $events = Programme::query()->orderBy('starts_at')->orderBy('title')->get();
-        $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
+        $selectedEventId = $this->resolveSelectedEventId($request, $events);
 
         $vehicles = TransportVehicle::query()
             ->with(['incharge', 'assignments.user'])
@@ -117,7 +117,7 @@ class VehicleAssignmentController extends Controller
     public function assignmentIndex(Request $request)
     {
         $events = Programme::query()->orderBy('starts_at')->orderBy('title')->get();
-        $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
+        $selectedEventId = $this->resolveSelectedEventId($request, $events);
 
         $vehicles = TransportVehicle::query()
             ->with('incharge')
@@ -165,16 +165,6 @@ class VehicleAssignmentController extends Controller
                 $selectedEventId,
                 fn ($query) => $query->whereHas('joinedProgrammes', fn ($subQuery) => $subQuery->where('programmes.id', $selectedEventId))
             )
-            ->where(function ($query) {
-                $query->whereDoesntHave('userType')
-                    ->orWhereHas('userType', function ($subQuery) {
-                        $subQuery->where(function ($nameQuery) {
-                            $nameQuery->whereNull('name')->orWhereRaw("UPPER(name) NOT LIKE 'CHED%'");
-                        })->where(function ($slugQuery) {
-                            $slugQuery->whereNull('slug')->orWhereRaw("UPPER(slug) NOT LIKE 'CHED%'");
-                        });
-                    });
-            })
             ->orderBy('name')
             ->get()
             ->map(function (User $participant) use ($assignmentsByUser, $tableAssignments, $attendanceByUser) {
@@ -304,7 +294,7 @@ class VehicleAssignmentController extends Controller
             ->orderBy('title')
             ->get();
 
-        $selectedEventId = (int) $request->input('event_id', $events->first()?->id);
+        $selectedEventId = $this->resolveSelectedEventId($request, $events);
 
         $vehicles = TransportVehicle::query()
             ->with(['assignments' => fn ($query) => $query
@@ -606,6 +596,19 @@ class VehicleAssignmentController extends Controller
         ]);
 
         return back();
+    }
+
+    private function resolveSelectedEventId(Request $request, $events): int
+    {
+        $requestedEventId = (int) $request->input('event_id');
+
+        if ($requestedEventId > 0) {
+            return $requestedEventId;
+        }
+
+        $activeEvent = $events->firstWhere('is_active', true);
+
+        return (int) ($activeEvent?->id ?? $events->first()?->id ?? 0);
     }
 
     private function isChedLoType(User $user): bool
