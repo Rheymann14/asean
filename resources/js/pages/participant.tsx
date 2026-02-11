@@ -4947,9 +4947,7 @@ export default function ParticipantPage(props: PageProps) {
                                                                                 key={
                                                                                     item.value
                                                                                 }
-                                                                                value={
-                                                                                    item.value
-                                                                                }
+                                                                                value={`${item.label} ${item.value}`}
                                                                                 onSelect={() => {
                                                                                     participantForm.setData(
                                                                                         'contact_country_code',

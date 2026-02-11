@@ -1718,9 +1718,7 @@ export default function Register({
                                                                                     key={
                                                                                         item.value
                                                                                     }
-                                                                                    value={
-                                                                                        item.value
-                                                                                    } // ✅ important
+                                                                                    value={`${item.label} ${item.value}`} // ✅ searchable by country and code
                                                                                     onSelect={() => {
                                                                                         setContactCountryCode(
                                                                                             item.value,
