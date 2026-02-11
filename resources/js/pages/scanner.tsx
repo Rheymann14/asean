@@ -478,26 +478,17 @@ function ScannerIdCardPreview({
                             !isLandscape && 'mt-auto',
                         )}
                     >
-                        {participant.profile_image_url ? (
-                            <img
-                                src={participant.profile_image_url}
-                                alt={participant.name}
-                                className="rounded-2xl object-cover"
-                                style={{ width: qrSize, height: qrSize }}
-                                draggable={false}
-                                loading="lazy"
-                            />
-                        ) : (
-                            <div
-                                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 text-center dark:border-white/10 dark:bg-slate-950/30"
-                                style={{ width: qrSize, height: qrSize }}
-                            >
-                                <ShieldCheck className="h-7 w-7 text-emerald-600" />
-                                <div className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
-                                    Verified
-                                </div>
-                            </div>
-                        )}
+                        <img
+                            src={
+                                participant.profile_image_url ??
+                                '/img/asean_logo.png'
+                            }
+                            alt={participant.name}
+                            className="rounded-2xl object-cover"
+                            style={{ width: qrSize, height: qrSize }}
+                            draggable={false}
+                            loading="lazy"
+                        />
 
                         {participant.is_verified !== false ? (
                             <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
