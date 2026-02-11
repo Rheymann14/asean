@@ -103,20 +103,29 @@ const ALL_EVENTS_VALUE = 'all';
 const REPORT_NOTIFICATION_SENT_AT_KEY =
     'reports-assignment-notification-sent-at';
 
-function getCsrfToken() {
+function readXsrfCookieToken() {
+    const cookieMatch = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/);
+
+    if (!cookieMatch?.[1]) return '';
+
+    try {
+        return decodeURIComponent(cookieMatch[1]).trim();
+    } catch {
+        return cookieMatch[1].trim();
+    }
+}
+
+function getCsrfTokens() {
     const metaToken = document
         .querySelector('meta[name="csrf-token"]')
         ?.getAttribute('content')
         ?.trim();
+    const cookieToken = readXsrfCookieToken();
 
-    if (metaToken) return metaToken;
-
-    const cookieMatch = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/);
-    const cookieToken = cookieMatch?.[1]
-        ? decodeURIComponent(cookieMatch[1])
-        : '';
-
-    return cookieToken.trim();
+    return [metaToken, cookieToken].filter(
+        (token, index, tokens): token is string =>
+            Boolean(token) && tokens.indexOf(token) === index,
+    );
 }
 
 function resolveEventPhase(event: EventRow, nowTs: number): EventPhase {
@@ -420,28 +429,44 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 [row.id]: true,
             }));
 
-            const token = getCsrfToken();
+            const [primaryToken, fallbackToken] = getCsrfTokens();
 
-            try {
-                const response = await fetch(
-                    `/reports/${row.id}/assignment-notification`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Accept: 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            ...(token ? { 'X-CSRF-TOKEN': token } : {}),
-                        },
-                        body: JSON.stringify({ event_id: notificationEventId }),
+            const sendRequest = (csrfToken?: string) =>
+                fetch(`/reports/${row.id}/assignment-notification`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...(csrfToken
+                            ? {
+                                  'X-CSRF-TOKEN': csrfToken,
+                                  'X-XSRF-TOKEN': csrfToken,
+                              }
+                            : {}),
                     },
-                );
+                    body: JSON.stringify({
+                        event_id: notificationEventId,
+                        ...(csrfToken ? { _token: csrfToken } : {}),
+                    }),
+                });
 
-                const payload = (await response.json().catch(() => ({}))) as {
+            const parsePayload = async (response: Response) =>
+                (await response.json().catch(() => ({}))) as {
                     message?: string;
                     sent_at?: string;
                     errors?: Record<string, string[]>;
                 };
+
+            try {
+                let response = await sendRequest(primaryToken);
+                let payload = await parsePayload(response);
+
+                if (!response.ok && response.status === 419 && fallbackToken) {
+                    response = await sendRequest(fallbackToken);
+                    payload = await parsePayload(response);
+                }
 
                 if (!response.ok) {
                     if (response.status === 419) {
