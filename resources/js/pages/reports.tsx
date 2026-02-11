@@ -192,8 +192,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                     ? 'checked in attended'
                     : 'did not join'
                 : row.has_attended
-                  ? 'checked in attended'
-                  : 'did not join';
+                    ? 'checked in attended'
+                    : 'did not join';
 
             return [
                 buildDisplayName(row),
@@ -311,7 +311,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={eventsOpen}
-                                            className="h-auto w-full justify-between gap-2 py-2 md:w-[260px]"
+                                            className="
+                h-auto w-full justify-between gap-2 py-2
+                sm:max-w-[420px]
+                md:w-[260px] md:max-w-none
+            "
                                         >
                                             <span className="min-w-0 break-words whitespace-normal text-left leading-tight md:overflow-hidden md:text-ellipsis md:whitespace-nowrap">
                                                 {selectedEventData ? selectedEventData.title : 'All Events'}
@@ -320,11 +324,21 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         </Button>
                                     </PopoverTrigger>
 
-                                    <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
-                                        <Command>
+                                    <PopoverContent
+                                        align="start"
+                                        sideOffset={8}
+                                        className="
+            p-0
+            w-[min(420px,calc(100vw-1.5rem))]
+            max-h-[70vh] overflow-hidden
+            md:w-[--radix-popover-trigger-width]
+        "
+                                    >
+                                        <Command className="w-full">
                                             <CommandInput placeholder="Search event..." />
                                             <CommandEmpty>No event found.</CommandEmpty>
-                                            <CommandList>
+
+                                            <CommandList className="max-h-[60vh] overflow-auto">
                                                 <CommandGroup>
                                                     <CommandItem
                                                         value="all events"
@@ -366,7 +380,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                     </p>
                                                                 </div>
                                                             </div>
-                                                            <Badge className={cn('shrink-0', phaseBadgeClass(event.phase))}>{event.phase_label}</Badge>
+                                                            <Badge className={cn('shrink-0', phaseBadgeClass(event.phase))}>
+                                                                {event.phase_label}
+                                                            </Badge>
                                                         </CommandItem>
                                                     ))}
                                                 </CommandGroup>
@@ -374,6 +390,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
+
 
                                 <Input
                                     value={search}

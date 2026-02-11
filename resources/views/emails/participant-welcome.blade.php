@@ -29,7 +29,7 @@
                                 <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #475569;">
                                     System link:
                                     <a href="{{ $appUrl }}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">{{ $appUrl }}</a>
-                                    &mdash; log in and answer few questions on the event page to complete your registration. <strong>Your username is:</strong> {{ $user->email }}<br />
+                                    &mdash; log in and check your profile. <strong>Your username is:</strong> {{ $user->email }}<br />
                                 </p>
                                 <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #64748b;">
                                     This is a no-reply email. 
