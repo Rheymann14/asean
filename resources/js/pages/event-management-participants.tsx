@@ -109,13 +109,43 @@ export default function EventManagementParticipants() {
     const { programme } = usePage<PageProps>().props;
     const participantsList = programme.participants ?? [];
     const checkedInCount = participantsList.filter((participant) => participant.checked_in_at).length;
+    const pageSizeOptions = [1, 10, 100, 1000] as const;
 
     const [signatoryName, setSignatoryName] = React.useState('');
     const [signatoryTitle, setSignatoryTitle] = React.useState('');
     const [signatorySignature, setSignatorySignature] = React.useState<string | null>(null);
     const [signatorySignatureLabel, setSignatorySignatureLabel] = React.useState<string>('');
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [entriesPerPage, setEntriesPerPage] = React.useState<number>(10);
+    const [currentPage, setCurrentPage] = React.useState(1);
     const signatorySyncEnabledRef = React.useRef(false);
     const signatorySyncTimeoutRef = React.useRef<number | null>(null);
+
+    const filteredParticipants = React.useMemo(() => {
+        const query = searchQuery.trim().toLocaleLowerCase('en-PH');
+
+        if (!query) return participantsList;
+
+        return participantsList.filter((participant) => {
+            return [participant.name, participant.email, participant.display_id]
+                .filter(Boolean)
+                .some((value) => String(value).toLocaleLowerCase('en-PH').includes(query));
+        });
+    }, [participantsList, searchQuery]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredParticipants.length / entriesPerPage));
+    const startIndex = (currentPage - 1) * entriesPerPage;
+    const paginatedParticipants = filteredParticipants.slice(startIndex, startIndex + entriesPerPage);
+
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, entriesPerPage]);
+
+    React.useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
 
     React.useEffect(() => {
         signatorySyncEnabledRef.current = false;
@@ -411,48 +441,113 @@ export default function EventManagementParticipants() {
                                     No participants have joined this event yet.
                                 </div>
                             ) : (
-                                <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950">
-                                    {participantsList.map((participant) => {
-                                        const checked = !!participant.checked_in_at;
+                                <div className="space-y-3">
+                                    <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-slate-500 dark:text-slate-400">Show entries</span>
+                                            <select
+                                                className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-slate-700"
+                                                value={entriesPerPage}
+                                                onChange={(event) => setEntriesPerPage(Number(event.target.value))}
+                                            >
+                                                {pageSizeOptions.map((option) => (
+                                                    <option key={option} value={option}>
+                                                        {option}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <Input
+                                            className="h-8 text-xs sm:max-w-xs"
+                                            placeholder="Search participant"
+                                            value={searchQuery}
+                                            onChange={(event) => setSearchQuery(event.target.value)}
+                                        />
+                                    </div>
 
-                                        return (
-                                            <div key={participant.id} className="flex items-center gap-3 px-3 py-2">
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                        {participant.name}
-                                                    </div>
-                                                    <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                                                        {participant.display_id || participant.email || '—'}
-                                                        {checked ? ` · Scanned ${formatDateTimeSafe(participant.checked_in_at)}` : ''}
-                                                    </div>
+                                    {filteredParticipants.length === 0 ? (
+                                        <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800">
+                                            No participants matched your search.
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950">
+                                                {paginatedParticipants.map((participant) => {
+                                                    const checked = !!participant.checked_in_at;
+
+                                                    return (
+                                                        <div key={participant.id} className="flex items-center gap-3 px-3 py-2">
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                                    {participant.name}
+                                                                </div>
+                                                                <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                                                                    {participant.display_id || participant.email || '—'}
+                                                                    {checked ? ` · Scanned ${formatDateTimeSafe(participant.checked_in_at)}` : ''}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex shrink-0 items-center gap-2">
+                                                                {checked ? (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                                                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                                                        Checked
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                                                                        Not yet
+                                                                    </span>
+                                                                )}
+
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className={cn('h-8 px-2 text-xs', !checked && 'cursor-not-allowed opacity-60')}
+                                                                    onClick={() => printParticipantCertificates(participant)}
+                                                                    disabled={!checked}
+                                                                >
+                                                                    Print
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="flex flex-col items-start justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center">
+                                                <div>
+                                                    Showing {startIndex + 1} to {Math.min(startIndex + entriesPerPage, filteredParticipants.length)} of{' '}
+                                                    {filteredParticipants.length.toLocaleString()} entries
                                                 </div>
-
-                                                <div className="flex shrink-0 items-center gap-2">
-                                                    {checked ? (
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                                            Checked
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                                                            Not yet
-                                                        </span>
-                                                    )}
-
+                                                <div className="flex items-center gap-2">
                                                     <Button
                                                         type="button"
                                                         size="sm"
                                                         variant="outline"
-                                                        className={cn('h-8 px-2 text-xs', !checked && 'cursor-not-allowed opacity-60')}
-                                                        onClick={() => printParticipantCertificates(participant)}
-                                                        disabled={!checked}
+                                                        className="h-8 px-2 text-xs"
+                                                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                                        disabled={currentPage === 1}
                                                     >
-                                                        Print
+                                                        Previous
+                                                    </Button>
+                                                    <span>
+                                                        Page {currentPage} of {totalPages}
+                                                    </span>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-8 px-2 text-xs"
+                                                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                                        disabled={currentPage >= totalPages}
+                                                    >
+                                                        Next
                                                     </Button>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
