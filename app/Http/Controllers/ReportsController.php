@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AssignmentNotificationLog;
 use App\Models\ParticipantAttendance;
 use App\Models\ParticipantTableAssignment;
 use App\Models\Programme;
@@ -167,9 +168,21 @@ Please be informed of the following:
                 ], 500);
             }
 
+            $sentAt = now();
+
+            AssignmentNotificationLog::query()->updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'programme_id' => $event->id,
+                ],
+                [
+                    'sent_at' => $sentAt,
+                ],
+            );
+
             return response()->json([
                 'message' => 'Notification sent successfully.',
-                'sent_at' => now()->toISOString(),
+                'sent_at' => $sentAt->toISOString(),
             ]);
         } catch (\Throwable $exception) {
             report($exception);
@@ -291,6 +304,19 @@ Please be informed of the following:
             ->get()
             ->groupBy('user_id');
 
+        $assignmentNotificationByUser = AssignmentNotificationLog::query()
+            ->join('users', 'assignment_notification_logs.user_id', '=', 'users.id')
+            ->where('users.is_active', true)
+            ->tap($excludeAdmin)
+            ->select([
+                'assignment_notification_logs.user_id',
+                'assignment_notification_logs.programme_id',
+                'assignment_notification_logs.sent_at',
+            ])
+            ->orderBy('assignment_notification_logs.sent_at')
+            ->get()
+            ->groupBy('user_id');
+
         $rows = User::query()
             ->leftJoin('countries', 'users.country_id', '=', 'countries.id')
             ->leftJoin('user_types', 'users.user_type_id', '=', 'user_types.id')
@@ -313,11 +339,12 @@ Please be informed of the following:
             ])
             ->orderBy('users.name')
             ->get()
-            ->map(function ($row) use ($joinedByUser, $attendanceEntriesByUser, $tableAssignmentsByUser, $vehicleAssignmentsByUser) {
+            ->map(function ($row) use ($joinedByUser, $attendanceEntriesByUser, $tableAssignmentsByUser, $vehicleAssignmentsByUser, $assignmentNotificationByUser) {
                 $joinedProgrammeIds = ($joinedByUser->get($row->id) ?? collect())->values();
                 $attendanceEntries = $attendanceEntriesByUser->get($row->id, collect());
                 $tableAssignments = $tableAssignmentsByUser->get($row->id, collect());
                 $vehicleAssignments = $vehicleAssignmentsByUser->get($row->id, collect());
+                $assignmentNotificationEntries = $assignmentNotificationByUser->get($row->id, collect());
 
                 $attendedProgrammeIds = $attendanceEntries
                     ->pluck('programme_id')
@@ -357,6 +384,11 @@ Please be informed of the following:
                     ->map(fn ($entries) => $entries->last()?->transport_vehicle_plate_number)
                     ->all();
 
+                $notificationSentAtByProgramme = $assignmentNotificationEntries
+                    ->groupBy('programme_id')
+                    ->map(fn ($entries) => $entries->last()?->sent_at?->toISOString())
+                    ->all();
+
                 return [
                     'id' => $row->id,
                     'honorific_title' => $row->honorific_title,
@@ -377,6 +409,7 @@ Please be informed of the following:
                     'vehicle_assignment_by_programme' => $vehicleAssignmentByProgramme,
                     'vehicle_plate_number' => $latestVehicleAssignment?->transport_vehicle_plate_number,
                     'vehicle_plate_number_by_programme' => $vehiclePlateNumberByProgramme,
+                    'notification_sent_at_by_programme' => $notificationSentAtByProgramme,
                     'has_attended' => $attendedProgrammeIds->isNotEmpty(),
                     'joined_programme_ids' => $joinedProgrammeIds,
                     'attended_programme_ids' => $attendedProgrammeIds,
