@@ -333,19 +333,6 @@ export default function Register({
 
     const canContinue = consentContact && consentMedia;
 
-    React.useEffect(() => {
-        if (
-            attendWelcomeDinner !== 'yes' &&
-            availTransportFromMakatiToPeninsula
-        ) {
-            setAvailTransportFromMakatiToPeninsula('');
-        }
-    }, [
-        attendWelcomeDinner,
-        availTransportFromMakatiToPeninsula,
-        setAvailTransportFromMakatiToPeninsula,
-    ]);
-
     const [country, setCountry] = useRemember<string>('', 'register.country');
     const [honorificTitle, setHonorificTitle] = useRemember<string>(
         '',
@@ -913,9 +900,8 @@ export default function Register({
                                         type="hidden"
                                         name="avail_transport_from_makati_to_peninsula"
                                         value={
-                                            attendWelcomeDinner === 'yes' &&
                                             availTransportFromMakatiToPeninsula ===
-                                                'yes'
+                                            'yes'
                                                 ? '1'
                                                 : '0'
                                         }
@@ -2386,60 +2372,54 @@ export default function Register({
                                                 />
                                             </div>
 
-                                            {attendWelcomeDinner === 'yes' ? (
-                                                <div className="mt-3 grid gap-2">
-                                                    <Label>
-                                                       Will you avail of the transportation to The Peninsula Manila?
-                                                    </Label>
-                                                    <div className="mt-1 grid gap-2 sm:grid-cols-2">
-                                                        <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
-                                                            <input
-                                                                type="radio"
-                                                                value="yes"
-                                                                checked={
-                                                                    availTransportFromMakatiToPeninsula ===
-                                                                    'yes'
-                                                                }
-                                                                onChange={() =>
-                                                                    setAvailTransportFromMakatiToPeninsula(
-                                                                        'yes',
-                                                                    )
-                                                                }
-                                                                required={
-                                                                    attendWelcomeDinner ===
-                                                                    'yes'
-                                                                }
-                                                            />
-                                                            Yes
-                                                        </label>
-                                                        <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
-                                                            <input
-                                                                type="radio"
-                                                                value="no"
-                                                                checked={
-                                                                    availTransportFromMakatiToPeninsula ===
-                                                                    'no'
-                                                                }
-                                                                onChange={() =>
-                                                                    setAvailTransportFromMakatiToPeninsula(
-                                                                        'no',
-                                                                    )
-                                                                }
-                                                                required={
-                                                                    attendWelcomeDinner ===
-                                                                    'yes'
-                                                                }
-                                                            />
-                                                            No
-                                                        </label>
-                                                    </div>
-                                                    <InputError
-                                                        message={
-                                                            err.avail_transport_from_makati_to_peninsula
-                                                        }
-                                                    />
+                                            <div className="mt-3 grid gap-2">
+                                                <Label>
+                                                    Will you avail of the
+                                                    transportation to The
+                                                    Peninsula Manila?
+                                                </Label>
+                                                <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                                                    <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                        <input
+                                                            type="radio"
+                                                            value="yes"
+                                                            checked={
+                                                                availTransportFromMakatiToPeninsula ===
+                                                                'yes'
+                                                            }
+                                                            onChange={() =>
+                                                                setAvailTransportFromMakatiToPeninsula(
+                                                                    'yes',
+                                                                )
+                                                            }
+                                                            required
+                                                        />
+                                                        Yes
+                                                    </label>
+                                                    <label className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-sm">
+                                                        <input
+                                                            type="radio"
+                                                            value="no"
+                                                            checked={
+                                                                availTransportFromMakatiToPeninsula ===
+                                                                'no'
+                                                            }
+                                                            onChange={() =>
+                                                                setAvailTransportFromMakatiToPeninsula(
+                                                                    'no',
+                                                                )
+                                                            }
+                                                            required
+                                                        />
+                                                        No
+                                                    </label>
                                                 </div>
-                                            ) : null}
+                                                <InputError
+                                                    message={
+                                                        err.avail_transport_from_makati_to_peninsula
+                                                    }
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3 backdrop-blur">
@@ -2449,7 +2429,8 @@ export default function Register({
                                                         Dietary Preferences
                                                     </p>
                                                     <p className="mt-1 text-sm leading-snug text-slate-600">
-                                                        Select all that apply. (Leave blank if none)
+                                                        Select all that apply.
+                                                        (Leave blank if none)
                                                     </p>
                                                 </div>
                                             </div>
@@ -2699,7 +2680,8 @@ export default function Register({
                                                     </p>
                                                     <p className="mt-1 text-sm leading-snug text-slate-600">
                                                         Select all applicable
-                                                        needs. (Leave blank if none)
+                                                        needs. (Leave blank if
+                                                        none)
                                                     </p>
                                                 </div>
                                             </div>
