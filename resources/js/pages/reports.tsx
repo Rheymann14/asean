@@ -72,6 +72,10 @@ type ReportRow = {
     other_user_type?: string | null;
     attend_welcome_dinner: boolean;
     avail_transport_from_makati_to_peninsula: boolean;
+    table_assignment?: string | null;
+    table_assignment_by_programme: Record<string, string | null>;
+    vehicle_assignment?: string | null;
+    vehicle_assignment_by_programme: Record<string, string | null>;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
@@ -172,6 +176,26 @@ function getCheckinTime(
     if (selectedEventId)
         return row.attendance_by_programme?.[String(selectedEventId)];
     return row.latest_attendance_at;
+}
+
+function getTableAssignment(
+    row: ReportRow,
+    selectedEventId: number | null,
+): string | null | undefined {
+    if (selectedEventId)
+        return row.table_assignment_by_programme?.[String(selectedEventId)];
+
+    return row.table_assignment;
+}
+
+function getVehicleAssignment(
+    row: ReportRow,
+    selectedEventId: number | null,
+): string | null | undefined {
+    if (selectedEventId)
+        return row.vehicle_assignment_by_programme?.[String(selectedEventId)];
+
+    return row.vehicle_assignment;
 }
 
 export default function Reports({ summary, rows, events, now_iso }: PageProps) {
@@ -381,6 +405,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                         <td>${escapeHtml(row.organization_name ?? '—')}</td>
                         <td>${row.attend_welcome_dinner ? 'YES' : 'NO'}</td>
                         <td>${row.avail_transport_from_makati_to_peninsula ? 'YES' : 'NO'}</td>
+                        <td>${escapeHtml(getTableAssignment(row, selectedEventId) ?? '—')}</td>
+                        <td>${escapeHtml(getVehicleAssignment(row, selectedEventId) ?? '—')}</td>
                         <td>${hasCheckin ? 'Checked In' : 'Did Not Join'}</td>
                         <td>${escapeHtml(hasCheckin ? formatDateTime(scannedAt) : '—')}</td>
                     </tr>
@@ -416,12 +442,14 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                 <th>Organization</th>
                                 <th>Welcome Dinner</th>
                                 <th>Transportation</th>
+                                <th>Table Assignment</th>
+                                <th>Vehicle Assignment</th>
                                 <th>Check-in Status</th>
                                 <th>Check-in Date and Time</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${rowsForPrint || '<tr><td colspan="9">No participants found.</td></tr>'}
+                            ${rowsForPrint || '<tr><td colspan="11">No participants found.</td></tr>'}
                         </tbody>
                     </table>
                 </body>
@@ -507,6 +535,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
             'Organization',
             'Welcome Dinner YES',
             'Transportation YES',
+            'Table Assignment',
+            'Vehicle Assignment',
             'Check-in Status',
             'Check-in Date and Time',
         ];
@@ -523,6 +553,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 row.organization_name ?? '—',
                 row.attend_welcome_dinner ? 'YES' : 'NO',
                 row.avail_transport_from_makati_to_peninsula ? 'YES' : 'NO',
+                getTableAssignment(row, selectedEventId) ?? '—',
+                getVehicleAssignment(row, selectedEventId) ?? '—',
                 hasCheckin ? 'Checked In' : 'Did Not Join',
                 hasCheckin ? formatDateTime(scannedAt) : '—',
             ];
@@ -1041,6 +1073,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         <TableHead>
                                             Transportation YES
                                         </TableHead>
+                                        <TableHead>Table Assignment</TableHead>
+                                        <TableHead>
+                                            Vehicle Assignment
+                                        </TableHead>
                                         <TableHead>
                                             <Button
                                                 type="button"
@@ -1153,19 +1189,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                     nextTransport,
                                                                 );
                                                             }}
-                                                            disabled={
-                                                                Boolean(
-                                                                    savingUserIds[
-                                                                        row.id
-                                                                    ],
-                                                                ) ||
-                                                                !(
-                                                                    welcomeDinnerByUser[
-                                                                        row.id
-                                                                    ] ??
-                                                                    row.attend_welcome_dinner
-                                                                )
-                                                            }
+                                                            disabled={Boolean(
+                                                                savingUserIds[
+                                                                    row.id
+                                                                ],
+                                                            )}
                                                         >
                                                             <SelectTrigger className="h-8 w-[90px]">
                                                                 <SelectValue />
@@ -1244,6 +1272,18 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                         </Select>
                                                     </TableCell>
                                                     <TableCell>
+                                                        {getTableAssignment(
+                                                            row,
+                                                            selectedEventId,
+                                                        ) ?? '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {getVehicleAssignment(
+                                                            row,
+                                                            selectedEventId,
+                                                        ) ?? '—'}
+                                                    </TableCell>
+                                                    <TableCell>
                                                         {hasCheckin ? (
                                                             <div className="flex flex-col gap-1">
                                                                 <Badge className="w-fit bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
@@ -1267,7 +1307,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     ) : (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={7}
+                                                colSpan={9}
                                                 className="text-center text-slate-500"
                                             >
                                                 No participants found.

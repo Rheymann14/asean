@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ParticipantAttendance;
+use App\Models\ParticipantTableAssignment;
 use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
+use App\Models\VehicleAssignment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -100,6 +102,37 @@ class ReportsController extends Controller
             ->get()
             ->groupBy('user_id');
 
+        $tableAssignmentsByUser = ParticipantTableAssignment::query()
+            ->join('participant_tables', 'participant_table_assignments.participant_table_id', '=', 'participant_tables.id')
+            ->join('users', 'participant_table_assignments.user_id', '=', 'users.id')
+            ->where('users.is_active', true)
+            ->tap($excludeAdmin)
+            ->select([
+                'participant_table_assignments.user_id',
+                'participant_table_assignments.programme_id',
+                'participant_table_assignments.assigned_at',
+                'participant_tables.table_number',
+            ])
+            ->orderBy('participant_table_assignments.assigned_at')
+            ->get()
+            ->groupBy('user_id');
+
+        $vehicleAssignmentsByUser = VehicleAssignment::query()
+            ->leftJoin('transport_vehicles', 'vehicle_assignments.vehicle_id', '=', 'transport_vehicles.id')
+            ->join('users', 'vehicle_assignments.user_id', '=', 'users.id')
+            ->where('users.is_active', true)
+            ->tap($excludeAdmin)
+            ->select([
+                'vehicle_assignments.user_id',
+                'vehicle_assignments.programme_id',
+                'vehicle_assignments.updated_at',
+                'vehicle_assignments.vehicle_label',
+                'transport_vehicles.label as transport_vehicle_label',
+            ])
+            ->orderBy('vehicle_assignments.updated_at')
+            ->get()
+            ->groupBy('user_id');
+
         $rows = User::query()
             ->leftJoin('countries', 'users.country_id', '=', 'countries.id')
             ->leftJoin('user_types', 'users.user_type_id', '=', 'user_types.id')
@@ -121,9 +154,11 @@ class ReportsController extends Controller
             ])
             ->orderBy('users.name')
             ->get()
-            ->map(function ($row) use ($joinedByUser, $attendanceEntriesByUser) {
+            ->map(function ($row) use ($joinedByUser, $attendanceEntriesByUser, $tableAssignmentsByUser, $vehicleAssignmentsByUser) {
                 $joinedProgrammeIds = ($joinedByUser->get($row->id) ?? collect())->values();
                 $attendanceEntries = $attendanceEntriesByUser->get($row->id, collect());
+                $tableAssignments = $tableAssignmentsByUser->get($row->id, collect());
+                $vehicleAssignments = $vehicleAssignmentsByUser->get($row->id, collect());
 
                 $attendedProgrammeIds = $attendanceEntries
                     ->pluck('programme_id')
@@ -141,6 +176,22 @@ class ReportsController extends Controller
                     ->all();
 
                 $latestAttendance = $attendanceEntries->last();
+                $latestTableAssignment = $tableAssignments->last();
+                $latestVehicleAssignment = $vehicleAssignments->last();
+
+                $tableAssignmentByProgramme = $tableAssignments
+                    ->groupBy('programme_id')
+                    ->map(fn ($entries) => $entries->last()?->table_number)
+                    ->all();
+
+                $vehicleAssignmentByProgramme = $vehicleAssignments
+                    ->groupBy('programme_id')
+                    ->map(function ($entries) {
+                        $latest = $entries->last();
+
+                        return $latest?->transport_vehicle_label ?: $latest?->vehicle_label;
+                    })
+                    ->all();
 
                 return [
                     'id' => $row->id,
@@ -155,6 +206,10 @@ class ReportsController extends Controller
                     'other_user_type' => $row->other_user_type,
                     'attend_welcome_dinner' => (bool) $row->attend_welcome_dinner,
                     'avail_transport_from_makati_to_peninsula' => (bool) $row->avail_transport_from_makati_to_peninsula,
+                    'table_assignment' => $latestTableAssignment?->table_number,
+                    'table_assignment_by_programme' => $tableAssignmentByProgramme,
+                    'vehicle_assignment' => $latestVehicleAssignment?->transport_vehicle_label ?: $latestVehicleAssignment?->vehicle_label,
+                    'vehicle_assignment_by_programme' => $vehicleAssignmentByProgramme,
                     'has_attended' => $attendedProgrammeIds->isNotEmpty(),
                     'joined_programme_ids' => $joinedProgrammeIds,
                     'attended_programme_ids' => $attendedProgrammeIds,
