@@ -295,37 +295,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         );
     }, [getNotificationSentAtKey, rows]);
 
-    React.useEffect(() => {
-        if (typeof window === 'undefined') return;
 
-        const persistedRaw = window.localStorage.getItem(
-            REPORT_NOTIFICATION_SENT_AT_KEY,
-        );
 
-        if (!persistedRaw) return;
-
-        try {
-            const persisted = JSON.parse(persistedRaw) as Record<
-                string,
-                string
-            >;
-
-            if (!persisted || typeof persisted !== 'object') return;
-
-            setNotificationSentAtByAssignment(persisted);
-        } catch {
-            window.localStorage.removeItem(REPORT_NOTIFICATION_SENT_AT_KEY);
-        }
-    }, []);
-
-    React.useEffect(() => {
-        if (typeof window === 'undefined') return;
-
-        window.localStorage.setItem(
-            REPORT_NOTIFICATION_SENT_AT_KEY,
-            JSON.stringify(notificationSentAtByAssignment),
-        );
-    }, [notificationSentAtByAssignment]);
 
     const updateWelcomeDinnerPreferences = React.useCallback(
         (
