@@ -93,6 +93,8 @@ class ReportsController extends Controller
                 'users.name',
                 'users.organization_name',
                 'users.other_user_type',
+                'users.attend_welcome_dinner',
+                'users.avail_transport_from_makati_to_peninsula',
                 'countries.name as country_name',
                 'user_types.name as registrant_type',
             ])
@@ -130,6 +132,8 @@ class ReportsController extends Controller
                     'registrant_type' => $row->registrant_type,
                     'organization_name' => $row->organization_name,
                     'other_user_type' => $row->other_user_type,
+                    'attend_welcome_dinner' => (bool) $row->attend_welcome_dinner,
+                    'avail_transport_from_makati_to_peninsula' => (bool) $row->avail_transport_from_makati_to_peninsula,
                     'has_attended' => $attendedProgrammeIds->isNotEmpty(),
                     'joined_programme_ids' => $joinedProgrammeIds,
                     'attended_programme_ids' => $attendedProgrammeIds,
