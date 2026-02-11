@@ -275,6 +275,9 @@ export default function Register({
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
     const [successOpen, setSuccessOpen] = React.useState(false);
+    const [preferredImagePreviewUrl, setPreferredImagePreviewUrl] =
+        React.useState<string | null>(null);
+    const preferredImageInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const [consentContact, setConsentContact] = React.useState(false);
     const [consentMedia, setConsentMedia] = React.useState(false);
@@ -316,18 +319,25 @@ export default function Register({
         useRemember<string>('', 'register.emergency_contact_phone');
     const [emergencyContactEmail, setEmergencyContactEmail] =
         useRemember<string>('', 'register.emergency_contact_email');
-    const [attendWelcomeDinner, setAttendWelcomeDinner] =
-        useRemember<string>('', 'register.attend_welcome_dinner');
-    const [availTransportFromMakatiToPeninsula, setAvailTransportFromMakatiToPeninsula] =
-        useRemember<string>(
-            '',
-            'register.avail_transport_from_makati_to_peninsula',
-        );
+    const [attendWelcomeDinner, setAttendWelcomeDinner] = useRemember<string>(
+        '',
+        'register.attend_welcome_dinner',
+    );
+    const [
+        availTransportFromMakatiToPeninsula,
+        setAvailTransportFromMakatiToPeninsula,
+    ] = useRemember<string>(
+        '',
+        'register.avail_transport_from_makati_to_peninsula',
+    );
 
     const canContinue = consentContact && consentMedia;
 
     React.useEffect(() => {
-        if (attendWelcomeDinner !== 'yes' && availTransportFromMakatiToPeninsula) {
+        if (
+            attendWelcomeDinner !== 'yes' &&
+            availTransportFromMakatiToPeninsula
+        ) {
             setAvailTransportFromMakatiToPeninsula('');
         }
     }, [
@@ -366,6 +376,42 @@ export default function Register({
         '',
         'register.honorific_other',
     );
+
+    React.useEffect(() => {
+        return () => {
+            if (preferredImagePreviewUrl) {
+                URL.revokeObjectURL(preferredImagePreviewUrl);
+            }
+        };
+    }, [preferredImagePreviewUrl]);
+
+    const handlePreferredImageChange = (
+        event: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        const file = event.target.files?.[0] ?? null;
+
+        setPreferredImagePreviewUrl((current) => {
+            if (current) {
+                URL.revokeObjectURL(current);
+            }
+
+            return file ? URL.createObjectURL(file) : null;
+        });
+    };
+
+    const handleRemovePreferredImage = () => {
+        setPreferredImagePreviewUrl((current) => {
+            if (current) {
+                URL.revokeObjectURL(current);
+            }
+
+            return null;
+        });
+
+        if (preferredImageInputRef.current) {
+            preferredImageInputRef.current.value = '';
+        }
+    };
 
     const selectedCountry = React.useMemo(
         () => countries.find((c) => String(c.id) === country) ?? null,
@@ -1444,21 +1490,53 @@ export default function Register({
                                             />
                                         </div>
 
-                                              <div className="grid gap-2">
+                                        <div className="grid gap-2">
                                             <Label htmlFor="profile_photo">
                                                 Preferred image for ID
                                             </Label>
                                             <Input
+                                                ref={preferredImageInputRef}
                                                 id="profile_photo"
                                                 type="file"
                                                 name="profile_photo"
                                                 accept="image/*"
+                                                onChange={
+                                                    handlePreferredImageChange
+                                                }
                                                 className={cn(
                                                     inputClass,
                                                     'file:mr-3 file:rounded-md file:border-0 file:bg-[#0033A0]/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[#0033A0] hover:file:bg-[#0033A0]/20',
                                                 )}
                                             />
-                                       
+
+                                            {preferredImagePreviewUrl ? (
+                                                <div className="mt-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-2">
+                                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                                        <p className="text-xs font-medium text-slate-600">
+                                                            Preview
+                                                        </p>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900"
+                                                            onClick={
+                                                                handleRemovePreferredImage
+                                                            }
+                                                        >
+                                                            Remove image
+                                                        </Button>
+                                                    </div>
+                                                    <img
+                                                        src={
+                                                            preferredImagePreviewUrl
+                                                        }
+                                                        alt="Preferred image preview"
+                                                        className="h-40 w-auto rounded-md object-cover"
+                                                    />
+                                                </div>
+                                            ) : null}
+
                                             <InputError
                                                 message={err.profile_photo}
                                             />
@@ -2243,8 +2321,6 @@ export default function Register({
                                                 }
                                             />
                                         </div>
-
-                                  
                                     </fieldset>
 
                                     <fieldset
