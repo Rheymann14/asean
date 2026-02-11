@@ -1064,7 +1064,7 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                 show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: easeOut } },
                             }}
                         >
-                            Key teams supporting ASEAN Philippines 2026 coordination, protocol, readiness, and delegate services.
+                            Leaders supporting ASEAN Philippines 2026 coordination, protocol, readiness, and delegate services.
                         </motion.p>
                     </motion.div>
 
