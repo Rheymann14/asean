@@ -320,19 +320,37 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
     }, [selectedEvent]);
 
-    const handleSendNotification = React.useCallback(
+    const getNotificationEventId = React.useCallback(
         (row: ReportRow) => {
-            if (!selectedEventId) {
-                window.alert('Please select a specific event first.');
-                return;
+            if (selectedEventId) {
+                const hasTable = Boolean(getTableAssignment(row, selectedEventId));
+                const hasVehicle = Boolean(
+                    getVehicleAssignment(row, selectedEventId),
+                );
+
+                return hasTable || hasVehicle ? selectedEventId : null;
             }
 
-            const tableAssignment = getTableAssignment(row, selectedEventId);
-            const vehicleAssignment = getVehicleAssignment(row, selectedEventId);
+            for (const event of eventOptionItems) {
+                const eventId = event.id;
+                const hasTable = Boolean(getTableAssignment(row, eventId));
+                const hasVehicle = Boolean(getVehicleAssignment(row, eventId));
 
-            if (!tableAssignment || !vehicleAssignment) {
+                if (hasTable || hasVehicle) return eventId;
+            }
+
+            return null;
+        },
+        [eventOptionItems, selectedEventId],
+    );
+
+    const handleSendNotification = React.useCallback(
+        (row: ReportRow) => {
+            const notificationEventId = getNotificationEventId(row);
+
+            if (!notificationEventId) {
                 window.alert(
-                    'Notification can only be sent when table and vehicle assignments are available.',
+                    'Notification can only be sent when table or vehicle assignment is available.',
                 );
                 return;
             }
@@ -350,7 +368,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                     Accept: 'application/json',
                     ...(token ? { 'X-CSRF-TOKEN': token } : {}),
                 },
-                body: JSON.stringify({ event_id: selectedEventId }),
+                body: JSON.stringify({ event_id: notificationEventId }),
             })
                 .then((response) => {
                     if (!response.ok) throw new Error('Request failed');
@@ -367,7 +385,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                     });
                 });
         },
-        [selectedEventId],
+        [getNotificationEventId],
     );
 
     const rowsAfterEventFilter = React.useMemo(() => {
@@ -1368,14 +1386,8 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                         row.id
                                                                     ],
                                                                 ) ||
-                                                                !selectedEventId ||
-                                                                !getTableAssignment(
+                                                                !getNotificationEventId(
                                                                     row,
-                                                                    selectedEventId,
-                                                                ) ||
-                                                                !getVehicleAssignment(
-                                                                    row,
-                                                                    selectedEventId,
                                                                 )
                                                             }
                                                         >

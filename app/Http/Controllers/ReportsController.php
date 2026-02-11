@@ -64,13 +64,16 @@ class ReportsController extends Controller
                 'transport_vehicles.plate_number as transport_vehicle_plate_number',
             ]);
 
-        $tableNumber = $tableAssignment?->table_number;
-        $vehicleName = $vehicleAssignment?->transport_vehicle_label ?: $vehicleAssignment?->vehicle_label;
-        $vehiclePlateNumber = $vehicleAssignment?->transport_vehicle_plate_number;
+        $tableNumber = $tableAssignment?->table_number ?: 'N/A';
+        $vehicleName = $vehicleAssignment?->transport_vehicle_label ?: $vehicleAssignment?->vehicle_label ?: 'N/A';
+        $vehiclePlateNumber = $vehicleAssignment?->transport_vehicle_plate_number ?: 'N/A';
 
-        if (! $tableNumber || ! $vehicleName) {
+        $hasTableAssignment = $tableNumber !== 'N/A';
+        $hasVehicleAssignment = $vehicleName !== 'N/A';
+
+        if (! $hasTableAssignment && ! $hasVehicleAssignment) {
             return response()->json([
-                'message' => 'Participant must have both table and vehicle assignments for the selected event.',
+                'message' => 'Participant must have either table or vehicle assignment for the selected event.',
             ], 422);
         }
 
@@ -81,17 +84,40 @@ class ReportsController extends Controller
             ->implode(' to ');
 
         $participantName = trim($user->name ?: collect([$user->given_name, $user->family_name, $user->suffix])->filter()->implode(' '));
+        $participantName = $participantName !== '' ? $participantName : 'Participant';
 
-        $textContent = "Hi {$participantName}\n\nPlease be informed of the following:\n\n"
-            . "Participant ID: {$user->id}\n"
-            . "Event Title: {$event->title}\n"
-            . 'Event Date: '.($eventDate ?: 'TBA')."\n"
-            . "Vehicle: {$vehicleName}\n"
-            . 'Vehicle Plate Number: '.($vehiclePlateNumber ?: 'N/A')."\n"
-            . "Table Number: {$tableNumber}\n\n\n"
-            . 'Thank you!\n\n\n';
+        $textContent = "Hi {$participantName}
 
-        $htmlContent = nl2br(e($textContent));
+Please be informed of the following:
+
+"
+            . "Participant ID: {$user->id}
+"
+            . "Event Title: {$event->title}
+"
+            . 'Event Date: '.($eventDate ?: 'TBA')."
+"
+            . "Vehicle: {$vehicleName}
+"
+            . "Vehicle Plate Number: {$vehiclePlateNumber}
+"
+            . "Table Number: {$tableNumber}
+
+"
+            . 'Thank you!';
+
+        $appUrl = rtrim((string) config('app.url', 'https://asean-registration.ched.gov.ph'), '/');
+        $htmlContent = $this->minifyHtml(view('emails.assignment-notification-brevo', [
+            'bannerUrl' => $appUrl.'/img/asean_banner_logo.png',
+            'logoUrl' => $appUrl.'/img/asean_logo.png',
+            'participantName' => $participantName,
+            'participantId' => $user->id,
+            'eventTitle' => $event->title,
+            'eventDate' => $eventDate ?: 'TBA',
+            'vehicleName' => $vehicleName,
+            'vehiclePlateNumber' => $vehiclePlateNumber,
+            'tableNumber' => $tableNumber,
+        ])->render());
 
         $apiKey = config('services.brevo.api_key');
 
@@ -123,7 +149,7 @@ class ReportsController extends Controller
                         'email' => $user->email,
                         'name' => $participantName,
                     ]],
-                    'subject' => 'Assignment Notification',
+                    'subject' => 'ASEAN 2026 Assignment Notification',
                     'htmlContent' => $htmlContent,
                     'textContent' => $textContent,
                 ]);
@@ -152,6 +178,17 @@ class ReportsController extends Controller
                 'message' => 'Failed to send notification.',
             ], 500);
         }
+    }
+
+
+
+    private function minifyHtml(string $html): string
+    {
+        $html = preg_replace('/<!--.*?-->/s', '', $html) ?? $html;
+        $html = preg_replace('/>\s+</', '><', $html) ?? $html;
+        $html = preg_replace('/\s{2,}/', ' ', $html) ?? $html;
+
+        return trim($html);
     }
 
     public function index()
