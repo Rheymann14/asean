@@ -14,6 +14,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -69,7 +70,7 @@ type PageProps = {
 type EventPhase = 'ongoing' | 'upcoming' | 'closed';
 type CheckinSort = 'desc' | 'asc';
 
-const PER_PAGE = 10;
+const PAGE_SIZE_OPTIONS = [10, 50, 100, 1000] as const;
 const ALL_EVENTS_VALUE = 'all';
 
 function resolveEventPhase(event: EventRow, nowTs: number): EventPhase {
@@ -138,6 +139,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [selectedEvent, setSelectedEvent] = React.useState<string>(ALL_EVENTS_VALUE);
     const [eventsOpen, setEventsOpen] = React.useState(false);
     const [checkinSort, setCheckinSort] = React.useState<CheckinSort>('desc');
+    const [entriesPerPage, setEntriesPerPage] = React.useState<number>(10);
 
     const referenceNowTs = React.useMemo(() => {
         const parsed = now_iso ? Date.parse(now_iso) : Number.NaN;
@@ -237,11 +239,11 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         };
     }, [rows, selectedEvent, summary]);
 
-    const totalPages = Math.max(1, Math.ceil(sortedRows.length / PER_PAGE));
+    const totalPages = Math.max(1, Math.ceil(sortedRows.length / entriesPerPage));
 
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [search, selectedEvent, checkinSort]);
+    }, [search, selectedEvent, checkinSort, entriesPerPage]);
 
     React.useEffect(() => {
         if (currentPage > totalPages) {
@@ -250,9 +252,9 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     }, [currentPage, totalPages]);
 
     const paginatedRows = React.useMemo(() => {
-        const start = (currentPage - 1) * PER_PAGE;
-        return sortedRows.slice(start, start + PER_PAGE);
-    }, [sortedRows, currentPage]);
+        const start = (currentPage - 1) * entriesPerPage;
+        return sortedRows.slice(start, start + entriesPerPage);
+    }, [sortedRows, currentPage, entriesPerPage]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -423,7 +425,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
 
                                             return (
                                                 <TableRow key={row.id}>
-                                                    <TableCell>{(currentPage - 1) * PER_PAGE + index + 1}</TableCell>
+                                                    <TableCell>{(currentPage - 1) * entriesPerPage + index + 1}</TableCell>
                                                     <TableCell>
                                                         <div className="min-w-[240px]">
                                                             <p className="font-medium text-slate-900 dark:text-slate-100">{buildDisplayName(row)}</p>
@@ -463,10 +465,30 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                         </div>
 
                         <div className="flex flex-col items-center justify-between gap-3 text-sm text-slate-600 md:flex-row dark:text-slate-300">
-                            <p>
-                                Showing {(currentPage - 1) * PER_PAGE + (paginatedRows.length ? 1 : 0)} to{' '}
-                                {(currentPage - 1) * PER_PAGE + paginatedRows.length} of {sortedRows.length} entries
-                            </p>
+                            <div className="flex flex-col items-center gap-2 sm:flex-row">
+                                <div className="flex items-center gap-2">
+                                    <span>Show entries</span>
+                                    <Select
+                                        value={String(entriesPerPage)}
+                                        onValueChange={(value) => setEntriesPerPage(Number(value))}
+                                    >
+                                        <SelectTrigger className="h-8 w-[90px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {PAGE_SIZE_OPTIONS.map((size) => (
+                                                <SelectItem key={size} value={String(size)}>
+                                                    {size}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <p>
+                                    Showing {(currentPage - 1) * entriesPerPage + (paginatedRows.length ? 1 : 0)} to{' '}
+                                    {(currentPage - 1) * entriesPerPage + paginatedRows.length} of {sortedRows.length} entries
+                                </p>
+                            </div>
 
                             <div className="flex items-center gap-2">
                                 <Button
