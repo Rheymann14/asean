@@ -42,6 +42,7 @@ import {
     Printer,
 } from 'lucide-react';
 import * as React from 'react';
+import { toast } from 'sonner';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Reports', href: '/reports' }];
 
@@ -66,6 +67,7 @@ type ReportRow = {
     family_name?: string | null;
     suffix?: string | null;
     name: string;
+    display_id?: string | null;
     country_name?: string | null;
     registrant_type?: string | null;
     organization_name?: string | null;
@@ -76,6 +78,8 @@ type ReportRow = {
     table_assignment_by_programme: Record<string, string | null>;
     vehicle_assignment?: string | null;
     vehicle_assignment_by_programme: Record<string, string | null>;
+    vehicle_plate_number?: string | null;
+    vehicle_plate_number_by_programme: Record<string, string | null>;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
@@ -198,6 +202,16 @@ function getVehicleAssignment(
     return row.vehicle_assignment;
 }
 
+function getVehiclePlateNumber(
+    row: ReportRow,
+    selectedEventId: number | null,
+): string | null | undefined {
+    if (selectedEventId)
+        return row.vehicle_plate_number_by_programme?.[String(selectedEventId)];
+
+    return row.vehicle_plate_number;
+}
+
 export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [search, setSearch] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
@@ -217,6 +231,10 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
     const [savingUserIds, setSavingUserIds] = React.useState<
         Record<number, boolean>
     >({});
+    const [sendingNotificationByUser, setSendingNotificationByUser] =
+        React.useState<Record<number, boolean>>({});
+    const [notificationSentAtByUser, setNotificationSentAtByUser] =
+        React.useState<Record<number, string>>({});
 
     React.useEffect(() => {
         setWelcomeDinnerByUser(
@@ -266,6 +284,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         [],
     );
 
+
     const referenceNowTs = React.useMemo(() => {
         const parsed = now_iso ? Date.parse(now_iso) : Number.NaN;
         return Number.isNaN(parsed) ? 0 : parsed;
@@ -304,6 +323,102 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         const parsed = Number(selectedEvent);
         return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
     }, [selectedEvent]);
+
+    const getNotificationEventId = React.useCallback(
+        (row: ReportRow) => {
+            if (selectedEventId) {
+                const hasTable = Boolean(getTableAssignment(row, selectedEventId));
+                const hasVehicle = Boolean(
+                    getVehicleAssignment(row, selectedEventId),
+                );
+
+                return hasTable || hasVehicle ? selectedEventId : null;
+            }
+
+            for (const event of eventOptionItems) {
+                const eventId = event.id;
+                const hasTable = Boolean(getTableAssignment(row, eventId));
+                const hasVehicle = Boolean(getVehicleAssignment(row, eventId));
+
+                if (hasTable || hasVehicle) return eventId;
+            }
+
+            return null;
+        },
+        [eventOptionItems, selectedEventId],
+    );
+
+    const handleSendNotification = React.useCallback(
+        async (row: ReportRow) => {
+            const notificationEventId = getNotificationEventId(row);
+
+            if (!notificationEventId) {
+                toast.warning(
+                    'Notification can only be sent when table or vehicle assignment is available.',
+                );
+                return;
+            }
+
+            setSendingNotificationByUser((prev) => ({ ...prev, [row.id]: true }));
+
+            const token = document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content');
+
+            try {
+                const response = await fetch(
+                    `/reports/${row.id}/assignment-notification`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+                        },
+                        body: JSON.stringify({ event_id: notificationEventId }),
+                    },
+                );
+
+                const payload = (await response.json().catch(() => ({}))) as {
+                    message?: string;
+                    sent_at?: string;
+                    errors?: Record<string, string[]>;
+                };
+
+                if (!response.ok) {
+                    if (response.status === 422) {
+                        toast.warning(
+                            payload.message ??
+                                'Validation failed. Please check assignment data.',
+                        );
+                    } else {
+                        toast.error(
+                            payload.message ?? 'Failed to send notification.',
+                        );
+                    }
+
+                    return;
+                }
+
+                const sentAt = payload.sent_at ?? new Date().toISOString();
+                setNotificationSentAtByUser((prev) => ({
+                    ...prev,
+                    [row.id]: sentAt,
+                }));
+
+                toast.success(payload.message ?? 'Notification sent successfully.');
+            } catch {
+                toast.error('Failed to send notification.');
+            } finally {
+                setSendingNotificationByUser((prev) => {
+                    const next = { ...prev };
+                    delete next[row.id];
+                    return next;
+                });
+            }
+        },
+        [getNotificationEventId],
+    );
 
     const rowsAfterEventFilter = React.useMemo(() => {
         if (!selectedEventId) return rows;
@@ -1077,6 +1192,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                         <TableHead>
                                             Vehicle Assignment
                                         </TableHead>
+                                        <TableHead>Notification</TableHead>
                                         <TableHead>
                                             <Button
                                                 type="button"
@@ -1282,6 +1398,55 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                             row,
                                                             selectedEventId,
                                                         ) ?? '—'}
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                            Plate: {getVehiclePlateNumber(row, selectedEventId) ?? '—'}
+                                                        </p>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                handleSendNotification(
+                                                                    row,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                Boolean(
+                                                                    sendingNotificationByUser[
+                                                                        row.id
+                                                                    ],
+                                                                ) ||
+                                                                !getNotificationEventId(
+                                                                    row,
+                                                                )
+                                                            }
+                                                            className={cn(
+                                                                notificationSentAtByUser[
+                                                                    row.id
+                                                                ]
+                                                                    ? 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white'
+                                                                    : '',
+                                                            )}
+                                                        >
+                                                            {sendingNotificationByUser[
+                                                                row.id
+                                                            ]
+                                                                ? 'Sending...'
+                                                                : 'Email'}
+                                                        </Button>
+                                                        {notificationSentAtByUser[
+                                                            row.id
+                                                        ] ? (
+                                                            <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
+                                                                Sent: {formatDateTime(
+                                                                    notificationSentAtByUser[
+                                                                        row.id
+                                                                    ],
+                                                                )}
+                                                            </p>
+                                                        ) : null}
                                                     </TableCell>
                                                     <TableCell>
                                                         {hasCheckin ? (
@@ -1307,7 +1472,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                     ) : (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={9}
+                                                colSpan={11}
                                                 className="text-center text-slate-500"
                                             >
                                                 No participants found.

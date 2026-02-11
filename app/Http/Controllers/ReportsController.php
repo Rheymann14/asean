@@ -8,6 +8,9 @@ use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserType;
 use App\Models\VehicleAssignment;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +35,160 @@ class ReportsController extends Controller
         ]);
 
         return back()->with('success', 'Welcome dinner preferences updated.');
+    }
+
+
+    public function sendAssignmentNotification(Request $request, User $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => ['required', 'integer', 'exists:programmes,id'],
+        ]);
+
+        $event = Programme::query()->findOrFail($validated['event_id']);
+
+        $tableAssignment = ParticipantTableAssignment::query()
+            ->join('participant_tables', 'participant_table_assignments.participant_table_id', '=', 'participant_tables.id')
+            ->where('participant_table_assignments.user_id', $user->id)
+            ->where('participant_table_assignments.programme_id', $event->id)
+            ->orderByDesc('participant_table_assignments.assigned_at')
+            ->first(['participant_tables.table_number']);
+
+        $vehicleAssignment = VehicleAssignment::query()
+            ->leftJoin('transport_vehicles', 'vehicle_assignments.vehicle_id', '=', 'transport_vehicles.id')
+            ->where('vehicle_assignments.user_id', $user->id)
+            ->where('vehicle_assignments.programme_id', $event->id)
+            ->orderByDesc('vehicle_assignments.updated_at')
+            ->first([
+                'vehicle_assignments.vehicle_label',
+                'transport_vehicles.label as transport_vehicle_label',
+                'transport_vehicles.plate_number as transport_vehicle_plate_number',
+            ]);
+
+        $tableNumber = $tableAssignment?->table_number ?: 'N/A';
+        $vehicleName = $vehicleAssignment?->transport_vehicle_label ?: $vehicleAssignment?->vehicle_label ?: 'N/A';
+        $vehiclePlateNumber = $vehicleAssignment?->transport_vehicle_plate_number ?: 'N/A';
+
+        $hasTableAssignment = $tableNumber !== 'N/A';
+        $hasVehicleAssignment = $vehicleName !== 'N/A';
+
+        if (! $hasTableAssignment && ! $hasVehicleAssignment) {
+            return response()->json([
+                'message' => 'Participant must have either table or vehicle assignment for the selected event.',
+            ], 422);
+        }
+
+        $eventDate = collect([$event->starts_at, $event->ends_at])
+            ->filter()
+            ->map(fn ($date) => $date->format('F d, Y'))
+            ->unique()
+            ->implode(' to ');
+
+        $participantName = trim($user->name ?: collect([$user->given_name, $user->family_name, $user->suffix])->filter()->implode(' '));
+        $participantName = $participantName !== '' ? $participantName : 'Participant';
+
+        $textContent = "Hi {$participantName}
+
+Please be informed of the following:
+
+"
+            . "Participant ID: ".($user->display_id ?: $user->id)."\n"
+            . "Event Title: {$event->title}
+"
+            . 'Event Date: '.($eventDate ?: 'TBA')."
+"
+            . "Vehicle: {$vehicleName}
+"
+            . "Vehicle Plate Number: {$vehiclePlateNumber}
+"
+            . "Table Number: {$tableNumber}
+
+"
+            . 'Thank you!';
+
+        $appUrl = rtrim((string) config('app.url', 'https://asean-registration.ched.gov.ph'), '/');
+        $htmlContent = $this->minifyHtml(view('emails.assignment-notification-brevo', [
+            'bannerUrl' => $appUrl.'/img/asean_banner_logo.png',
+            'logoUrl' => $appUrl.'/img/asean_logo.png',
+            'participantName' => $participantName,
+            'participantId' => $user->display_id ?: $user->id,
+            'eventTitle' => $event->title,
+            'eventDate' => $eventDate ?: 'TBA',
+            'vehicleName' => $vehicleName,
+            'vehiclePlateNumber' => $vehiclePlateNumber,
+            'tableNumber' => $tableNumber,
+        ])->render());
+
+        $apiKey = config('services.brevo.api_key');
+
+        if (! $apiKey) {
+            Log::warning('Assignment email skipped: BREVO_API_KEY missing.', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'event_id' => $event->id,
+            ]);
+
+            return response()->json([
+                'message' => 'Notification could not be sent because BREVO API key is missing.',
+            ], 500);
+        }
+
+        try {
+            $response = Http::timeout(20)
+                ->withHeaders([
+                    'api-key' => $apiKey,
+                    'accept' => 'application/json',
+                    'content-type' => 'application/json',
+                ])
+                ->post('https://api.brevo.com/v3/smtp/email', [
+                    'sender' => [
+                        'name' => config('services.brevo.sender_name', config('mail.from.name', 'ASEAN PH 2026')),
+                        'email' => config('services.brevo.sender_email', config('mail.from.address', 'ph2026@asean.chedro12.com')),
+                    ],
+                    'to' => [[
+                        'email' => $user->email,
+                        'name' => $participantName,
+                    ]],
+                    'subject' => 'ASEAN 2026 Assignment Notification',
+                    'htmlContent' => $htmlContent,
+                    'textContent' => $textContent,
+                ]);
+
+            if ($response->failed()) {
+                Log::error('Assignment email via Brevo API failed.', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'event_id' => $event->id,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Failed to send notification.',
+                ], 500);
+            }
+
+            return response()->json([
+                'message' => 'Notification sent successfully.',
+                'sent_at' => now()->toISOString(),
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Failed to send notification.',
+            ], 500);
+        }
+    }
+
+
+
+    private function minifyHtml(string $html): string
+    {
+        $html = preg_replace('/<!--.*?-->/s', '', $html) ?? $html;
+        $html = preg_replace('/>\s+</', '><', $html) ?? $html;
+        $html = preg_replace('/\s{2,}/', ' ', $html) ?? $html;
+
+        return trim($html);
     }
 
     public function index()
@@ -128,6 +285,7 @@ class ReportsController extends Controller
                 'vehicle_assignments.updated_at',
                 'vehicle_assignments.vehicle_label',
                 'transport_vehicles.label as transport_vehicle_label',
+                'transport_vehicles.plate_number as transport_vehicle_plate_number',
             ])
             ->orderBy('vehicle_assignments.updated_at')
             ->get()
@@ -145,6 +303,7 @@ class ReportsController extends Controller
                 'users.family_name',
                 'users.suffix',
                 'users.name',
+                'users.display_id',
                 'users.organization_name',
                 'users.other_user_type',
                 'users.attend_welcome_dinner',
@@ -193,6 +352,11 @@ class ReportsController extends Controller
                     })
                     ->all();
 
+                $vehiclePlateNumberByProgramme = $vehicleAssignments
+                    ->groupBy('programme_id')
+                    ->map(fn ($entries) => $entries->last()?->transport_vehicle_plate_number)
+                    ->all();
+
                 return [
                     'id' => $row->id,
                     'honorific_title' => $row->honorific_title,
@@ -200,6 +364,7 @@ class ReportsController extends Controller
                     'family_name' => $row->family_name,
                     'suffix' => $row->suffix,
                     'name' => $row->name,
+                    'display_id' => $row->display_id,
                     'country_name' => $row->country_name,
                     'registrant_type' => $row->registrant_type,
                     'organization_name' => $row->organization_name,
@@ -210,6 +375,8 @@ class ReportsController extends Controller
                     'table_assignment_by_programme' => $tableAssignmentByProgramme,
                     'vehicle_assignment' => $latestVehicleAssignment?->transport_vehicle_label ?: $latestVehicleAssignment?->vehicle_label,
                     'vehicle_assignment_by_programme' => $vehicleAssignmentByProgramme,
+                    'vehicle_plate_number' => $latestVehicleAssignment?->transport_vehicle_plate_number,
+                    'vehicle_plate_number_by_programme' => $vehiclePlateNumberByProgramme,
                     'has_attended' => $attendedProgrammeIds->isNotEmpty(),
                     'joined_programme_ids' => $joinedProgrammeIds,
                     'attended_programme_ids' => $attendedProgrammeIds,
