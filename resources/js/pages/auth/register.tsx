@@ -275,6 +275,8 @@ export default function Register({
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
     const [successOpen, setSuccessOpen] = React.useState(false);
+    const [preferredImagePreviewUrl, setPreferredImagePreviewUrl] =
+        React.useState<string | null>(null);
 
     const [consentContact, setConsentContact] = React.useState(false);
     const [consentMedia, setConsentMedia] = React.useState(false);
@@ -366,6 +368,28 @@ export default function Register({
         '',
         'register.honorific_other',
     );
+
+    React.useEffect(() => {
+        return () => {
+            if (preferredImagePreviewUrl) {
+                URL.revokeObjectURL(preferredImagePreviewUrl);
+            }
+        };
+    }, [preferredImagePreviewUrl]);
+
+    const handlePreferredImageChange = (
+        event: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        const file = event.target.files?.[0] ?? null;
+
+        setPreferredImagePreviewUrl((current) => {
+            if (current) {
+                URL.revokeObjectURL(current);
+            }
+
+            return file ? URL.createObjectURL(file) : null;
+        });
+    };
 
     const selectedCountry = React.useMemo(
         () => countries.find((c) => String(c.id) === country) ?? null,
@@ -1453,11 +1477,29 @@ export default function Register({
                                                 type="file"
                                                 name="profile_photo"
                                                 accept="image/*"
+                                                onChange={
+                                                    handlePreferredImageChange
+                                                }
                                                 className={cn(
                                                     inputClass,
                                                     'file:mr-3 file:rounded-md file:border-0 file:bg-[#0033A0]/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[#0033A0] hover:file:bg-[#0033A0]/20',
                                                 )}
                                             />
+
+                                            {preferredImagePreviewUrl ? (
+                                                <div className="mt-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-2">
+                                                    <p className="mb-2 text-xs font-medium text-slate-600">
+                                                        Preview
+                                                    </p>
+                                                    <img
+                                                        src={
+                                                            preferredImagePreviewUrl
+                                                        }
+                                                        alt="Preferred image preview"
+                                                        className="h-40 w-auto rounded-md object-cover"
+                                                    />
+                                                </div>
+                                            ) : null}
                                        
                                             <InputError
                                                 message={err.profile_photo}
