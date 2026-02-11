@@ -295,9 +295,6 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
         );
     }, [getNotificationSentAtKey, rows]);
 
-
-
-
     const updateWelcomeDinnerPreferences = React.useCallback(
         (
             userId: number,
@@ -1309,6 +1306,17 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                           )
                                                       ]
                                                     : null;
+                                            const disableNotificationButton =
+                                                Boolean(
+                                                    sendingNotificationByUser[
+                                                        row.id
+                                                    ],
+                                                ) ||
+                                                !notificationEventId ||
+                                                (!selectedEventId &&
+                                                    Boolean(
+                                                        notificationSentAt,
+                                                    ));
 
                                             return (
                                                 <TableRow key={row.id}>
@@ -1499,12 +1507,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                                                                 )
                                                             }
                                                             disabled={
-                                                                Boolean(
-                                                                    sendingNotificationByUser[
-                                                                        row.id
-                                                                    ],
-                                                                ) ||
-                                                                !notificationEventId
+                                                                disableNotificationButton
                                                             }
                                                             className={cn(
                                                                 notificationSentAt
