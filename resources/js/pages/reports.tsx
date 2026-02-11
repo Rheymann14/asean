@@ -80,6 +80,7 @@ type ReportRow = {
     vehicle_assignment_by_programme: Record<string, string | null>;
     vehicle_plate_number?: string | null;
     vehicle_plate_number_by_programme: Record<string, string | null>;
+    notification_sent_at_by_programme: Record<string, string | null>;
     has_attended: boolean;
     joined_programme_ids: number[];
     attended_programme_ids: number[];
@@ -100,9 +101,6 @@ type RegistrantTypeSort = 'none' | 'asc' | 'desc';
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 1000] as const;
 const ALL_EVENTS_VALUE = 'all';
-const REPORT_NOTIFICATION_SENT_AT_KEY =
-    'reports-assignment-notification-sent-at';
-
 function readXsrfCookieToken() {
     const cookieMatch = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/);
 
@@ -282,7 +280,20 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                 ]),
             ),
         );
-    }, [rows]);
+
+        setNotificationSentAtByAssignment(
+            Object.fromEntries(
+                rows.flatMap((row) =>
+                    Object.entries(row.notification_sent_at_by_programme ?? {})
+                        .filter(([, sentAt]) => Boolean(sentAt))
+                        .map(([eventId, sentAt]) => [
+                            getNotificationSentAtKey(row.id, Number(eventId)),
+                            sentAt as string,
+                        ]),
+                ),
+            ),
+        );
+    }, [getNotificationSentAtKey, rows]);
 
     React.useEffect(() => {
         if (typeof window === 'undefined') return;
