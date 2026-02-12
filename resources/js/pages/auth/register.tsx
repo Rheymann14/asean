@@ -18,14 +18,7 @@ import { splitCountriesByAsean } from '@/lib/countries';
 import { cn } from '@/lib/utils';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import {
-    Form,
-    Head,
-    Link,
-    router,
-    usePage,
-    useRemember,
-} from '@inertiajs/react';
+import { Form, Head, Link, router, useRemember } from '@inertiajs/react';
 import * as React from 'react';
 
 import {
@@ -51,7 +44,6 @@ import {
     Loader2,
     Sparkles,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 type CountryOption = {
     id: number;
@@ -189,12 +181,6 @@ export default function Register({
     const [formKey, setFormKey] = React.useState(0);
 
     const [currentStep, setCurrentStep] = React.useState(0);
-    const page = usePage();
-    const serverErrors = (page.props.errors ?? {}) as Record<
-        string,
-        string | undefined
-    >;
-
     const submittedRef = React.useRef(false);
 
     const [dirtyFields, setDirtyFields] = React.useState<
@@ -212,98 +198,6 @@ export default function Register({
         (name: string) => !dirtyFields[name],
         [dirtyFields],
     );
-
-    const FIELD_STEP_MAP: Array<{ step: number; fields: string[] }> = [
-        {
-            step: 0,
-            fields: [
-                'country_id',
-                'honorific_title',
-                'honorific_other',
-                'given_name',
-                'middle_name',
-                'family_name',
-                'suffix',
-                'sex_assigned_at_birth',
-            ],
-        },
-        {
-            step: 1,
-            fields: [
-                'email',
-                'contact_country_code',
-                'contact_number',
-                'organization_name',
-                'position_title',
-                'user_type_id',
-                'other_user_type',
-                'programme_ids',
-                'programme_ids.0',
-            ],
-        },
-        {
-            step: 2,
-            fields: ['password', 'password_confirmation', 'profile_photo'],
-        },
-        {
-            step: 3,
-            fields: [
-                'attend_welcome_dinner',
-                'avail_transport_from_makati_to_peninsula',
-                'dietary_allergies',
-                'dietary_other',
-                'ip_group_name',
-                'accessibility_other',
-                'emergency_contact_name',
-                'emergency_contact_relationship',
-                'emergency_contact_phone',
-                'emergency_contact_email',
-                'consent_contact_sharing',
-                'consent_photo_video',
-            ],
-        },
-    ];
-
-    const findStepFromErrors = React.useCallback(
-        (errs: Record<string, string | undefined>) => {
-            const keys = Object.keys(errs).filter((k) => errs[k]);
-            if (!keys.length) return null;
-
-            for (const group of FIELD_STEP_MAP) {
-                const hit = keys.some((k) =>
-                    group.fields.some((f) => k === f || k.startsWith(`${f}.`)),
-                );
-                if (hit) return group.step;
-            }
-
-            // fallback: keep user where they are instead of forcing Step 1
-            return currentStep;
-        },
-        [FIELD_STEP_MAP, currentStep],
-    );
-
-    React.useEffect(() => {
-        // ✅ don't auto-jump while user is navigating steps
-        if (!submittedRef.current) return;
-
-        const step = findStepFromErrors(serverErrors);
-        if (step === null) return;
-
-        setCurrentStep(step);
-
-        requestAnimationFrame(() => {
-            const form = getFormElement();
-            const fieldsets = Array.from(
-                form?.querySelectorAll('fieldset') ?? [],
-            ) as HTMLFieldSetElement[];
-            const target = fieldsets[step];
-            target?.reportValidity();
-            toast.error('Please check the highlighted fields.');
-        });
-
-        // ✅ reset flag after we handled this response
-        submittedRef.current = false;
-    }, [serverErrors, findStepFromErrors]);
 
     const [honorificOpen, setHonorificOpen] = React.useState(false);
     const [sexOpen, setSexOpen] = React.useState(false);
@@ -371,7 +265,7 @@ export default function Register({
         'register.avail_transport_from_makati_to_peninsula',
     );
 
-    const canContinue = consentContact && consentMedia;
+    const canContinue = true;
 
     const [country, setCountry] = useRemember<string>('', 'register.country');
     const [honorificTitle, setHonorificTitle] = useRemember<string>(
@@ -544,100 +438,7 @@ export default function Register({
         },
     ] as const;
 
-    const getFormElement = () => {
-        const fallback = document.getElementById(
-            'register-form',
-        ) as HTMLFormElement | null;
-        if (fallback) {
-            return fallback;
-        }
-
-        return document.querySelector(
-            'form[data-test="register-form"]',
-        ) as HTMLFormElement | null;
-    };
-
-    const findFirstInvalidStep = () => {
-        const form = getFormElement();
-        if (!form) return null;
-
-        const fieldsets = Array.from(
-            form.querySelectorAll('fieldset'),
-        ) as HTMLFieldSetElement[];
-
-        const previous = fieldsets.map((fs) => fs.disabled);
-
-        try {
-            // temporarily enable all
-            fieldsets.forEach((fs) => (fs.disabled = false));
-
-            for (let i = 0; i < fieldsets.length; i++) {
-                if (!fieldsets[i].checkValidity()) {
-                    return i;
-                }
-            }
-
-            return null;
-        } finally {
-            // ✅ ALWAYS restore state
-            fieldsets.forEach((fs, i) => {
-                fs.disabled = previous[i];
-            });
-        }
-    };
-
-    const validateActiveStep = () => {
-        const form = getFormElement();
-        if (!form) {
-            return true;
-        }
-
-        const activeFieldset = form.querySelector(
-            'fieldset[data-active="true"]',
-        ) as HTMLFieldSetElement | null;
-        if (!activeFieldset) {
-            return true;
-        }
-
-        const isValid = activeFieldset.checkValidity();
-        if (!isValid) {
-            activeFieldset.reportValidity();
-            toast.error(
-                'Please complete the required fields before continuing.',
-            );
-        }
-
-        return isValid;
-    };
-
-    const validateForm = () => {
-        const form = getFormElement();
-        if (!form) {
-            return true;
-        }
-
-        const invalidStep = findFirstInvalidStep();
-        if (invalidStep !== null) {
-            setCurrentStep(invalidStep);
-            requestAnimationFrame(() => {
-                const targetForm = getFormElement();
-                const fieldsets = Array.from(
-                    targetForm?.querySelectorAll('fieldset') ?? [],
-                ) as HTMLFieldSetElement[];
-                const target = fieldsets[invalidStep];
-                target?.reportValidity();
-            });
-            toast.error(
-                'Please complete the required fields before submitting.',
-            );
-            return false;
-        }
-
-        return true;
-    };
-
     const goNext = () => {
-        if (!validateActiveStep()) return;
         setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
     };
 
@@ -727,22 +528,7 @@ export default function Register({
             year: 'numeric',
         });
     };
-
-    const errorSteps = React.useMemo(() => {
-        const keys = Object.keys(serverErrors).filter(
-            (key) => serverErrors[key],
-        );
-        if (!keys.length) return new Set<number>();
-
-        const stepsWithErrors = new Set<number>();
-        for (const group of FIELD_STEP_MAP) {
-            if (keys.some((key) => group.fields.includes(key))) {
-                stepsWithErrors.add(group.step);
-            }
-        }
-
-        return stepsWithErrors;
-    }, [FIELD_STEP_MAP, serverErrors]);
+    const errorSteps = new Set<number>();
 
     return (
         <RegisterLayout>
@@ -789,22 +575,7 @@ export default function Register({
                         | HTMLTextAreaElement;
                     markDirty(target?.name);
                 }}
-                onSubmitCapture={(event) => {
-                    if (!canContinue) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        toast.error('Please tick both required consent boxes.');
-                        return;
-                    }
-
-                    // client-side validation (all steps)
-                    if (!validateForm()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return;
-                    }
-
-                    // ✅ only set when we actually allow submit to go through
+                onSubmitCapture={() => {
                     submittedRef.current = true;
                 }}
                 onSuccess={() => {
@@ -812,8 +583,8 @@ export default function Register({
                     setSuccessOpen(true);
                 }}
             >
-                {({ processing, errors }) => {
-                    const err = errors as Record<string, string | undefined>;
+                {({ processing }) => {
+                    const err = {} as Record<string, string | undefined>;
                     const showIfEmpty = (msg?: string, value?: string) =>
                         msg && !value?.trim() ? msg : undefined;
 
@@ -891,10 +662,10 @@ export default function Register({
                                                                 isActive
                                                                     ? 'bg-[#0033A0] text-white'
                                                                     : isError
-                                                                        ? 'border border-red-200 bg-red-50 text-red-600 hover:border-red-300'
-                                                                        : isComplete
-                                                                            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300'
-                                                                            : 'border border-slate-200 text-slate-500 hover:border-[#0033A0] hover:text-[#0033A0]',
+                                                                      ? 'border border-red-200 bg-red-50 text-red-600 hover:border-red-300'
+                                                                      : isComplete
+                                                                        ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300'
+                                                                        : 'border border-slate-200 text-slate-500 hover:border-[#0033A0] hover:text-[#0033A0]',
                                                             )}
                                                         >
                                                             {index + 1}
@@ -945,7 +716,7 @@ export default function Register({
                                         name="avail_transport_from_makati_to_peninsula"
                                         value={
                                             availTransportFromMakatiToPeninsula ===
-                                                'yes'
+                                            'yes'
                                                 ? '1'
                                                 : '0'
                                         }
@@ -1051,88 +822,141 @@ export default function Register({
                                                 >
                                                     <Command>
                                                         <CommandInput placeholder="Search country…" />
-                                                        <CommandEmpty>No country found.</CommandEmpty>
+                                                        <CommandEmpty>
+                                                            No country found.
+                                                        </CommandEmpty>
 
                                                         {/* ✅ scrollable list */}
                                                         <CommandList className="max-h-[320px] overflow-auto overscroll-contain sm:max-h-[380px]">
                                                             <CommandGroup heading="ASEAN Countries">
-                                                                {groupedCountries.asean.map((item) => (
-                                                                    <CommandItem
-                                                                        key={item.id}
-                                                                        value={item.name}
-                                                                        onSelect={() => {
-                                                                            setCountry(String(item.id));
-                                                                            setCountryOpen(false);
-                                                                        }}
-                                                                        className="gap-2"
-                                                                    >
-                                                                        {item.flag_url ? (
-                                                                            <img
-                                                                                src={item.flag_url}
-                                                                                alt=""
-                                                                                className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
-                                                                                loading="lazy"
-                                                                                draggable={false}
-                                                                            />
-                                                                        ) : (
-                                                                            <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                                                                                {item.code}
-                                                                            </span>
-                                                                        )}
-                                                                        <span className="truncate">{item.name}</span>
-                                                                        <Check
-                                                                            className={cn(
-                                                                                'ml-auto h-4 w-4',
-                                                                                country === String(item.id)
-                                                                                    ? 'opacity-100'
-                                                                                    : 'opacity-0',
-                                                                            )}
-                                                                        />
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandGroup>
-
-                                                            {groupedCountries.nonAsean.length > 0 ? (
-                                                                <CommandGroup heading="Non-ASEAN Countries">
-                                                                    {groupedCountries.nonAsean.map((item) => (
+                                                                {groupedCountries.asean.map(
+                                                                    (item) => (
                                                                         <CommandItem
-                                                                            key={item.id}
-                                                                            value={`${item.name} ${item.code}`}
+                                                                            key={
+                                                                                item.id
+                                                                            }
+                                                                            value={
+                                                                                item.name
+                                                                            }
                                                                             onSelect={() => {
-                                                                                setCountry(String(item.id));
-                                                                                setCountryOpen(false);
+                                                                                setCountry(
+                                                                                    String(
+                                                                                        item.id,
+                                                                                    ),
+                                                                                );
+                                                                                setCountryOpen(
+                                                                                    false,
+                                                                                );
                                                                             }}
                                                                             className="gap-2"
                                                                         >
                                                                             {item.flag_url ? (
                                                                                 <img
-                                                                                    src={item.flag_url}
+                                                                                    src={
+                                                                                        item.flag_url
+                                                                                    }
                                                                                     alt=""
                                                                                     className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
                                                                                     loading="lazy"
-                                                                                    draggable={false}
+                                                                                    draggable={
+                                                                                        false
+                                                                                    }
                                                                                 />
                                                                             ) : (
                                                                                 <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
-                                                                                    {item.code}
+                                                                                    {
+                                                                                        item.code
+                                                                                    }
                                                                                 </span>
                                                                             )}
-                                                                            <span className="truncate">{item.name}</span>
+                                                                            <span className="truncate">
+                                                                                {
+                                                                                    item.name
+                                                                                }
+                                                                            </span>
                                                                             <Check
                                                                                 className={cn(
                                                                                     'ml-auto h-4 w-4',
-                                                                                    country === String(item.id)
+                                                                                    country ===
+                                                                                        String(
+                                                                                            item.id,
+                                                                                        )
                                                                                         ? 'opacity-100'
                                                                                         : 'opacity-0',
                                                                                 )}
                                                                             />
                                                                         </CommandItem>
-                                                                    ))}
+                                                                    ),
+                                                                )}
+                                                            </CommandGroup>
+
+                                                            {groupedCountries
+                                                                .nonAsean
+                                                                .length > 0 ? (
+                                                                <CommandGroup heading="Non-ASEAN Countries">
+                                                                    {groupedCountries.nonAsean.map(
+                                                                        (
+                                                                            item,
+                                                                        ) => (
+                                                                            <CommandItem
+                                                                                key={
+                                                                                    item.id
+                                                                                }
+                                                                                value={`${item.name} ${item.code}`}
+                                                                                onSelect={() => {
+                                                                                    setCountry(
+                                                                                        String(
+                                                                                            item.id,
+                                                                                        ),
+                                                                                    );
+                                                                                    setCountryOpen(
+                                                                                        false,
+                                                                                    );
+                                                                                }}
+                                                                                className="gap-2"
+                                                                            >
+                                                                                {item.flag_url ? (
+                                                                                    <img
+                                                                                        src={
+                                                                                            item.flag_url
+                                                                                        }
+                                                                                        alt=""
+                                                                                        className="h-6 w-6 shrink-0 rounded-md border border-slate-200 object-cover"
+                                                                                        loading="lazy"
+                                                                                        draggable={
+                                                                                            false
+                                                                                        }
+                                                                                    />
+                                                                                ) : (
+                                                                                    <span className="grid h-6 w-6 place-items-center rounded-md border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+                                                                                        {
+                                                                                            item.code
+                                                                                        }
+                                                                                    </span>
+                                                                                )}
+                                                                                <span className="truncate">
+                                                                                    {
+                                                                                        item.name
+                                                                                    }
+                                                                                </span>
+                                                                                <Check
+                                                                                    className={cn(
+                                                                                        'ml-auto h-4 w-4',
+                                                                                        country ===
+                                                                                            String(
+                                                                                                item.id,
+                                                                                            )
+                                                                                            ? 'opacity-100'
+                                                                                            : 'opacity-0',
+                                                                                    )}
+                                                                                />
+                                                                            </CommandItem>
+                                                                        ),
+                                                                    )}
                                                                 </CommandGroup>
                                                             ) : null}
                                                         </CommandList>
                                                     </Command>
-
                                                 </PopoverContent>
                                             </Popover>
 
@@ -1184,7 +1008,7 @@ export default function Register({
                                                                         o.value ===
                                                                         honorificTitle,
                                                                 )?.label ??
-                                                                    honorificTitle)
+                                                                honorificTitle)
                                                             ) : (
                                                                 <span className="text-muted-foreground">
                                                                     Select
@@ -1259,7 +1083,7 @@ export default function Register({
                                             <InputError
                                                 message={
                                                     err.honorific_title &&
-                                                        !honorificTitle
+                                                    !honorificTitle
                                                         ? err.honorific_title
                                                         : undefined
                                                 }
@@ -1281,7 +1105,6 @@ export default function Register({
                                                             e.target.value,
                                                         )
                                                     }
-                                                    required
                                                     maxLength={50}
                                                     placeholder="Please specify"
                                                     className={inputClass}
@@ -1307,10 +1130,9 @@ export default function Register({
                                                 <Input
                                                     id="given_name"
                                                     type="text"
-                                                    required
                                                     tabIndex={
                                                         honorificTitle ===
-                                                            'other'
+                                                        'other'
                                                             ? 4
                                                             : 3
                                                     }
@@ -1323,9 +1145,9 @@ export default function Register({
                                                 <InputError
                                                     message={
                                                         err.given_name &&
-                                                            shouldShowError(
-                                                                'given_name',
-                                                            )
+                                                        shouldShowError(
+                                                            'given_name',
+                                                        )
                                                             ? err.given_name
                                                             : undefined
                                                     }
@@ -1341,7 +1163,7 @@ export default function Register({
                                                     type="text"
                                                     tabIndex={
                                                         honorificTitle ===
-                                                            'other'
+                                                        'other'
                                                             ? 5
                                                             : 4
                                                     }
@@ -1354,9 +1176,9 @@ export default function Register({
                                                 <InputError
                                                     message={
                                                         err.middle_name &&
-                                                            shouldShowError(
-                                                                'middle_name',
-                                                            )
+                                                        shouldShowError(
+                                                            'middle_name',
+                                                        )
                                                             ? err.middle_name
                                                             : undefined
                                                     }
@@ -1374,10 +1196,9 @@ export default function Register({
                                                 <Input
                                                     id="family_name"
                                                     type="text"
-                                                    required
                                                     tabIndex={
                                                         honorificTitle ===
-                                                            'other'
+                                                        'other'
                                                             ? 6
                                                             : 5
                                                     }
@@ -1389,9 +1210,9 @@ export default function Register({
                                                 <InputError
                                                     message={
                                                         err.family_name &&
-                                                            shouldShowError(
-                                                                'family_name',
-                                                            )
+                                                        shouldShowError(
+                                                            'family_name',
+                                                        )
                                                             ? err.family_name
                                                             : undefined
                                                     }
@@ -1419,7 +1240,7 @@ export default function Register({
                                             <InputError
                                                 message={
                                                     err.suffix &&
-                                                        shouldShowError('suffix')
+                                                    shouldShowError('suffix')
                                                         ? err.suffix
                                                         : undefined
                                                 }
@@ -1456,7 +1277,7 @@ export default function Register({
                                                         }
                                                         tabIndex={
                                                             honorificTitle ===
-                                                                'other'
+                                                            'other'
                                                                 ? 8
                                                                 : 7
                                                         }
@@ -1468,7 +1289,7 @@ export default function Register({
                                                                         o.value ===
                                                                         sexAssignedAtBirth,
                                                                 )?.label ??
-                                                                    sexAssignedAtBirth)
+                                                                sexAssignedAtBirth)
                                                             ) : (
                                                                 <span className="text-muted-foreground">
                                                                     Select…
@@ -1530,7 +1351,7 @@ export default function Register({
                                             <InputError
                                                 message={
                                                     err.sex_assigned_at_birth &&
-                                                        !sexAssignedAtBirth
+                                                    !sexAssignedAtBirth
                                                         ? err.sex_assigned_at_birth
                                                         : undefined
                                                 }
@@ -1609,7 +1430,6 @@ export default function Register({
                                             <Input
                                                 id="email"
                                                 type="email"
-                                                required
                                                 tabIndex={
                                                     honorificTitle === 'other'
                                                         ? 9
@@ -1624,7 +1444,7 @@ export default function Register({
                                             <InputError
                                                 message={
                                                     err.email &&
-                                                        shouldShowError('email')
+                                                    shouldShowError('email')
                                                         ? err.email
                                                         : undefined
                                                 }
@@ -1670,7 +1490,7 @@ export default function Register({
                                                                 }
                                                                 tabIndex={
                                                                     honorificTitle ===
-                                                                        'other'
+                                                                    'other'
                                                                         ? 10
                                                                         : 9
                                                                 }
@@ -1685,7 +1505,7 @@ export default function Register({
                                                                                 contactCountryCode,
                                                                         )
                                                                             ?.label ??
-                                                                            contactCountryCode)
+                                                                        contactCountryCode)
                                                                     ) : (
                                                                         <span className="text-muted-foreground">
                                                                             Country
@@ -1754,10 +1574,9 @@ export default function Register({
                                                 <Input
                                                     id="contact_number"
                                                     type="tel"
-                                                    required
                                                     tabIndex={
                                                         honorificTitle ===
-                                                            'other'
+                                                        'other'
                                                             ? 11
                                                             : 10
                                                     }
@@ -1779,14 +1598,14 @@ export default function Register({
                                             <InputError
                                                 message={
                                                     err.contact_country_code &&
-                                                        !contactCountryCode
+                                                    !contactCountryCode
                                                         ? err.contact_country_code
                                                         : err.contact_number &&
                                                             shouldShowError(
                                                                 'contact_number',
                                                             )
-                                                            ? err.contact_number
-                                                            : undefined
+                                                          ? err.contact_number
+                                                          : undefined
                                                 }
                                             />
                                         </div>
@@ -1803,7 +1622,6 @@ export default function Register({
                                             <Input
                                                 id="organization_name"
                                                 type="text"
-                                                required
                                                 tabIndex={
                                                     honorificTitle === 'other'
                                                         ? 12
@@ -1816,9 +1634,9 @@ export default function Register({
                                             <InputError
                                                 message={
                                                     err.organization_name &&
-                                                        shouldShowError(
-                                                            'organization_name',
-                                                        )
+                                                    shouldShowError(
+                                                        'organization_name',
+                                                    )
                                                         ? err.organization_name
                                                         : undefined
                                                 }
@@ -1836,7 +1654,6 @@ export default function Register({
                                             <Input
                                                 id="position_title"
                                                 type="text"
-                                                required
                                                 tabIndex={
                                                     honorificTitle === 'other'
                                                         ? 13
@@ -1880,7 +1697,7 @@ export default function Register({
                                                         }
                                                         tabIndex={
                                                             honorificTitle ===
-                                                                'other'
+                                                            'other'
                                                                 ? 14
                                                                 : 13
                                                         }
@@ -1936,14 +1753,14 @@ export default function Register({
                                                                                 )
                                                                                     .trim()
                                                                                     .toLowerCase() ===
-                                                                                'other' ||
+                                                                                    'other' ||
                                                                                 (
                                                                                     item.name ??
                                                                                     ''
                                                                                 )
                                                                                     .trim()
                                                                                     .toLowerCase() ===
-                                                                                'other';
+                                                                                    'other';
 
                                                                             if (
                                                                                 !isOther
@@ -1980,9 +1797,9 @@ export default function Register({
                                                 message={
                                                     (err.user_type_id ||
                                                         err.registrant_type) &&
-                                                        registrantType === ''
+                                                    registrantType === ''
                                                         ? (err.user_type_id ??
-                                                            err.registrant_type)
+                                                          err.registrant_type)
                                                         : undefined
                                                 }
                                             />
@@ -2003,7 +1820,6 @@ export default function Register({
                                                             e.target.value,
                                                         )
                                                     }
-                                                    required
                                                     maxLength={120}
                                                     placeholder="Enter your role"
                                                     className={inputClass}
@@ -2215,13 +2031,13 @@ export default function Register({
                                                 message={
                                                     (err.programme_ids ??
                                                         err[
-                                                        'programme_ids.0'
-                                                        ]) &&
-                                                        programmeIds.length === 0
-                                                        ? (err.programme_ids ??
-                                                            err[
                                                             'programme_ids.0'
-                                                            ])
+                                                        ]) &&
+                                                    programmeIds.length === 0
+                                                        ? (err.programme_ids ??
+                                                          err[
+                                                              'programme_ids.0'
+                                                          ])
                                                         : undefined
                                                 }
                                             />
@@ -2272,7 +2088,6 @@ export default function Register({
                                                             ? 'text'
                                                             : 'password'
                                                     }
-                                                    required
                                                     tabIndex={7}
                                                     autoComplete="new-password"
                                                     name="password"
@@ -2307,7 +2122,7 @@ export default function Register({
                                             <InputError
                                                 message={
                                                     err.password &&
-                                                        shouldShowError('password')
+                                                    shouldShowError('password')
                                                         ? err.password
                                                         : undefined
                                                 }
@@ -2330,7 +2145,6 @@ export default function Register({
                                                             ? 'text'
                                                             : 'password'
                                                     }
-                                                    required
                                                     tabIndex={8}
                                                     autoComplete="new-password"
                                                     name="password_confirmation"
@@ -2404,7 +2218,6 @@ export default function Register({
                                                                     'yes',
                                                                 )
                                                             }
-                                                            required
                                                         />
                                                         Yes
                                                     </label>
@@ -2421,7 +2234,6 @@ export default function Register({
                                                                     'no',
                                                                 )
                                                             }
-                                                            required
                                                         />
                                                         No
                                                     </label>
@@ -2453,7 +2265,6 @@ export default function Register({
                                                                     'yes',
                                                                 )
                                                             }
-                                                            required
                                                         />
                                                         Yes
                                                     </label>
@@ -2470,7 +2281,6 @@ export default function Register({
                                                                     'no',
                                                                 )
                                                             }
-                                                            required
                                                         />
                                                         No
                                                     </label>
@@ -2530,9 +2340,9 @@ export default function Register({
                                                                                     )
                                                                                         ? prev
                                                                                         : [
-                                                                                            ...prev,
-                                                                                            option.value,
-                                                                                        ];
+                                                                                              ...prev,
+                                                                                              option.value,
+                                                                                          ];
                                                                                 }
 
                                                                                 return prev.filter(
@@ -2581,9 +2391,9 @@ export default function Register({
                                                     <InputError
                                                         message={
                                                             err.dietary_allergies &&
-                                                                shouldShowError(
-                                                                    'dietary_allergies',
-                                                                )
+                                                            shouldShowError(
+                                                                'dietary_allergies',
+                                                            )
                                                                 ? err.dietary_allergies
                                                                 : undefined
                                                         }
@@ -2659,7 +2469,6 @@ export default function Register({
                                                                 'yes',
                                                             )
                                                         }
-                                                        required
                                                     />
                                                     Yes
                                                 </label>
@@ -2711,10 +2520,6 @@ export default function Register({
                                                             ipAffiliation !==
                                                             'yes'
                                                         }
-                                                        required={
-                                                            ipAffiliation ===
-                                                            'yes'
-                                                        }
                                                         maxLength={150}
                                                         placeholder="Name of IP group"
                                                         className={inputClass}
@@ -2722,9 +2527,9 @@ export default function Register({
                                                     <InputError
                                                         message={
                                                             err.ip_group_name &&
-                                                                shouldShowError(
-                                                                    'ip_group_name',
-                                                                )
+                                                            shouldShowError(
+                                                                'ip_group_name',
+                                                            )
                                                                 ? err.ip_group_name
                                                                 : undefined
                                                         }
@@ -2797,7 +2602,7 @@ export default function Register({
                                                                                 // ✅ clear immediately when "other" is removed
                                                                                 if (
                                                                                     option.value ===
-                                                                                    'other' &&
+                                                                                        'other' &&
                                                                                     !arr.includes(
                                                                                         'other',
                                                                                     )
@@ -3073,21 +2878,8 @@ export default function Register({
                                                 type="submit"
                                                 className="h-11 w-full rounded-xl bg-[#0033A0] text-white shadow-sm hover:bg-[#002b86] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                                                 tabIndex={9}
-                                                disabled={
-                                                    !canContinue || processing
-                                                }
+                                                disabled={processing}
                                                 data-test="register-user-button"
-                                                onClick={(event) => {
-                                                    if (!canContinue) {
-                                                        event.preventDefault();
-                                                        toast.error(
-                                                            'Please tick both required consent boxes.',
-                                                        );
-                                                        return;
-                                                    }
-                                                    if (!validateForm())
-                                                        event.preventDefault();
-                                                }}
                                             >
                                                 {processing ? (
                                                     <>
