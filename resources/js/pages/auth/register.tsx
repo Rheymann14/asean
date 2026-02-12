@@ -195,8 +195,6 @@ export default function Register({
         string | undefined
     >;
 
-    const submittedRef = React.useRef(false);
-
     const [dirtyFields, setDirtyFields] = React.useState<
         Record<string, boolean>
     >({});
@@ -282,29 +280,6 @@ export default function Register({
         [FIELD_STEP_MAP, currentStep],
     );
 
-    React.useEffect(() => {
-        // ✅ don't auto-jump while user is navigating steps
-        if (!submittedRef.current) return;
-
-        const step = findStepFromErrors(serverErrors);
-        if (step === null) return;
-
-        setCurrentStep(step);
-
-        requestAnimationFrame(() => {
-            const form = getFormElement();
-            const fieldsets = Array.from(
-                form?.querySelectorAll('fieldset') ?? [],
-            ) as HTMLFieldSetElement[];
-            const target = fieldsets[step];
-            target?.reportValidity();
-            toast.error('Please check the highlighted fields.');
-        });
-
-        // ✅ reset flag after we handled this response
-        submittedRef.current = false;
-    }, [serverErrors, findStepFromErrors]);
-
     const [honorificOpen, setHonorificOpen] = React.useState(false);
     const [sexOpen, setSexOpen] = React.useState(false);
     const [phoneCodeOpen, setPhoneCodeOpen] = React.useState(false);
@@ -359,17 +334,11 @@ export default function Register({
         useRemember<string>('', 'register.emergency_contact_phone');
     const [emergencyContactEmail, setEmergencyContactEmail] =
         useRemember<string>('', 'register.emergency_contact_email');
-    const [attendWelcomeDinner, setAttendWelcomeDinner] = useRemember<string>(
-        '',
-        'register.attend_welcome_dinner',
-    );
+    const [attendWelcomeDinner, setAttendWelcomeDinner] = React.useState<string>('');
     const [
         availTransportFromMakatiToPeninsula,
         setAvailTransportFromMakatiToPeninsula,
-    ] = useRemember<string>(
-        '',
-        'register.avail_transport_from_makati_to_peninsula',
-    );
+    ] = React.useState<string>('');
 
     const canContinue = consentContact && consentMedia;
 
@@ -804,8 +773,24 @@ export default function Register({
                         return;
                     }
 
-                    // ✅ only set when we actually allow submit to go through
-                    submittedRef.current = true;
+                }}
+                onError={(errors) => {
+                    const step = findStepFromErrors(
+                        errors as Record<string, string | undefined>,
+                    );
+                    if (step === null) return;
+
+                    setCurrentStep(step);
+
+                    requestAnimationFrame(() => {
+                        const form = getFormElement();
+                        const fieldsets = Array.from(
+                            form?.querySelectorAll('fieldset') ?? [],
+                        ) as HTMLFieldSetElement[];
+                        const target = fieldsets[step];
+                        target?.reportValidity();
+                        toast.error('Please check the highlighted fields.');
+                    });
                 }}
                 onSuccess={() => {
                     resetFormState();
