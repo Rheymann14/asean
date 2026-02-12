@@ -594,7 +594,7 @@ export default function Reports({ summary, rows, events, now_iso }: PageProps) {
                         <td>${row.avail_transport_from_makati_to_peninsula ? 'YES' : 'NO'}</td>
                         <td>${escapeHtml(getTableAssignment(row, selectedEventId) ?? '—')}</td>
                         <td>${escapeHtml(getVehicleAssignment(row, selectedEventId) ?? '—')}</td>
-                        <td>${hasCheckin ? 'Checked In' : 'Did Not Join'}</td>
+                        <td>${hasCheckin ? 'Checked In' : 'Not yet checked in'}</td>
                         <td>${escapeHtml(hasCheckin ? formatDateTime(scannedAt) : '—')}</td>
                     </tr>
                 `;

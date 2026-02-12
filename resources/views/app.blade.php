@@ -33,6 +33,31 @@
 
         <title inertia>{{ config('app.name', 'ASEAN') }}</title>
 
+        @php
+  
+            $meta = $page['props']['meta'] ?? [];
+
+            $ogTitle = $meta['title'] ?? config('app.name', 'ASEAN');
+            $ogDescription = $meta['description'] ?? 'Official registration system.';
+            $ogImage = $meta['image'] ?? asset('img/asean_logo_he.png'); // <-- put your default thumbnail here
+            $ogUrl = $meta['url'] ?? url()->current();
+        @endphp
+
+        <meta property="og:type" content="website">
+        <meta property="og:title" content="{{ e($ogTitle) }}">
+        <meta property="og:description" content="{{ e($ogDescription) }}">
+        <meta property="og:url" content="{{ $ogUrl }}">
+
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:secure_url" content="{{ $ogImage }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ e($ogTitle) }}">
+        <meta name="twitter:description" content="{{ e($ogDescription) }}">
+        <meta name="twitter:image" content="{{ $ogImage }}">
+
 
         <link rel="icon" href="/logo.ico" sizes="any">
         <link rel="icon" href="/logo.ico" type="image/x-icon">
