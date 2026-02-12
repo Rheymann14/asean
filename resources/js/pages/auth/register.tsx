@@ -18,14 +18,7 @@ import { splitCountriesByAsean } from '@/lib/countries';
 import { cn } from '@/lib/utils';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import {
-    Form,
-    Head,
-    Link,
-    router,
-    usePage,
-    useRemember,
-} from '@inertiajs/react';
+import { Form, Head, Link, router, useRemember } from '@inertiajs/react';
 import * as React from 'react';
 
 import {
@@ -51,7 +44,6 @@ import {
     Loader2,
     Sparkles,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 type CountryOption = {
     id: number;
@@ -189,12 +181,6 @@ export default function Register({
     const [formKey, setFormKey] = React.useState(0);
 
     const [currentStep, setCurrentStep] = React.useState(0);
-    const page = usePage();
-    const serverErrors = (page.props.errors ?? {}) as Record<
-        string,
-        string | undefined
-    >;
-
     const submittedRef = React.useRef(false);
 
     const [dirtyFields, setDirtyFields] = React.useState<
@@ -212,98 +198,6 @@ export default function Register({
         (name: string) => !dirtyFields[name],
         [dirtyFields],
     );
-
-    const FIELD_STEP_MAP: Array<{ step: number; fields: string[] }> = [
-        {
-            step: 0,
-            fields: [
-                'country_id',
-                'honorific_title',
-                'honorific_other',
-                'given_name',
-                'middle_name',
-                'family_name',
-                'suffix',
-                'sex_assigned_at_birth',
-            ],
-        },
-        {
-            step: 1,
-            fields: [
-                'email',
-                'contact_country_code',
-                'contact_number',
-                'organization_name',
-                'position_title',
-                'user_type_id',
-                'other_user_type',
-                'programme_ids',
-                'programme_ids.0',
-            ],
-        },
-        {
-            step: 2,
-            fields: ['password', 'password_confirmation', 'profile_photo'],
-        },
-        {
-            step: 3,
-            fields: [
-                'attend_welcome_dinner',
-                'avail_transport_from_makati_to_peninsula',
-                'dietary_allergies',
-                'dietary_other',
-                'ip_group_name',
-                'accessibility_other',
-                'emergency_contact_name',
-                'emergency_contact_relationship',
-                'emergency_contact_phone',
-                'emergency_contact_email',
-                'consent_contact_sharing',
-                'consent_photo_video',
-            ],
-        },
-    ];
-
-    const findStepFromErrors = React.useCallback(
-        (errs: Record<string, string | undefined>) => {
-            const keys = Object.keys(errs).filter((k) => errs[k]);
-            if (!keys.length) return null;
-
-            for (const group of FIELD_STEP_MAP) {
-                const hit = keys.some((k) =>
-                    group.fields.some((f) => k === f || k.startsWith(`${f}.`)),
-                );
-                if (hit) return group.step;
-            }
-
-            // fallback: keep user where they are instead of forcing Step 1
-            return currentStep;
-        },
-        [FIELD_STEP_MAP, currentStep],
-    );
-
-    React.useEffect(() => {
-        // ✅ don't auto-jump while user is navigating steps
-        if (!submittedRef.current) return;
-
-        const step = findStepFromErrors(serverErrors);
-        if (step === null) return;
-
-        setCurrentStep(step);
-
-        requestAnimationFrame(() => {
-            const form = getFormElement();
-            const fieldsets = Array.from(
-                form?.querySelectorAll('fieldset') ?? [],
-            ) as HTMLFieldSetElement[];
-            const target = fieldsets[step];
-            target?.reportValidity();
-            toast.error('Please check the highlighted fields.');
-        });
-
-        // ✅ reset flag after we handled this response
-        submittedRef.current = false;
-    }, [serverErrors, findStepFromErrors]);
 
     const [honorificOpen, setHonorificOpen] = React.useState(false);
     const [sexOpen, setSexOpen] = React.useState(false);
@@ -544,19 +438,6 @@ export default function Register({
         },
     ] as const;
 
-    const getFormElement = () => {
-        const fallback = document.getElementById(
-            'register-form',
-        ) as HTMLFormElement | null;
-        if (fallback) {
-            return fallback;
-        }
-
-        return document.querySelector(
-            'form[data-test="register-form"]',
-        ) as HTMLFormElement | null;
-    };
-
     const goNext = () => {
         setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
     };
@@ -647,22 +528,7 @@ export default function Register({
             year: 'numeric',
         });
     };
-
-    const errorSteps = React.useMemo(() => {
-        const keys = Object.keys(serverErrors).filter(
-            (key) => serverErrors[key],
-        );
-        if (!keys.length) return new Set<number>();
-
-        const stepsWithErrors = new Set<number>();
-        for (const group of FIELD_STEP_MAP) {
-            if (keys.some((key) => group.fields.includes(key))) {
-                stepsWithErrors.add(group.step);
-            }
-        }
-
-        return stepsWithErrors;
-    }, [FIELD_STEP_MAP, serverErrors]);
+    const errorSteps = new Set<number>();
 
     return (
         <RegisterLayout>
@@ -717,8 +583,8 @@ export default function Register({
                     setSuccessOpen(true);
                 }}
             >
-                {({ processing, errors }) => {
-                    const err = errors as Record<string, string | undefined>;
+                {({ processing }) => {
+                    const err = {} as Record<string, string | undefined>;
                     const showIfEmpty = (msg?: string, value?: string) =>
                         msg && !value?.trim() ? msg : undefined;
 
@@ -1239,7 +1105,6 @@ export default function Register({
                                                             e.target.value,
                                                         )
                                                     }
-                                                    required
                                                     maxLength={50}
                                                     placeholder="Please specify"
                                                     className={inputClass}
@@ -1265,7 +1130,6 @@ export default function Register({
                                                 <Input
                                                     id="given_name"
                                                     type="text"
-                                                    required
                                                     tabIndex={
                                                         honorificTitle ===
                                                         'other'
@@ -1332,7 +1196,6 @@ export default function Register({
                                                 <Input
                                                     id="family_name"
                                                     type="text"
-                                                    required
                                                     tabIndex={
                                                         honorificTitle ===
                                                         'other'
@@ -1567,7 +1430,6 @@ export default function Register({
                                             <Input
                                                 id="email"
                                                 type="email"
-                                                required
                                                 tabIndex={
                                                     honorificTitle === 'other'
                                                         ? 9
@@ -1712,7 +1574,6 @@ export default function Register({
                                                 <Input
                                                     id="contact_number"
                                                     type="tel"
-                                                    required
                                                     tabIndex={
                                                         honorificTitle ===
                                                         'other'
@@ -1761,7 +1622,6 @@ export default function Register({
                                             <Input
                                                 id="organization_name"
                                                 type="text"
-                                                required
                                                 tabIndex={
                                                     honorificTitle === 'other'
                                                         ? 12
@@ -1794,7 +1654,6 @@ export default function Register({
                                             <Input
                                                 id="position_title"
                                                 type="text"
-                                                required
                                                 tabIndex={
                                                     honorificTitle === 'other'
                                                         ? 13
@@ -1961,7 +1820,6 @@ export default function Register({
                                                             e.target.value,
                                                         )
                                                     }
-                                                    required
                                                     maxLength={120}
                                                     placeholder="Enter your role"
                                                     className={inputClass}
@@ -2230,7 +2088,6 @@ export default function Register({
                                                             ? 'text'
                                                             : 'password'
                                                     }
-                                                    required
                                                     tabIndex={7}
                                                     autoComplete="new-password"
                                                     name="password"
@@ -2288,7 +2145,6 @@ export default function Register({
                                                             ? 'text'
                                                             : 'password'
                                                     }
-                                                    required
                                                     tabIndex={8}
                                                     autoComplete="new-password"
                                                     name="password_confirmation"
@@ -2362,7 +2218,6 @@ export default function Register({
                                                                     'yes',
                                                                 )
                                                             }
-                                                            required
                                                         />
                                                         Yes
                                                     </label>
@@ -2379,7 +2234,6 @@ export default function Register({
                                                                     'no',
                                                                 )
                                                             }
-                                                            required
                                                         />
                                                         No
                                                     </label>
@@ -2411,7 +2265,6 @@ export default function Register({
                                                                     'yes',
                                                                 )
                                                             }
-                                                            required
                                                         />
                                                         Yes
                                                     </label>
@@ -2428,7 +2281,6 @@ export default function Register({
                                                                     'no',
                                                                 )
                                                             }
-                                                            required
                                                         />
                                                         No
                                                     </label>
@@ -2617,7 +2469,6 @@ export default function Register({
                                                                 'yes',
                                                             )
                                                         }
-                                                        required
                                                     />
                                                     Yes
                                                 </label>
@@ -2667,10 +2518,6 @@ export default function Register({
                                                         }
                                                         disabled={
                                                             ipAffiliation !==
-                                                            'yes'
-                                                        }
-                                                        required={
-                                                            ipAffiliation ===
                                                             'yes'
                                                         }
                                                         maxLength={150}
